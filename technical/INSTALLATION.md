@@ -30,29 +30,64 @@ docker --version
 git --version
 ```
 
-Baseline verified on 2026-09-13; [Tech Stack](./TECH-STACK.md) is authoritative:
+Baseline verified on 2026-09-14; [Tech Stack](./TECH-STACK.md) is authoritative:
 
 - Node.js `24.21.0` LTS;
 - Corepack `0.36.0` with repository `packageManager: pnpm@12.4.1`;
 - Foundry `1.8.1` and Solidity `0.8.37`;
-- PostgreSQL `18.6`;
+- project-local Supabase CLI `2.117.0`;
 - Git;
-- Docker only when used for local PostgreSQL;
-- no Rust/Stylus dependency in MVP.
+- Docker for the Supabase CLI local stack;
+- no standalone local PostgreSQL install and no Rust/Stylus dependency in MVP.
 
 Use official Foundry installation instructions: <https://getfoundry.sh/introduction/installation/>.
 
 On Windows, use one supported shell/environment and avoid multiple Foundry installations on PATH.
 
-## 3. Project bootstrap
+## 3. Developer CLIs
+
+| CLI or surface | Crest use | Rule |
+|---|---|---|
+| Corepack / pnpm | Reproducible workspace, scripts, and project-local tools | Use the lockfile and `packageManager`; do not mix npm/yarn installs |
+| Supabase CLI | Local Supabase stack and hosted-project linking | Install project-local at `2.117.0`; discover commands with `--help` |
+| `forge` | Solidity build, unit/fuzz/invariant/fork tests, deployment scripts | Pin Foundry and Solidity; prefer reproducible scripts |
+| `cast` | Chain ID, bytecode, calls, receipts, logs, and Blockscout verification inputs | Never paste production private keys or credential-bearing RPC URLs |
+| `anvil` | Manifest-pinned Robinhood Chain fork | Fork exact block/hash evidence; do not call a fork live |
+| `chisel` | Throwaway Solidity/EVM calculations | Optional; never use REPL output as deployment evidence |
+| Blockscout API/UI | Source, address, and transaction discovery/cross-check | Direct RPC and canonical receipt remain authoritative |
+
+Useful discovery commands:
+
+```bash
+pnpm supabase --help
+pnpm supabase --version
+pnpm supabase status
+cast chain-id --rpc-url \"$ROBINHOOD_CHAIN_RPC_URL\"
+cast block-number --rpc-url \"$ROBINHOOD_CHAIN_RPC_URL\"
+cast code <address> --rpc-url \"$ROBINHOOD_CHAIN_RPC_URL\"
+forge --version
+```
+
+Robinhood Chain endpoints:
+
+```text
+Mainnet RPC:       https://rpc.mainnet.chain.robinhood.com
+Mainnet explorer:  https://robinhoodchain.blockscout.com
+Testnet RPC:       https://rpc.testnet.chain.robinhood.com
+Testnet explorer:  https://explorer.testnet.chain.robinhood.com
+Testnet faucet:    https://faucet.testnet.chain.robinhood.com
+```
+
+There is no required Robinhood-specific CLI and no separate official Morpho CLI. Use standard EVM tools plus `@morpho-org/morpho-sdk`, its Blue packages, and current Morpho APIs. Public RPCs are rate-limited; production/demo reliability requires a reviewed provider without weakening chain-ID, block, or code-hash verification.
+
+## 4. Project bootstrap
 
 From the implementation root:
 
 ```bash
 corepack enable
 pnpm install --frozen-lockfile
-docker compose up -d postgres
-forge install
+pnpm supabase start
 pnpm db:migrate
 pnpm generate
 pnpm verify
@@ -61,7 +96,7 @@ forge test
 
 Lockfiles, remappings, and repository scripts are authoritative. Do not float Solidity dependencies after pinning.
 
-## 4. Contract dependencies
+## 5. Contract dependencies
 
 Minimum:
 
@@ -81,7 +116,7 @@ Before adding Morpho or vault packages:
 
 Never copy an ABI or address from an unverified gist.
 
-## 5. JavaScript dependencies
+## 6. JavaScript dependencies
 
 Install exact versions through the lockfile-backed workspace:
 
@@ -95,13 +130,14 @@ pnpm add radix-ui@1.6.7
 pnpm add -D typescript@7.0.2 turbo@2.10.12 drizzle-kit@0.31.10
 pnpm add -D vitest@5.0.0 @playwright/test@1.63.0
 pnpm add -D tailwindcss@4.3.3 @tailwindcss/postcss@4.3.3
+pnpm add -D supabase@2.117.0
 ```
 
 These are a compatible bootstrap candidate, not permission to skip install/typecheck/build/fork verification. Refresh the complete set from official stable sources rather than floating one package independently.
 
 Do not add a routing, agent, automation, or vault SDK when viem plus the verified ABI covers the required calls.
 
-## 6. Environment contract
+## 7. Environment contract
 
 Commit `.env.example`, never credentials.
 
@@ -112,7 +148,9 @@ NEXT_PUBLIC_ROBINHOOD_CHAIN_ID=4663
 NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=
 
 # Server only
-DATABASE_URL=postgresql://crest:crest@localhost:5432/crest
+DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres
+DIRECT_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres
+SUPABASE_PROJECT_REF=
 ROBINHOOD_CHAIN_RPC_URL=
 ROBINHOOD_API_BASE_URL=https://api.robinhood.com/rhj
 
@@ -141,32 +179,33 @@ Rules:
 - Test keys are disposable Anvil keys only.
 - Never log credential-bearing URLs.
 
-## 7. Local PostgreSQL
+## 8. Supabase Postgres
 
-```yaml
-services:
-  postgres:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_USER: crest
-      POSTGRES_PASSWORD: crest
-      POSTGRES_DB: crest
-    ports:
-      - "5432:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U crest"]
-      interval: 2s
-      timeout: 2s
-      retries: 20
-    volumes:
-      - crest-postgres:/var/lib/postgresql/data
-volumes:
-  crest-postgres:
+Supabase is the deployed PostgreSQL provider. Drizzle remains the schema/migration source and the application uses Postgres.js through Drizzle; do not add Supabase Auth, Realtime, Storage, Edge Functions, or browser Data API access without a product requirement.
+
+The Supabase CLI is a pinned project dev dependency rather than a machine-global prerequisite:
+
+```bash
+pnpm supabase init
+pnpm supabase start
+pnpm supabase status
+pnpm db:migrate
 ```
 
-No Redis or message broker. One Guardian worker plus PostgreSQL leases/idempotency is MVP.
+Run `init` once and commit `supabase/config.toml`; do not overwrite an existing project configuration. The local stack requires Docker and exposes PostgreSQL at `127.0.0.1:54322` by default. Repository scripts, not ad hoc dashboard edits, own schema changes.
 
-## 8. Deployment manifest
+For hosted environments:
+
+- copy exact connection strings from the Supabase **Connect** dialog; never derive pooler hosts;
+- use the appropriate pooled `DATABASE_URL` for the runtime topology;
+- use `DIRECT_URL` for migrations, dumps, and other single-session administration;
+- transaction-pooler clients use `max: 1`, `prepare: false`, and required SSL;
+- never expose database passwords, direct URLs, secret/service-role keys, or Guardian credentials to the browser;
+- record the hosted PostgreSQL major, required extensions, region, pooling mode, and migration result as deployment evidence.
+
+No Neon, Redis, or message broker. One Guardian worker plus Supabase Postgres leases/idempotency is MVP.
+
+## 9. Deployment manifest
 
 The manifest includes:
 
@@ -220,7 +259,7 @@ Ellipses are schema examples only. A shipped manifest contains current verified 
 
 The verifier recomputes market ID, confirms code and vault asset, and reads current market/vault state.
 
-## 9. Fork setup
+## 10. Fork setup
 
 ```bash
 anvil \
@@ -245,7 +284,7 @@ Fork prerequisites:
 
 A fork proves compatibility at one state, not future rates or liquidity.
 
-## 10. Fixtures
+## 11. Fixtures
 
 ### Robinhood
 
@@ -276,7 +315,7 @@ A fork proves compatibility at one state, not future rates or liquidity.
 
 Fixtures test adapters. They are never live demo evidence.
 
-## 11. Canonical commands
+## 12. Canonical commands
 
 ```bash
 pnpm dev
@@ -294,7 +333,7 @@ pnpm smoke:fork
 
 Guardian defaults off. Starting it requires an explicit command and allowlisted account.
 
-## 12. CI order
+## 13. CI order
 
 ```text
 verify pinned toolchains
@@ -311,7 +350,7 @@ verify pinned toolchains
 
 A missing external secret skips/fails visibly; it is never reported as passing live integration.
 
-## 13. Mainnet canary
+## 14. Mainnet canary
 
 1. Reverify route, code, liquidity, vault withdrawal, and current rates.
 2. Deploy and verify Crest Account source.
@@ -329,7 +368,7 @@ A missing external secret skips/fails visibly; it is never reported as passing l
 
 Stop after any unexpected result. Never raise limits to make the demo work.
 
-## 14. Security checklist
+## 15. Security checklist
 
 - compiler/dependency/source/code hashes pinned;
 - secret and license scan;
@@ -344,7 +383,7 @@ Stop after any unexpected result. Never raise limits to make the demo work.
 - database restart/reorg/idempotency recovery tested;
 - alerts for stale monitor, vault constraint/loss, failed transaction, and failed postcondition.
 
-## 15. Do not install/build in MVP
+## 16. Do not install/build in MVP
 
 - Stylus/Rust;
 - Safe/ERC-4337/ERC-7579;

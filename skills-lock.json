@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "skills": {
+    "borrow-integration": {
+      "source": "morpho-org/morpho-skills",
+      "sourceType": "github",
+      "skillPath": "plugins/morpho-builder/skills/borrow-integration/SKILL.md",
+      "computedHash": "29eb34361f451efb6aa97c87cda4e5463afc1f49635c20493f08b1923e12e0dd"
+    },
+    "develop-secure-contracts": {
+      "source": "OpenZeppelin/openzeppelin-skills",
+      "sourceType": "github",
+      "skillPath": "skills/develop-secure-contracts/SKILL.md",
+      "computedHash": "ac0810a8a0f39acfc6e18349872bf663ec477366a9243e37f89b4a8dade70243"
+    },
+    "earn-integration": {
+      "source": "morpho-org/morpho-skills",
+      "sourceType": "github",
+      "skillPath": "plugins/morpho-builder/skills/earn-integration/SKILL.md",
+      "computedHash": "b67a11b9e3b87dc6eaca1c65180fb186725365e7450b4067ee162825e7ce9620"
+    },
+    "setup-solidity-contracts": {
+      "source": "OpenZeppelin/openzeppelin-skills",
+      "sourceType": "github",
+      "skillPath": "skills/setup-solidity-contracts/SKILL.md",
+      "computedHash": "562f4ececbc91ab8eed22b2bcae6b3e0a573916c0b8a2e44be96245847aab17c"
+    },
+    "vercel-react-best-practices": {
+      "source": "vercel-labs/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/react-best-practices/SKILL.md",
+      "computedHash": "6b526d013e28073246a36f99b529bc43745d30832ecfa8217b359c34f260ca6b"
+    }
+  }
+}

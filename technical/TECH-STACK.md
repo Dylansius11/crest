@@ -13,13 +13,13 @@
 | Contracts | Solidity + Foundry + OpenZeppelin | Narrow account and invariant/fork proof |
 | API | Hono on Node | Bounded typed HTTP surface |
 | Validation | Zod + generated JSON Schema | Policy and external trust boundaries |
-| Data | PostgreSQL + Drizzle | Relational audit, bigint-safe state, job leases |
+| Data | Supabase Postgres + Drizzle | Hosted relational audit state, bigint-safe schema, and job leases |
 | Monitor | Node worker | Block/rate/lifecycle observations and assessments |
 | Guardian | Isolated Node process with viem wallet client | Three fixed debt-protection selectors |
 | Math | Native bigint + audited Morpho/vault semantics | Exact units and rounding |
 | Tests | Vitest, Foundry, Playwright | Pure, onchain/fork, and user-flow behavior |
 | Observability | Structured logs + OpenTelemetry-compatible metrics | Route/action provenance |
-| Local infra | PostgreSQL + Anvil | Minimum stateful tooling |
+| Local infra | Supabase CLI local stack + Anvil | One PostgreSQL-compatible development path plus chain fork |
 
 Pin exact versions, compiler, ABIs, deployment manifest, and rate conventions.
 
@@ -60,7 +60,7 @@ The manifest contains verified route identities. It is not an unchecked address 
 
 ## 3. Runtime and version baseline
 
-Use the newest stable **compatible** release, not every newest tag independently. Production Node uses the newest Active LTS even when a newer `Current` line exists. Exact bootstrap pins below were verified from official release pages and npm `latest` tags on **2026-09-13**:
+Use the newest stable **compatible** release, not every newest tag independently. Production Node uses the newest Active LTS even when a newer `Current` line exists. Exact bootstrap pins below were verified from official release pages and npm `latest` tags on **2026-09-14**:
 
 | Component | Exact bootstrap pin | Rationale |
 |---|---:|---|
@@ -78,14 +78,15 @@ Use the newest stable **compatible** release, not every newest tag independently
 | Zod | `4.6.4` | Trust-boundary schemas |
 | Drizzle ORM / Kit / Postgres.js | `0.45.2` / `0.31.10` / `3.4.9` | PostgreSQL schema, migrations, driver |
 | Vitest / Playwright | `5.0.0` / `1.63.0` | Pure/integration and browser checks |
-| PostgreSQL | `18.6` | Latest stable major and current supported minor |
+| Supabase CLI | `2.117.0` | Project-local local-stack, schema, and project-linking CLI |
+| Hosted PostgreSQL | Supabase project version | Record the actual project major/extensions at provisioning; do not assume local `18.6` |
 | Solidity / Foundry | `0.8.37` / `1.8.1` | Stable compiler and EVM toolchain |
 | OpenZeppelin Contracts | `5.6.1` | Reviewed primitives; import minimally |
 | OpenTelemetry API | `1.9.1` | Stable telemetry interface |
 
 Pin JavaScript packages without range prefixes in the lockfile-backed workspace. Pin Foundry by release/commit and Solidity in `foundry.toml`. Before accepting any refresh, run install, typecheck, build, focused tests, ABI diff, and pinned-fork smoke flow together; “latest” is not evidence of compatibility or safety.
 
-Primary version sources: [Node releases](https://nodejs.org/en/about/previous-releases), [npm registry](https://www.npmjs.com/), [PostgreSQL versioning](https://www.postgresql.org/support/versioning/), [Solidity releases](https://github.com/argotorg/solidity/releases), and [Foundry releases](https://github.com/foundry-rs/foundry/releases).
+Primary version sources: [Node releases](https://nodejs.org/en/about/previous-releases), [npm registry](https://www.npmjs.com/), [Supabase CLI releases](https://github.com/supabase/cli/releases), [PostgreSQL versioning](https://www.postgresql.org/support/versioning/), [Solidity releases](https://github.com/argotorg/solidity/releases), and [Foundry releases](https://github.com/foundry-rs/foundry/releases).
 
 ### 3.1 Rust decision
 
@@ -103,7 +104,7 @@ Potential later uses, each gated by evidence:
 
 Adoption requires a benchmark, an explicit process/API boundary, shared golden test vectors, deterministic TypeScript/Rust parity, new deployment runbooks, and a security review. Do not add Rust “for performance” or “for security” without those proofs.
 
-Local infrastructure remains PostgreSQL plus Anvil. Docker is optional for local PostgreSQL. No Rust/Stylus toolchain, Redis, Kafka, or custom oracle is in MVP.
+Local infrastructure remains the Supabase CLI local stack plus Anvil. The deployed database is Supabase Postgres; Supabase Auth, Realtime, Storage, Edge Functions, and Data API are not MVP dependencies unless the PRD changes. Docker is required by the local Supabase stack. No Rust/Stylus toolchain, Redis, Kafka, or custom oracle is in MVP.
 
 ## 4. Numeric and identity types
 
@@ -257,7 +258,7 @@ Do not expose Guardian through a generic HTTP route.
 
 ## 9. Database coordination
 
-PostgreSQL owns observations, policy versions, assessments, triggers, leases, attempts, receipts, and postconditions.
+Supabase Postgres owns observations, policy versions, assessments, triggers, leases, attempts, receipts, and postconditions. Drizzle schema and migrations remain the single repository source; do not create a parallel migration convention.
 
 One Guardian worker is enough. Add replicas only after testing lease expiry, nonce serialization, and recovery. No Redis/Kafka.
 
@@ -277,7 +278,7 @@ One Guardian worker is enough. Add replicas only after testing lease expiry, non
 | Policy/risk/carry | Vitest/property tests | LTV boundaries, rate convention, degradation, projected/realized separation |
 | Crest Account | Foundry unit/fuzz/invariant | roles, caps, floors, fixed route, receiver, debt decrease |
 | Morpho/vault route | Pinned Foundry fork | borrow-and-deploy, maxWithdraw, partial strategy repay, owner exit |
-| Adapters/database | Vitest + PostgreSQL | schema validation, reorg, idempotency, policy activation |
+| Adapters/database | Vitest + Supabase Postgres | schema validation, reorg, idempotency, policy activation |
 | Guardian | Anvil/fork integration | duplicate trigger, nonce, receipt, postconditions, no borrow |
 | Web | Playwright | inventory → policy → owner borrow → Guardian evidence |
 
@@ -289,7 +290,7 @@ Mocks cover failure boundaries; they do not prove the claimed live route.
 Web/API deployment
 Monitor deployment without signing key
 Guardian deployment with minimally funded key
-Managed PostgreSQL
+Supabase Postgres
 Robinhood Chain RPC
 Robinhood lifecycle/rate sources
 ```
@@ -298,7 +299,7 @@ Automation starts only after manifest and contract verification. Owner remains a
 
 ## 13. Environment separation
 
-- `local`: Anvil + mock Morpho/vault/lifecycle/rate fixtures + PostgreSQL.
+- `local`: Anvil + mock Morpho/vault/lifecycle/rate fixtures + Supabase CLI local stack.
 - `fork`: pinned Robinhood state; read-only live APIs optional.
 - `testnet`: only when exact required contracts exist.
 - `mainnet-canary`: verified manifest, small limits, separate Guardian.
