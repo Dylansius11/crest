@@ -64,6 +64,7 @@ Return changed files, exact checks and observed results, assumptions, unresolved
 ## Self Learning Logs
 Newest first. At every completed build-plan task and before handoff, record any newly verified, reusable technical lesson in one line: `YYYY-MM-DD — Root cause → rule`. Do not record status, secrets, speculation, or a duplicate lesson.
 
+- 2026-09-14 — Robinhood L2 block headers omit Cancun blob fields that Anvil 1.8.1 requires → preserve the canonical block hash/state while normalizing only missing zero-valued header fields; do not downgrade the EVM because Vault V2 uses Cancun opcodes.
 - 2026-09-14 — Morpho Vault V2 deliberately returns zero from all ERC-4626 `max*` functions → identify the exact vault generation and use its fresh withdrawal options plus exact simulation instead of treating zero as unavailable liquidity.
 - 2026-09-13 — Morpho collateral does not earn supply yield → attribute yield only to deployed loan-token assets.
 - 2026-09-13 — A broad automation key turns optimization into custody risk → enforce Guardian authority in the contract ABI, not an HTTP allowlist.
@@ -71,6 +72,7 @@ Newest first. At every completed build-plan task and before handoff, record any 
 ## Self Insight Logs
 Newest first. At every completed build-plan task and before handoff, record any newly observed durable user/workflow preference in one line: `YYYY-MM-DD — Observation → application`. Do not record transient status or restate an existing preference.
 
+- 2026-09-14 — The user wants high assurance without wasteful verification context → use narrow reads, persist evidence in manifests, and avoid repeated or speculative checks.
 - 2026-09-14 — The user requires the complete Build Plan to remain visible → retain Tasks 1–11 as top-level todos and expand only the active task into checklist and acceptance children.
 - 2026-09-14 — The user expects repository instructions to remain active → reread `AGENTS.md` at every task and commit boundary while treating `CONTEXT.md` as one-time orientation unless decisions change.
 - 2026-09-14 — The user chose Supabase rather than Neon → use Supabase-hosted PostgreSQL and its selected global skills without introducing a second managed database provider.

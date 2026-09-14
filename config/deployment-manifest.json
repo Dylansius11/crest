@@ -1,0 +1,376 @@
+{
+  "schemaVersion": 1,
+  "network": {
+    "name": "Robinhood Chain",
+    "chainId": 4663,
+    "rpcUrl": "https://rpc.mainnet.chain.robinhood.com",
+    "explorerUrl": "https://robinhoodchain.blockscout.com"
+  },
+  "evidence": {
+    "retrievedAt": "2026-09-14T09:54:56Z",
+    "block": {
+      "number": "62692076",
+      "hash": "0x6c3ce4f78c2c469afaebe6177e8824ab91b25e301eda091d102d138b299e7c01",
+      "timestamp": "2026-09-14T09:12:04.000Z",
+      "l1BlockNumber": "25974715",
+      "finality": "unfinalized"
+    }
+  },
+  "sources": [
+    {
+      "name": "Robinhood Chain connection parameters",
+      "url": "https://docs.robinhood.com/chain/connecting/",
+      "retrievedAt": "2026-09-14T09:54:56Z"
+    },
+    {
+      "name": "Robinhood canonical token contracts",
+      "url": "https://docs.robinhood.com/chain/contracts/",
+      "retrievedAt": "2026-09-14T09:54:56Z"
+    },
+    {
+      "name": "Robinhood oracle and Stock Token controls",
+      "url": "https://docs.robinhood.com/chain/oracles-and-price-feeds/",
+      "retrievedAt": "2026-09-14T09:54:56Z"
+    },
+    {
+      "name": "Morpho market configuration",
+      "url": "https://api.morpho.org/v0/blue/markets/4663:0xdeb4782d012d5fd3b24962538c2f6559049d70bda4dabd2e4212dacb96c28d45",
+      "retrievedAt": "2026-09-14T09:54:56Z"
+    },
+    {
+      "name": "Pinned Robinhood archive state",
+      "url": "https://rpc.ordofi.network",
+      "retrievedAt": "2026-09-14T09:54:56Z",
+      "blockNumber": "62692076",
+      "note": "Independent keyless archive RPC from the EIP-3085 chain registry; canonical block hash cross-checked with Blockscout."
+    },
+    {
+      "name": "Morpho Vault V2 state",
+      "url": "https://api.morpho.org/v1/vaults-v2/4663:0xBeEff033F34C046626B8D0A041844C5d1A5409dd/state",
+      "retrievedAt": "2026-09-14T09:54:56Z",
+      "blockNumber": "62716392"
+    },
+    {
+      "name": "Morpho Vault V2 withdrawal options",
+      "url": "https://api.morpho.org/v0/vaults-v2/4663:0xBeEff033F34C046626B8D0A041844C5d1A5409dd/withdrawal-options",
+      "retrievedAt": "2026-09-14T09:54:56Z",
+      "blockNumber": "62716392",
+      "note": "Withdrawal result matched the simultaneously indexed vault state."
+    },
+    {
+      "name": "Morpho Vault V2 allocations and caps",
+      "url": "https://api.morpho.org/v0/vaults-v2/4663:0xBeEff033F34C046626B8D0A041844C5d1A5409dd/allocations",
+      "retrievedAt": "2026-09-14T09:54:56Z",
+      "blockNumber": "62716566"
+    },
+    {
+      "name": "Morpho Vault V2 pending governance",
+      "url": "https://api.morpho.org/v0/vaults-v2/4663:0xBeEff033F34C046626B8D0A041844C5d1A5409dd/pending-governance-actions",
+      "retrievedAt": "2026-09-14T09:54:56Z",
+      "blockNumber": "62716556"
+    },
+    {
+      "name": "Morpho market APY averages",
+      "url": "https://api.morpho.org/v0/blue/markets/4663:0xdeb4782d012d5fd3b24962538c2f6559049d70bda4dabd2e4212dacb96c28d45/apy-averages",
+      "retrievedAt": "2026-09-14T09:54:56Z",
+      "blockNumber": "62716556"
+    },
+    {
+      "name": "Morpho Vault V2 APY averages",
+      "url": "https://api.morpho.org/v1/vaults-v2/4663:0xBeEff033F34C046626B8D0A041844C5d1A5409dd/apy-averages",
+      "retrievedAt": "2026-09-14T09:54:56Z",
+      "blockNumber": "62716556"
+    },
+    {
+      "name": "Morpho Vault V2 max-function semantics",
+      "url": "https://docs.morpho.org/build/earn/concepts/vault-v2/",
+      "retrievedAt": "2026-09-14T09:54:56Z",
+      "note": "Vault V2 deliberately returns zero from all four ERC-4626 max functions."
+    },
+    {
+      "name": "ERC-4626 rounding semantics",
+      "url": "https://eips.ethereum.org/EIPS/eip-4626",
+      "retrievedAt": "2026-09-14T09:54:56Z"
+    }
+  ],
+  "contracts": {
+    "morpho": {
+      "address": "0x9D53d5E3bd5E8d4CbfA6DB1ca238AEA02E651010",
+      "codeHash": "0x753b54fdb48c87c9c1ba1dcc3a330faac1a401a3bd23b43104b7b92409ecb424",
+      "source": "https://robinhoodchain.blockscout.com/api/v2/smart-contracts/0x9D53d5E3bd5E8d4CbfA6DB1ca238AEA02E651010",
+      "contractName": "Morpho",
+      "proxyType": null
+    },
+    "loanToken": {
+      "address": "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168",
+      "codeHash": "0x864cc9ad53b338b82da1f7cab85ab0b3d5c8861acb422b6fec63cf36234f36a6",
+      "source": "https://robinhoodchain.blockscout.com/api/v2/smart-contracts/0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168",
+      "contractName": "ERC1967Proxy",
+      "proxyType": "eip1967",
+      "decimals": 6,
+      "symbol": "USDG"
+    },
+    "collateralToken": {
+      "address": "0xaF3D76f1834A1d425780943C99Ea8A608f8a93f9",
+      "codeHash": "0x6c1fdd40002dcb440c7fff6a84171404d279ccb057803b65826f7546acd65630",
+      "source": "https://robinhoodchain.blockscout.com/api/v2/smart-contracts/0xaF3D76f1834A1d425780943C99Ea8A608f8a93f9",
+      "contractName": "BeaconProxy",
+      "proxyType": "beacon",
+      "decimals": 18,
+      "symbol": "AAPL"
+    },
+    "oracle": {
+      "address": "0xD625d488D552775D2867194C618B945E5dDfE097",
+      "codeHash": "0x1fbc6d30920a1b8cca852864460f317c72a14a6b7228f3fae202152b7d2f9fd3",
+      "source": "https://robinhoodchain.blockscout.com/api/v2/smart-contracts/0xD625d488D552775D2867194C618B945E5dDfE097",
+      "contractName": "StaticOracle",
+      "proxyType": null
+    },
+    "irm": {
+      "address": "0x2BD3d5965B26B51814AC95127B2b80dD6CcC0fa1",
+      "codeHash": "0x27bdf07d4b41c5785e200e5d27ae0eb734a7573049196ac686a2c9bf3473b97b",
+      "source": "https://robinhoodchain.blockscout.com/api/v2/smart-contracts/0x2BD3d5965B26B51814AC95127B2b80dD6CcC0fa1",
+      "contractName": "AdaptiveCurveIrm",
+      "proxyType": null
+    },
+    "vault": {
+      "address": "0xBeEff033F34C046626B8D0A041844C5d1A5409dd",
+      "codeHash": "0x3492098028b641c5949beebf8c56898f1ed846f42b59978ed7c75249603c1f6e",
+      "source": "https://robinhoodchain.blockscout.com/api/v2/smart-contracts/0xBeEff033F34C046626B8D0A041844C5d1A5409dd",
+      "contractName": "VaultV2",
+      "proxyType": null
+    },
+    "vaultAdapter": {
+      "address": "0x44ABc1d6cCFF2696d98890B92E2157AF242179c2",
+      "codeHash": "0x78f72dee842a438cc21750b36673fdeeb88d9379ffd477ff934a3bd4851b4b50",
+      "source": "https://robinhoodchain.blockscout.com/api/v2/smart-contracts/0x44ABc1d6cCFF2696d98890B92E2157AF242179c2",
+      "contractName": "MorphoMarketV1AdapterV2",
+      "proxyType": null
+    },
+    "collateralFeed": {
+      "address": "0x6b22a786baa607d76728168703a39ea9c99f2cd0",
+      "codeHash": "0xbd6f524cdc4268b6bd1bb6f77a8821faeea9c52ee9e0afa0b6d948ce82c966c2",
+      "source": "https://robinhoodchain.blockscout.com/api/v2/smart-contracts/0x6b22a786baa607d76728168703a39ea9c99f2cd0",
+      "contractName": "EACAggregatorProxy",
+      "proxyType": null
+    },
+    "loanFeed": {
+      "address": "0x61b7e5650328764b076a108eff5fa7282a1b9ad2",
+      "codeHash": "0xbd6f524cdc4268b6bd1bb6f77a8821faeea9c52ee9e0afa0b6d948ce82c966c2",
+      "source": "https://robinhoodchain.blockscout.com/api/v2/smart-contracts/0x61b7e5650328764b076a108eff5fa7282a1b9ad2",
+      "contractName": "EACAggregatorProxy",
+      "proxyType": null
+    }
+  },
+  "market": {
+    "id": "0xdeb4782d012d5fd3b24962538c2f6559049d70bda4dabd2e4212dacb96c28d45",
+    "derivedId": "0xdeb4782d012d5fd3b24962538c2f6559049d70bda4dabd2e4212dacb96c28d45",
+    "loanToken": "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168",
+    "collateralToken": "0xaF3D76f1834A1d425780943C99Ea8A608f8a93f9",
+    "oracle": "0xD625d488D552775D2867194C618B945E5dDfE097",
+    "irm": "0x2BD3d5965B26B51814AC95127B2b80dD6CcC0fa1",
+    "lltv": "625000000000000000",
+    "state": {
+      "observedBlockNumber": "62692076",
+      "totalSupplyAssets": "222150217331",
+      "totalSupplyShares": "222073070227389310",
+      "totalBorrowAssets": "176804007331",
+      "totalBorrowShares": "176732180478282549",
+      "lastAccrualTimestamp": "1789331721",
+      "fee": "0"
+    },
+    "oracleState": {
+      "price": "332023325534494394907416880",
+      "collateralRound": "18446744073709552241",
+      "collateralAnswer": "33179956885",
+      "collateralUpdatedAt": "1789373114",
+      "loanRound": "18446744073709551717",
+      "loanAnswer": "99989178",
+      "loanUpdatedAt": "1789313605",
+      "checkedAtBlockTimestamp": "1789377124"
+    },
+    "liquidityAssets": "45346210000",
+    "plannedBorrowAssets": "1000000000"
+  },
+  "vault": {
+    "address": "0xBeEff033F34C046626B8D0A041844C5d1A5409dd",
+    "codeHash": "0x3492098028b641c5949beebf8c56898f1ed846f42b59978ed7c75249603c1f6e",
+    "asset": "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168",
+    "generation": "Morpho Vault V2",
+    "factory": "0x0FBad98595b0186dA120E41f77C102beb49f803c",
+    "governance": {
+      "owner": "0xCa50D23F1c18C1Dfaff5d3cae3aa4B9dC5C8db73",
+      "curator": "0x9023FBD6A08C666491A2d1648737E400cF42D2Fb",
+      "timelockSeconds": "604800",
+      "adapterRegistry": "0xe785a2eFD384BA7B95BaEd3851BC76aeD67C676f",
+      "liquidityAdapter": "0x44ABc1d6cCFF2696d98890B92E2157AF242179c2",
+      "pendingCapExecutableAt": "1789408649",
+      "pendingActionsObservedBlockNumber": "62716556"
+    },
+    "fees": {
+      "management": "0",
+      "performance": "0",
+      "maxRatePerSecondWad": "63419583967"
+    },
+    "gates": {
+      "receiveShares": null,
+      "sendShares": null,
+      "receiveAssets": null,
+      "sendAssets": null
+    },
+    "maxFunctions": {
+      "maxDeposit": "0",
+      "maxMint": "0",
+      "maxWithdraw": "0",
+      "maxRedeem": "0",
+      "interpretation": "Vault V2 deliberately returns zero; use fresh withdrawal options plus exact simulation and post-state."
+    },
+    "state": {
+      "observedBlockNumber": "62716392",
+      "totalAssets": "458893193669798",
+      "totalSupply": "455753098339367727104943336",
+      "idleAssets": "0",
+      "allocatedAssets": "458893193669798",
+      "sharePriceRay": "1006889904516001896205621623"
+    },
+    "withdrawalOptions": {
+      "observedBlockNumber": "62716392",
+      "liquidityAdapterAvailable": "31771715098334",
+      "idleAssets": "0",
+      "forceDeallocatable": "16089096955359",
+      "forceDeallocationPenalty": "0"
+    },
+    "withdrawableAssets": "31771715098334",
+    "plannedWithdrawalAssets": "1000000000",
+    "adapterCap": {
+      "allocatedAssets": "458893199243616",
+      "absoluteCap": "1000000000000000000000",
+      "relativeCapWad": "1000000000000000000"
+    },
+    "downstreamAllocationsObservedBlockNumber": "62716566",
+    "downstreamAllocations": [
+      {
+        "adapter": "0x44ABc1d6cCFF2696d98890B92E2157AF242179c2",
+        "marketId": "0x1efd13a2d1dc66a2466e7c25820537028e604791f00454d9c686fdfbf70f404d",
+        "collateral": "0xFEd493F38c1aAcb4EA4e6A11F8b9287849EE0096",
+        "allocatedAssets": "31275285107696",
+        "absoluteCap": "50000000000000",
+        "relativeCapWad": "1000000000000000000",
+        "pendingAbsoluteCap": null,
+        "withdrawableAssets": null,
+        "liquidityRole": "allocated"
+      },
+      {
+        "adapter": "0x44ABc1d6cCFF2696d98890B92E2157AF242179c2",
+        "marketId": "0x127353ba63e08f74d8e9ce8a1c2b41b5f89c7167135b1c09fbed34a71b4cb06b",
+        "collateral": "0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73",
+        "allocatedAssets": "212392",
+        "absoluteCap": "50000000000000",
+        "relativeCapWad": "1000000000000000000",
+        "pendingAbsoluteCap": null,
+        "withdrawableAssets": null,
+        "liquidityRole": "allocated"
+      },
+      {
+        "adapter": "0x44ABc1d6cCFF2696d98890B92E2157AF242179c2",
+        "marketId": "0x0309c02dabf0be02682af1a2bde9a457f4df0f0b6bc889cde3f948e5315e4114",
+        "collateral": "0xde770c84FE66E063336b31737cFE9790f18c4087",
+        "allocatedAssets": "33391272055560",
+        "absoluteCap": "500000000000000",
+        "relativeCapWad": "1000000000000000000",
+        "pendingAbsoluteCap": null,
+        "withdrawableAssets": null,
+        "liquidityRole": "allocated"
+      },
+      {
+        "adapter": "0x44ABc1d6cCFF2696d98890B92E2157AF242179c2",
+        "marketId": "0xc845da65a020ddca5f132efa8fea79676d8edfdea504226a4c01e7a9e34cddd6",
+        "collateral": "0x5d3a1Ff2b6BAb83b63cd9AD0787074081a52ef34",
+        "allocatedAssets": "296385713971208",
+        "absoluteCap": "500000000000000",
+        "relativeCapWad": "1000000000000000000",
+        "pendingAbsoluteCap": "1000000000000000",
+        "withdrawableAssets": "31771715098334",
+        "liquidityRole": "default"
+      },
+      {
+        "adapter": "0x44ABc1d6cCFF2696d98890B92E2157AF242179c2",
+        "marketId": "0x919a9b6b94dae7c86620eaf7a08e597aae8a4c3a9e9c7671771fbaf62b6b61c7",
+        "collateral": "0x40858070814a57FdF33a613ae84fE0a8b4a874f7",
+        "allocatedAssets": "97840927896760",
+        "absoluteCap": "200000000000000",
+        "relativeCapWad": "1000000000000000000",
+        "pendingAbsoluteCap": "500000000000000",
+        "withdrawableAssets": null,
+        "liquidityRole": "allocated"
+      }
+    ]
+  },
+  "rates": {
+    "marketBorrow": {
+      "value": "0.03405142106441783",
+      "convention": "apy-compounded",
+      "window": "24h",
+      "source": "https://api.morpho.org/v0/blue/markets/4663:0xdeb4782d012d5fd3b24962538c2f6559049d70bda4dabd2e4212dacb96c28d45/apy-averages",
+      "observedAt": "2026-09-14T09:54:56Z",
+      "blockNumber": "62716556",
+      "status": "normal"
+    },
+    "vault": {
+      "value": "0.03646646532474613",
+      "convention": "apy-compounded",
+      "window": "six_hours",
+      "source": "https://api.morpho.org/v1/vaults-v2/4663:0xBeEff033F34C046626B8D0A041844C5d1A5409dd/apy-averages",
+      "observedAt": "2026-09-14T09:54:56Z",
+      "blockNumber": "62716556",
+      "status": "normal"
+    }
+  },
+  "forkProof": {
+    "tool": "Anvil 1.8.1",
+    "rpcSource": "https://rpc.ordofi.network",
+    "headerNormalization": "Added zero-valued Cancun blob header fields omitted by the Robinhood L2 RPC before Anvil consumed block metadata; canonical state and pinned block identity were not replaced.",
+    "blockNumber": "62692076",
+    "blockHash": "0x6c3ce4f78c2c469afaebe6177e8824ab91b25e301eda091d102d138b299e7c01",
+    "morphoLifecycle": "passed",
+    "vaultLifecycle": "passed",
+    "morpho": {
+      "collateralAssets": "10000000000000000000",
+      "borrowAssets": "1000000000",
+      "repaidAssets": "1000000043",
+      "withdrawnCollateralAssets": "10000000000000000000",
+      "transactionHashes": [
+        "0x0f5d4923787008f31b2292d3f0000e45203ea1ea3321b0e39de0acef96a570a8",
+        "0x7233bd57a3240f66f9da892e6d92c9e59626a74b0cf50b6ae15e1c72ae8e05e0",
+        "0x91956de3a29eac4d45d4bcc92cb5afb1eeb9d266206bf217d3051cc872170249",
+        "0x86d6a5155e1f75a69428a886e4fd2c6b98aa12e9175f00d9f0d5344a749abed1"
+      ]
+    },
+    "vault": {
+      "depositAssets": "1000000000",
+      "mintedShares": "993159952939135193330",
+      "withdrawAssets": "999999999",
+      "withdrawnShares": "993159906112245823329",
+      "redeemedShares": "46826889370001",
+      "redeemedAssets": "47",
+      "finalAssetDelta": "46",
+      "finalShares": "0",
+      "assetBalanceRestored": true,
+      "transactionHashes": [
+        "0x8684430006cb7160726f6602709e759606def5ad85288bda90f60d21291825a3",
+        "0xf566bff39ed6aaa6fcfd7fd67bc6bcfedc1b81a70147eafc7d55594a4eed2584",
+        "0xeab2929ba4579f46a22f795e6f47a480076ff9df5fe83feab87c5d05af76415c"
+      ]
+    }
+  },
+  "gate": {
+    "outcome": "full_route",
+    "marketGate": "passed",
+    "vaultGate": "passed",
+    "reason": "Pinned AAPL/USDG Morpho supply-borrow-repay-withdraw and same-asset Vault V2 deposit-withdraw-redeem lifecycles passed; planned 1,000 USDG is below both observed market and current adapter withdrawal liquidity."
+  },
+  "integrity": {
+    "algorithm": "sha256",
+    "digest": "sha256:1dc7f16c7550a299b48bad0d2c583061fd89be408bb1e6f16ffffeec3d82f601"
+  }
+}

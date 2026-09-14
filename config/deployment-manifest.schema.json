@@ -1,0 +1,339 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://crest.local/schemas/deployment-manifest.schema.json",
+  "title": "Crest verified deployment manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "network", "evidence", "sources", "contracts", "market", "vault", "rates", "forkProof", "gate", "integrity"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "network": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "chainId", "rpcUrl", "explorerUrl"],
+      "properties": {
+        "name": { "const": "Robinhood Chain" },
+        "chainId": { "const": 4663 },
+        "rpcUrl": { "type": "string", "format": "uri" },
+        "explorerUrl": { "type": "string", "format": "uri" }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["retrievedAt", "block"],
+      "properties": {
+        "retrievedAt": { "type": "string", "format": "date-time" },
+        "block": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["number", "hash", "timestamp", "l1BlockNumber", "finality"],
+          "properties": {
+            "number": { "$ref": "#/$defs/uint" },
+            "hash": { "$ref": "#/$defs/hash" },
+            "timestamp": { "type": "string", "format": "date-time" },
+            "l1BlockNumber": { "$ref": "#/$defs/uint" },
+            "finality": { "enum": ["finalized", "safe", "unfinalized"] }
+          }
+        }
+      }
+    },
+    "sources": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/source" } },
+    "contracts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["morpho", "loanToken", "collateralToken", "oracle", "irm", "vault", "vaultAdapter", "collateralFeed", "loanFeed"],
+      "properties": {
+        "morpho": { "$ref": "#/$defs/contract" },
+        "loanToken": { "$ref": "#/$defs/contract" },
+        "collateralToken": { "$ref": "#/$defs/contract" },
+        "oracle": { "$ref": "#/$defs/contract" },
+        "irm": { "$ref": "#/$defs/contract" },
+        "vault": { "$ref": "#/$defs/contract" },
+        "vaultAdapter": { "$ref": "#/$defs/contract" },
+        "collateralFeed": { "$ref": "#/$defs/contract" },
+        "loanFeed": { "$ref": "#/$defs/contract" }
+      }
+    },
+    "market": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "derivedId", "loanToken", "collateralToken", "oracle", "irm", "lltv", "state", "oracleState", "liquidityAssets", "plannedBorrowAssets"],
+      "properties": {
+        "id": { "$ref": "#/$defs/hash" },
+        "derivedId": { "$ref": "#/$defs/hash" },
+        "loanToken": { "$ref": "#/$defs/address" },
+        "collateralToken": { "$ref": "#/$defs/address" },
+        "oracle": { "$ref": "#/$defs/address" },
+        "irm": { "$ref": "#/$defs/address" },
+        "lltv": { "$ref": "#/$defs/uint" },
+        "state": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["observedBlockNumber", "totalSupplyAssets", "totalSupplyShares", "totalBorrowAssets", "totalBorrowShares", "lastAccrualTimestamp", "fee"],
+          "properties": {
+            "observedBlockNumber": { "$ref": "#/$defs/uint" },
+            "totalSupplyAssets": { "$ref": "#/$defs/uint" },
+            "totalSupplyShares": { "$ref": "#/$defs/uint" },
+            "totalBorrowAssets": { "$ref": "#/$defs/uint" },
+            "totalBorrowShares": { "$ref": "#/$defs/uint" },
+            "lastAccrualTimestamp": { "$ref": "#/$defs/uint" },
+            "fee": { "$ref": "#/$defs/uint" }
+          }
+        },
+        "oracleState": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["price", "collateralRound", "collateralAnswer", "collateralUpdatedAt", "loanRound", "loanAnswer", "loanUpdatedAt", "checkedAtBlockTimestamp"],
+          "properties": {
+            "price": { "$ref": "#/$defs/uint" },
+            "collateralRound": { "$ref": "#/$defs/uint" },
+            "collateralAnswer": { "$ref": "#/$defs/uint" },
+            "collateralUpdatedAt": { "$ref": "#/$defs/uint" },
+            "loanRound": { "$ref": "#/$defs/uint" },
+            "loanAnswer": { "$ref": "#/$defs/uint" },
+            "loanUpdatedAt": { "$ref": "#/$defs/uint" },
+            "checkedAtBlockTimestamp": { "$ref": "#/$defs/uint" }
+          }
+        },
+        "liquidityAssets": { "$ref": "#/$defs/uint" },
+        "plannedBorrowAssets": { "$ref": "#/$defs/uint" }
+      }
+    },
+    "vault": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["address", "codeHash", "asset", "generation", "factory", "governance", "fees", "gates", "maxFunctions", "state", "withdrawalOptions", "withdrawableAssets", "plannedWithdrawalAssets", "adapterCap", "downstreamAllocationsObservedBlockNumber", "downstreamAllocations"],
+      "properties": {
+        "address": { "$ref": "#/$defs/address" },
+        "codeHash": { "$ref": "#/$defs/hash" },
+        "asset": { "$ref": "#/$defs/address" },
+        "generation": { "const": "Morpho Vault V2" },
+        "factory": { "$ref": "#/$defs/address" },
+        "governance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["owner", "curator", "timelockSeconds", "adapterRegistry", "liquidityAdapter", "pendingCapExecutableAt", "pendingActionsObservedBlockNumber"],
+          "properties": {
+            "owner": { "$ref": "#/$defs/address" },
+            "curator": { "$ref": "#/$defs/address" },
+            "timelockSeconds": { "$ref": "#/$defs/uint" },
+            "adapterRegistry": { "$ref": "#/$defs/address" },
+            "liquidityAdapter": { "$ref": "#/$defs/address" },
+            "pendingCapExecutableAt": { "type": ["string", "null"], "pattern": "^(0|[1-9][0-9]*)$" },
+            "pendingActionsObservedBlockNumber": { "$ref": "#/$defs/uint" }
+          }
+        },
+        "fees": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["management", "performance", "maxRatePerSecondWad"],
+          "properties": {
+            "management": { "$ref": "#/$defs/uint" },
+            "performance": { "$ref": "#/$defs/uint" },
+            "maxRatePerSecondWad": { "$ref": "#/$defs/uint" }
+          }
+        },
+        "gates": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["receiveShares", "sendShares", "receiveAssets", "sendAssets"],
+          "properties": {
+            "receiveShares": { "type": ["string", "null"], "pattern": "^0x[0-9a-fA-F]{40}$" },
+            "sendShares": { "type": ["string", "null"], "pattern": "^0x[0-9a-fA-F]{40}$" },
+            "receiveAssets": { "type": ["string", "null"], "pattern": "^0x[0-9a-fA-F]{40}$" },
+            "sendAssets": { "type": ["string", "null"], "pattern": "^0x[0-9a-fA-F]{40}$" }
+          }
+        },
+        "maxFunctions": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["maxDeposit", "maxMint", "maxWithdraw", "maxRedeem", "interpretation"],
+          "properties": {
+            "maxDeposit": { "const": "0" },
+            "maxMint": { "const": "0" },
+            "maxWithdraw": { "const": "0" },
+            "maxRedeem": { "const": "0" },
+            "interpretation": { "const": "Vault V2 deliberately returns zero; use fresh withdrawal options plus exact simulation and post-state." }
+          }
+        },
+        "state": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["observedBlockNumber", "totalAssets", "totalSupply", "idleAssets", "allocatedAssets", "sharePriceRay"],
+          "properties": {
+            "observedBlockNumber": { "$ref": "#/$defs/uint" },
+            "totalAssets": { "$ref": "#/$defs/uint" },
+            "totalSupply": { "$ref": "#/$defs/uint" },
+            "idleAssets": { "$ref": "#/$defs/uint" },
+            "allocatedAssets": { "$ref": "#/$defs/uint" },
+            "sharePriceRay": { "$ref": "#/$defs/uint" }
+          }
+        },
+        "withdrawalOptions": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["observedBlockNumber", "liquidityAdapterAvailable", "idleAssets", "forceDeallocatable", "forceDeallocationPenalty"],
+          "properties": {
+            "observedBlockNumber": { "$ref": "#/$defs/uint" },
+            "liquidityAdapterAvailable": { "$ref": "#/$defs/uint" },
+            "idleAssets": { "$ref": "#/$defs/uint" },
+            "forceDeallocatable": { "$ref": "#/$defs/uint" },
+            "forceDeallocationPenalty": { "$ref": "#/$defs/uint" }
+          }
+        },
+        "withdrawableAssets": { "$ref": "#/$defs/uint" },
+        "plannedWithdrawalAssets": { "$ref": "#/$defs/uint" },
+        "adapterCap": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["allocatedAssets", "absoluteCap", "relativeCapWad"],
+          "properties": {
+            "allocatedAssets": { "$ref": "#/$defs/uint" },
+            "absoluteCap": { "$ref": "#/$defs/uint" },
+            "relativeCapWad": { "$ref": "#/$defs/uint" }
+          }
+        },
+        "downstreamAllocationsObservedBlockNumber": { "$ref": "#/$defs/uint" },
+        "downstreamAllocations": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["adapter", "marketId", "collateral", "allocatedAssets", "absoluteCap", "relativeCapWad", "pendingAbsoluteCap", "withdrawableAssets", "liquidityRole"],
+            "properties": {
+              "adapter": { "$ref": "#/$defs/address" },
+              "marketId": { "$ref": "#/$defs/hash" },
+              "collateral": { "$ref": "#/$defs/address" },
+              "allocatedAssets": { "$ref": "#/$defs/uint" },
+              "absoluteCap": { "$ref": "#/$defs/uint" },
+              "relativeCapWad": { "$ref": "#/$defs/uint" },
+              "pendingAbsoluteCap": { "type": ["string", "null"], "pattern": "^(0|[1-9][0-9]*)$" },
+              "withdrawableAssets": { "type": ["string", "null"], "pattern": "^(0|[1-9][0-9]*)$" },
+              "liquidityRole": { "enum": ["default", "allocated"] }
+            }
+          }
+        }
+      }
+    },
+    "rates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["marketBorrow", "vault"],
+      "properties": {
+        "marketBorrow": { "$ref": "#/$defs/rate" },
+        "vault": { "$ref": "#/$defs/rate" }
+      }
+    },
+    "forkProof": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tool", "rpcSource", "headerNormalization", "blockNumber", "blockHash", "morphoLifecycle", "vaultLifecycle", "morpho", "vault"],
+      "properties": {
+        "tool": { "const": "Anvil 1.8.1" },
+        "rpcSource": { "type": "string", "format": "uri" },
+        "headerNormalization": { "type": "string", "minLength": 1 },
+        "blockNumber": { "$ref": "#/$defs/uint" },
+        "blockHash": { "$ref": "#/$defs/hash" },
+        "morphoLifecycle": { "enum": ["passed", "failed", "not_executed"] },
+        "vaultLifecycle": { "enum": ["passed", "failed", "not_executed"] },
+        "morpho": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "required": ["collateralAssets", "borrowAssets", "repaidAssets", "withdrawnCollateralAssets", "transactionHashes"],
+          "properties": {
+            "collateralAssets": { "$ref": "#/$defs/uint" },
+            "borrowAssets": { "$ref": "#/$defs/uint" },
+            "repaidAssets": { "$ref": "#/$defs/uint" },
+            "withdrawnCollateralAssets": { "$ref": "#/$defs/uint" },
+            "transactionHashes": { "type": "array", "minItems": 4, "items": { "$ref": "#/$defs/hash" } }
+          }
+        },
+        "vault": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "required": ["depositAssets", "mintedShares", "withdrawAssets", "withdrawnShares", "redeemedShares", "redeemedAssets", "finalAssetDelta", "finalShares", "assetBalanceRestored", "transactionHashes"],
+          "properties": {
+            "depositAssets": { "$ref": "#/$defs/uint" },
+            "mintedShares": { "$ref": "#/$defs/uint" },
+            "withdrawAssets": { "$ref": "#/$defs/uint" },
+            "withdrawnShares": { "$ref": "#/$defs/uint" },
+            "redeemedShares": { "$ref": "#/$defs/uint" },
+            "redeemedAssets": { "$ref": "#/$defs/uint" },
+            "finalAssetDelta": { "$ref": "#/$defs/uint" },
+            "finalShares": { "$ref": "#/$defs/uint" },
+            "assetBalanceRestored": { "type": "boolean" },
+            "transactionHashes": { "type": "array", "minItems": 3, "items": { "$ref": "#/$defs/hash" } }
+          }
+        }
+      }
+    },
+    "gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["outcome", "marketGate", "vaultGate", "reason"],
+      "properties": {
+        "outcome": { "enum": ["stop", "reserve_only", "full_route"] },
+        "marketGate": { "enum": ["passed", "failed"] },
+        "vaultGate": { "enum": ["passed", "failed", "not_evaluated"] },
+        "reason": { "type": "string", "minLength": 1 }
+      }
+    },
+    "integrity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "digest"],
+      "properties": {
+        "algorithm": { "const": "sha256" },
+        "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+      }
+    }
+  },
+  "$defs": {
+    "address": { "type": "string", "pattern": "^0x[0-9a-fA-F]{40}$" },
+    "hash": { "type": "string", "pattern": "^0x[0-9a-fA-F]{64}$" },
+    "uint": { "type": "string", "pattern": "^(0|[1-9][0-9]*)$" },
+    "contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["address", "codeHash", "source"],
+      "properties": {
+        "address": { "$ref": "#/$defs/address" },
+        "codeHash": { "$ref": "#/$defs/hash" },
+        "source": { "type": "string", "format": "uri" },
+        "contractName": { "type": "string", "minLength": 1 },
+        "proxyType": { "type": ["string", "null"] },
+        "implementation": { "$ref": "#/$defs/address" },
+        "decimals": { "type": "integer", "minimum": 0, "maximum": 255 },
+        "symbol": { "type": "string", "minLength": 1 }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "url", "retrievedAt"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "url": { "type": "string", "format": "uri" },
+        "retrievedAt": { "type": "string", "format": "date-time" },
+        "blockNumber": { "$ref": "#/$defs/uint" },
+        "note": { "type": "string", "minLength": 1 }
+      }
+    },
+    "rate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "convention", "window", "source", "observedAt", "blockNumber", "status"],
+      "properties": {
+        "value": { "type": "string", "pattern": "^[0-9]+(\\.[0-9]+)?$" },
+        "convention": { "enum": ["apy-compounded", "apr-simple"] },
+        "window": { "type": "string", "minLength": 1 },
+        "source": { "type": "string", "format": "uri" },
+        "observedAt": { "type": "string", "format": "date-time" },
+        "blockNumber": { "$ref": "#/$defs/uint" },
+        "status": { "enum": ["normal", "degraded", "unknown"] }
+      }
+    }
+  }
+}
