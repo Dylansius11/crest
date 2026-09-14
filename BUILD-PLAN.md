@@ -51,16 +51,16 @@ apps/web
 
 **Steps**
 
-- [ ] Read current official Robinhood, Morpho, vault, and ERC-4626 sources.
-- [ ] Verify chain ID, Morpho code, tokens, decimals, oracle, IRM, LLTV, and derived market ID.
-- [ ] Read current market supply, borrow, and available loan liquidity.
-- [ ] Discover a same-loan-token yield vault; verify address, code, interface, `asset()`, roles, upgrades, fees, caps, pause, queue/loss behavior, and downstream allocations.
-- [ ] Observe borrow rate and vault rate with explicit convention/source/freshness.
-- [ ] Measure vault `maxDeposit`, `maxWithdraw`, and `maxRedeem` for the planned account/request.
-- [ ] Execute pinned-fork market supply/borrow/repay/withdraw.
-- [ ] Execute pinned-fork vault deposit/withdraw and record actual share rounding.
-- [ ] Record every source, retrieval time, verification block/hash, address, and code hash.
-- [ ] Make the verifier fail on altered chain, code, market ID, vault asset, or block evidence.
+- [x] Read current official Robinhood, Morpho, vault, and ERC-4626 sources.
+- [x] Verify chain ID, Morpho code, tokens, decimals, oracle, IRM, LLTV, and derived market ID.
+- [x] Read current market supply, borrow, and available loan liquidity.
+- [x] Discover a same-loan-token yield vault; verify address, code, interface, `asset()`, roles, upgrades, fees, caps, pause, queue/loss behavior, and downstream allocations.
+- [x] Observe borrow rate and vault rate with explicit convention/source/freshness.
+- [x] Measure vault `maxDeposit`, `maxWithdraw`, and `maxRedeem` for the planned account/request.
+- [x] Execute pinned-fork market supply/borrow/repay/withdraw.
+- [x] Execute pinned-fork vault deposit/withdraw and record actual share rounding.
+- [x] Record every source, retrieval time, verification block/hash, address, and code hash.
+- [x] Make the verifier fail on altered chain, code, market ID, vault asset, or block evidence.
 
 **Acceptance**
 
