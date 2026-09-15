@@ -64,6 +64,7 @@ Return changed files, exact checks and observed results, assumptions, unresolved
 ## Self Learning Logs
 Newest first. At every completed build-plan task and before handoff, record any newly verified, reusable technical lesson in one line: `YYYY-MM-DD — Root cause → rule`. Do not record status, secrets, speculation, or a duplicate lesson.
 
+- 2026-09-15 — Supabase local bootstrap applies timestamp-prefixed migrations during start and reset → use Supabase migration history as the sole runner and avoid reapplying the same SQL through Drizzle.
 - 2026-09-14 — Robinhood L2 block headers omit Cancun blob fields that Anvil 1.8.1 requires → preserve the canonical block hash/state while normalizing only missing zero-valued header fields; do not downgrade the EVM because Vault V2 uses Cancun opcodes.
 - 2026-09-14 — Morpho Vault V2 deliberately returns zero from all ERC-4626 `max*` functions → identify the exact vault generation and use its fresh withdrawal options plus exact simulation instead of treating zero as unavailable liquidity.
 - 2026-09-13 — Morpho collateral does not earn supply yield → attribute yield only to deployed loan-token assets.

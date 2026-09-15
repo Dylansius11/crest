@@ -1,0 +1,4620 @@
+{
+  "id": "d247bd41-5cb4-473e-b0cc-cdd89ae5f1a8",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.account_snapshots": {
+      "name": "account_snapshots",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "crest_account_id": {
+          "name": "crest_account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "owner_address": {
+          "name": "owner_address",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "guardian_address": {
+          "name": "guardian_address",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "market_id": {
+          "name": "market_id",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "vault_deployment_id": {
+          "name": "vault_deployment_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "max_collateral_assets": {
+          "name": "max_collateral_assets",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "debt_ceiling_assets": {
+          "name": "debt_ceiling_assets",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "max_strategy_assets": {
+          "name": "max_strategy_assets",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reserve_floor_assets": {
+          "name": "reserve_floor_assets",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "strategy_floor_assets": {
+          "name": "strategy_floor_assets",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "max_repay_per_action_assets": {
+          "name": "max_repay_per_action_assets",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "lower_ltv_wad": {
+          "name": "lower_ltv_wad",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "target_ltv_wad": {
+          "name": "target_ltv_wad",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "upper_ltv_wad": {
+          "name": "upper_ltv_wad",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "critical_ltv_wad": {
+          "name": "critical_ltv_wad",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "borrowing_frozen": {
+          "name": "borrowing_frozen",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "policy_nonce": {
+          "name": "policy_nonce",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "loan_token_balance": {
+          "name": "loan_token_balance",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "collateral_token_balance": {
+          "name": "collateral_token_balance",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "vault_share_balance": {
+          "name": "vault_share_balance",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "block_number": {
+          "name": "block_number",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "block_hash": {
+          "name": "block_hash",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "block_time": {
+          "name": "block_time",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "canonical": {
+          "name": "canonical",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "observed_at": {
+          "name": "observed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider_key": {
+          "name": "provider_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reorged_at": {
+          "name": "reorged_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "account_snapshots_account_id_idx": {
+          "name": "account_snapshots_account_id_idx",
+          "columns": [
+            {
+              "expression": "crest_account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "account_snapshots_market_id_idx": {
+          "name": "account_snapshots_market_id_idx",
+          "columns": [
+            {
+              "expression": "market_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "account_snapshots_vault_id_idx": {
+          "name": "account_snapshots_vault_id_idx",
+          "columns": [
+            {
+              "expression": "vault_deployment_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "account_snapshots_crest_account_id_crest_accounts_id_fk": {
+          "name": "account_snapshots_crest_account_id_crest_accounts_id_fk",
+          "tableFrom": "account_snapshots",
+          "tableTo": "crest_accounts",
+          "columnsFrom": [
+            "crest_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "account_snapshots_market_id_morpho_markets_id_fk": {
+          "name": "account_snapshots_market_id_morpho_markets_id_fk",
+          "tableFrom": "account_snapshots",
+          "tableTo": "morpho_markets",
+          "columnsFrom": [
+            "market_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "account_snapshots_vault_deployment_id_vault_deployments_id_fk": {
+          "name": "account_snapshots_vault_deployment_id_vault_deployments_id_fk",
+          "tableFrom": "account_snapshots",
+          "tableTo": "vault_deployments",
+          "columnsFrom": [
+            "vault_deployment_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "account_snapshots_account_block_unique": {
+          "name": "account_snapshots_account_block_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "crest_account_id",
+            "block_hash"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "account_snapshots_ltv_ordered": {
+          "name": "account_snapshots_ltv_ordered",
+          "value": "\"account_snapshots\".\"lower_ltv_wad\" < \"account_snapshots\".\"target_ltv_wad\" and \"account_snapshots\".\"target_ltv_wad\" < \"account_snapshots\".\"upper_ltv_wad\" and \"account_snapshots\".\"upper_ltv_wad\" < \"account_snapshots\".\"critical_ltv_wad\""
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.assessment_inputs": {
+      "name": "assessment_inputs",
+      "schema": "",
+      "columns": {
+        "assessment_id": {
+          "name": "assessment_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "input_kind": {
+          "name": "input_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "observation_id": {
+          "name": "observation_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "purpose": {
+          "name": "purpose",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "assessment_inputs_observation_id_idx": {
+          "name": "assessment_inputs_observation_id_idx",
+          "columns": [
+            {
+              "expression": "observation_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "assessment_inputs_assessment_id_risk_assessments_id_fk": {
+          "name": "assessment_inputs_assessment_id_risk_assessments_id_fk",
+          "tableFrom": "assessment_inputs",
+          "tableTo": "risk_assessments",
+          "columnsFrom": [
+            "assessment_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "assessment_inputs_assessment_id_input_kind_observation_id_pk": {
+          "name": "assessment_inputs_assessment_id_input_kind_observation_id_pk",
+          "columns": [
+            "assessment_id",
+            "input_kind",
+            "observation_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": true
+    },
+    "public.asset_intents": {
+      "name": "asset_intents",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "owner_id": {
+          "name": "owner_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "crest_account_id": {
+          "name": "crest_account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "token_deployment_id": {
+          "name": "token_deployment_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "intent": {
+          "name": "intent",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "market_id": {
+          "name": "market_id",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "vault_deployment_id": {
+          "name": "vault_deployment_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "policy_version": {
+          "name": "policy_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reason_codes": {
+          "name": "reason_codes",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::text[]"
+        },
+        "prepared_calldata_hash": {
+          "name": "prepared_calldata_hash",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "effective_at": {
+          "name": "effective_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "asset_intents_owner_id_idx": {
+          "name": "asset_intents_owner_id_idx",
+          "columns": [
+            {
+              "expression": "owner_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "asset_intents_account_id_idx": {
+          "name": "asset_intents_account_id_idx",
+          "columns": [
+            {
+              "expression": "crest_account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "asset_intents_token_id_idx": {
+          "name": "asset_intents_token_id_idx",
+          "columns": [
+            {
+              "expression": "token_deployment_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "asset_intents_owner_id_owners_id_fk": {
+          "name": "asset_intents_owner_id_owners_id_fk",
+          "tableFrom": "asset_intents",
+          "tableTo": "owners",
+          "columnsFrom": [
+            "owner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "asset_intents_crest_account_id_crest_accounts_id_fk": {
+          "name": "asset_intents_crest_account_id_crest_accounts_id_fk",
+          "tableFrom": "asset_intents",
+          "tableTo": "crest_accounts",
+          "columnsFrom": [
+            "crest_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "asset_intents_token_deployment_id_token_deployments_id_fk": {
+          "name": "asset_intents_token_deployment_id_token_deployments_id_fk",
+          "tableFrom": "asset_intents",
+          "tableTo": "token_deployments",
+          "columnsFrom": [
+            "token_deployment_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "asset_intents_market_id_morpho_markets_id_fk": {
+          "name": "asset_intents_market_id_morpho_markets_id_fk",
+          "tableFrom": "asset_intents",
+          "tableTo": "morpho_markets",
+          "columnsFrom": [
+            "market_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "asset_intents_vault_deployment_id_vault_deployments_id_fk": {
+          "name": "asset_intents_vault_deployment_id_vault_deployments_id_fk",
+          "tableFrom": "asset_intents",
+          "tableTo": "vault_deployments",
+          "columnsFrom": [
+            "vault_deployment_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "asset_intents_kind_valid": {
+          "name": "asset_intents_kind_valid",
+          "value": "\"asset_intents\".\"intent\" in ('KEEP','PROTECT_AND_BORROW','EARN_STABLE','EARN_ASSET','UNSUPPORTED')"
+        },
+        "asset_intents_no_forbidden_calldata": {
+          "name": "asset_intents_no_forbidden_calldata",
+          "value": "\"asset_intents\".\"intent\" not in ('KEEP','UNSUPPORTED') or \"asset_intents\".\"prepared_calldata_hash\" is null"
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.assets": {
+      "name": "assets",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "provider_uid": {
+          "name": "provider_uid",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "canonical_symbol": {
+          "name": "canonical_symbol",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "underlying_symbol": {
+          "name": "underlying_symbol",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "jurisdiction_note_version": {
+          "name": "jurisdiction_note_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "metadata_json": {
+          "name": "metadata_json",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "assets_kind_valid": {
+          "name": "assets_kind_valid",
+          "value": "\"assets\".\"kind\" in ('stock_token','crypto','stablecoin','vault_share')"
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.automation_runs": {
+      "name": "automation_runs",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "trigger_id": {
+          "name": "trigger_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "guardian_address": {
+          "name": "guardian_address",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "selector": {
+          "name": "selector",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "observed_policy_nonce": {
+          "name": "observed_policy_nonce",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "failure_class": {
+          "name": "failure_class",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "retry_count": {
+          "name": "retry_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "started_at": {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "finished_at": {
+          "name": "finished_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "automation_runs_trigger_id_automation_triggers_id_fk": {
+          "name": "automation_runs_trigger_id_automation_triggers_id_fk",
+          "tableFrom": "automation_runs",
+          "tableTo": "automation_triggers",
+          "columnsFrom": [
+            "trigger_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "automation_runs_trigger_unique": {
+          "name": "automation_runs_trigger_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "trigger_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "automation_runs_selector_allowed": {
+          "name": "automation_runs_selector_allowed",
+          "value": "\"automation_runs\".\"selector\" in ('freezeBorrowing()','repayFromReserve(uint256)','repayFromStrategy(uint256)')"
+        },
+        "automation_runs_retry_nonnegative": {
+          "name": "automation_runs_retry_nonnegative",
+          "value": "\"automation_runs\".\"retry_count\" >= 0"
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.automation_triggers": {
+      "name": "automation_triggers",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "idempotency_key": {
+          "name": "idempotency_key",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "assessment_id": {
+          "name": "assessment_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "policy_id": {
+          "name": "policy_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "action_kind": {
+          "name": "action_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "requested_assets": {
+          "name": "requested_assets",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reason_codes": {
+          "name": "reason_codes",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::text[]"
+        },
+        "detected_at": {
+          "name": "detected_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "claimed_at": {
+          "name": "claimed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lease_expires_at": {
+          "name": "lease_expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "completed_at": {
+          "name": "completed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "automation_triggers_assessment_id_idx": {
+          "name": "automation_triggers_assessment_id_idx",
+          "columns": [
+            {
+              "expression": "assessment_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "automation_triggers_policy_id_idx": {
+          "name": "automation_triggers_policy_id_idx",
+          "columns": [
+            {
+              "expression": "policy_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "automation_triggers_assessment_id_risk_assessments_id_fk": {
+          "name": "automation_triggers_assessment_id_risk_assessments_id_fk",
+          "tableFrom": "automation_triggers",
+          "tableTo": "risk_assessments",
+          "columnsFrom": [
+            "assessment_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "automation_triggers_policy_id_policies_id_fk": {
+          "name": "automation_triggers_policy_id_policies_id_fk",
+          "tableFrom": "automation_triggers",
+          "tableTo": "policies",
+          "columnsFrom": [
+            "policy_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "automation_triggers_idempotency_unique": {
+          "name": "automation_triggers_idempotency_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "idempotency_key"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "automation_triggers_action_valid": {
+          "name": "automation_triggers_action_valid",
+          "value": "\"automation_triggers\".\"action_kind\" in ('freeze','repay_reserve','repay_strategy')"
+        },
+        "automation_triggers_amount_shape": {
+          "name": "automation_triggers_amount_shape",
+          "value": "(\"automation_triggers\".\"action_kind\" = 'freeze' and \"automation_triggers\".\"requested_assets\" is null) or (\"automation_triggers\".\"action_kind\" <> 'freeze' and \"automation_triggers\".\"requested_assets\" > 0)"
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.corporate_actions": {
+      "name": "corporate_actions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "asset_id": {
+          "name": "asset_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider_action_id": {
+          "name": "provider_action_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "action_type": {
+          "name": "action_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "details": {
+          "name": "details",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "payload_hash": {
+          "name": "payload_hash",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "first_seen_at": {
+          "name": "first_seen_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "last_seen_at": {
+          "name": "last_seen_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "corporate_actions_asset_id_idx": {
+          "name": "corporate_actions_asset_id_idx",
+          "columns": [
+            {
+              "expression": "asset_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "corporate_actions_asset_id_assets_id_fk": {
+          "name": "corporate_actions_asset_id_assets_id_fk",
+          "tableFrom": "corporate_actions",
+          "tableTo": "assets",
+          "columnsFrom": [
+            "asset_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "corporate_actions_provider_id_unique": {
+          "name": "corporate_actions_provider_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "provider_action_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": true
+    },
+    "public.crest_accounts": {
+      "name": "crest_accounts",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "chain_id": {
+          "name": "chain_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "address": {
+          "name": "address",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "owner_id": {
+          "name": "owner_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "deployment_transaction_hash": {
+          "name": "deployment_transaction_hash",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "deployment_block_number": {
+          "name": "deployment_block_number",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "contract_version": {
+          "name": "contract_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "code_hash": {
+          "name": "code_hash",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "indexed_policy_nonce": {
+          "name": "indexed_policy_nonce",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "crest_accounts_owner_id_idx": {
+          "name": "crest_accounts_owner_id_idx",
+          "columns": [
+            {
+              "expression": "owner_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "crest_accounts_chain_id_idx": {
+          "name": "crest_accounts_chain_id_idx",
+          "columns": [
+            {
+              "expression": "chain_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "crest_accounts_chain_id_networks_chain_id_fk": {
+          "name": "crest_accounts_chain_id_networks_chain_id_fk",
+          "tableFrom": "crest_accounts",
+          "tableTo": "networks",
+          "columnsFrom": [
+            "chain_id"
+          ],
+          "columnsTo": [
+            "chain_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "crest_accounts_owner_id_owners_id_fk": {
+          "name": "crest_accounts_owner_id_owners_id_fk",
+          "tableFrom": "crest_accounts",
+          "tableTo": "owners",
+          "columnsFrom": [
+            "owner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "crest_accounts_chain_address_unique": {
+          "name": "crest_accounts_chain_address_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "chain_id",
+            "address"
+          ]
+        },
+        "crest_accounts_id_address_unique": {
+          "name": "crest_accounts_id_address_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "id",
+            "address"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "crest_accounts_address_length": {
+          "name": "crest_accounts_address_length",
+          "value": "octet_length(\"crest_accounts\".\"address\") = 20"
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.indexer_cursors": {
+      "name": "indexer_cursors",
+      "schema": "",
+      "columns": {
+        "chain_id": {
+          "name": "chain_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "stream_key": {
+          "name": "stream_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "last_canonical_block_number": {
+          "name": "last_canonical_block_number",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "last_canonical_block_hash": {
+          "name": "last_canonical_block_hash",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "indexer_cursors_chain_id_networks_chain_id_fk": {
+          "name": "indexer_cursors_chain_id_networks_chain_id_fk",
+          "tableFrom": "indexer_cursors",
+          "tableTo": "networks",
+          "columnsFrom": [
+            "chain_id"
+          ],
+          "columnsTo": [
+            "chain_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "indexer_cursors_chain_id_stream_key_pk": {
+          "name": "indexer_cursors_chain_id_stream_key_pk",
+          "columns": [
+            "chain_id",
+            "stream_key"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": true
+    },
+    "public.ltv_policies": {
+      "name": "ltv_policies",
+      "schema": "",
+      "columns": {
+        "policy_id": {
+          "name": "policy_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "lower_ltv_wad": {
+          "name": "lower_ltv_wad",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "target_ltv_wad": {
+          "name": "target_ltv_wad",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "upper_ltv_wad": {
+          "name": "upper_ltv_wad",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "critical_ltv_wad": {
+          "name": "critical_ltv_wad",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "market_lltv_wad": {
+          "name": "market_lltv_wad",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "ltv_policies_policy_lltv_fk": {
+          "name": "ltv_policies_policy_lltv_fk",
+          "tableFrom": "ltv_policies",
+          "tableTo": "policies",
+          "columnsFrom": [
+            "policy_id",
+            "market_lltv_wad"
+          ],
+          "columnsTo": [
+            "id",
+            "market_lltv_wad"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "ltv_policies_ordered": {
+          "name": "ltv_policies_ordered",
+          "value": "\"ltv_policies\".\"lower_ltv_wad\" >= 0 and \"ltv_policies\".\"lower_ltv_wad\" < \"ltv_policies\".\"target_ltv_wad\" and \"ltv_policies\".\"target_ltv_wad\" < \"ltv_policies\".\"upper_ltv_wad\" and \"ltv_policies\".\"upper_ltv_wad\" < \"ltv_policies\".\"critical_ltv_wad\" and \"ltv_policies\".\"critical_ltv_wad\" < \"ltv_policies\".\"market_lltv_wad\""
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.market_policies": {
+      "name": "market_policies",
+      "schema": "",
+      "columns": {
+        "policy_id": {
+          "name": "policy_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "max_collateral_assets": {
+          "name": "max_collateral_assets",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "debt_ceiling_assets": {
+          "name": "debt_ceiling_assets",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "enabled": {
+          "name": "enabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "market_policies_policy_id_policies_id_fk": {
+          "name": "market_policies_policy_id_policies_id_fk",
+          "tableFrom": "market_policies",
+          "tableTo": "policies",
+          "columnsFrom": [
+            "policy_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "market_policies_caps_positive": {
+          "name": "market_policies_caps_positive",
+          "value": "\"market_policies\".\"max_collateral_assets\" > 0 and \"market_policies\".\"debt_ceiling_assets\" > 0"
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.market_snapshots": {
+      "name": "market_snapshots",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "market_id": {
+          "name": "market_id",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "total_supply_assets": {
+          "name": "total_supply_assets",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "total_supply_shares": {
+          "name": "total_supply_shares",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "total_borrow_assets": {
+          "name": "total_borrow_assets",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "total_borrow_shares": {
+          "name": "total_borrow_shares",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "available_loan_assets": {
+          "name": "available_loan_assets",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "borrow_rate_value": {
+          "name": "borrow_rate_value",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "borrow_rate_scale": {
+          "name": "borrow_rate_scale",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "oracle_value": {
+          "name": "oracle_value",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "oracle_scale": {
+          "name": "oracle_scale",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "oracle_status": {
+          "name": "oracle_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sequencer_status": {
+          "name": "sequencer_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "route_status": {
+          "name": "route_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reason_codes": {
+          "name": "reason_codes",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::text[]"
+        },
+        "block_number": {
+          "name": "block_number",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "block_hash": {
+          "name": "block_hash",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "block_time": {
+          "name": "block_time",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "canonical": {
+          "name": "canonical",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "observed_at": {
+          "name": "observed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider_key": {
+          "name": "provider_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reorged_at": {
+          "name": "reorged_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "market_snapshots_market_id_idx": {
+          "name": "market_snapshots_market_id_idx",
+          "columns": [
+            {
+              "expression": "market_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "market_snapshots_market_id_morpho_markets_id_fk": {
+          "name": "market_snapshots_market_id_morpho_markets_id_fk",
+          "tableFrom": "market_snapshots",
+          "tableTo": "morpho_markets",
+          "columnsFrom": [
+            "market_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "market_snapshots_market_block_unique": {
+          "name": "market_snapshots_market_block_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "market_id",
+            "block_hash"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "market_snapshots_rate_scale_positive": {
+          "name": "market_snapshots_rate_scale_positive",
+          "value": "\"market_snapshots\".\"borrow_rate_scale\" > 0"
+        },
+        "market_snapshots_oracle_scale_positive": {
+          "name": "market_snapshots_oracle_scale_positive",
+          "value": "\"market_snapshots\".\"oracle_scale\" > 0"
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.morpho_deployments": {
+      "name": "morpho_deployments",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "chain_id": {
+          "name": "chain_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "address": {
+          "name": "address",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "code_hash": {
+          "name": "code_hash",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "version": {
+          "name": "version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_url": {
+          "name": "source_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "verified_block_number": {
+          "name": "verified_block_number",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "verified_block_hash": {
+          "name": "verified_block_hash",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "verified_at": {
+          "name": "verified_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "morpho_deployments_chain_id_idx": {
+          "name": "morpho_deployments_chain_id_idx",
+          "columns": [
+            {
+              "expression": "chain_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "morpho_deployments_chain_id_networks_chain_id_fk": {
+          "name": "morpho_deployments_chain_id_networks_chain_id_fk",
+          "tableFrom": "morpho_deployments",
+          "tableTo": "networks",
+          "columnsFrom": [
+            "chain_id"
+          ],
+          "columnsTo": [
+            "chain_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "morpho_deployments_chain_address_unique": {
+          "name": "morpho_deployments_chain_address_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "chain_id",
+            "address"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "morpho_deployments_address_length": {
+          "name": "morpho_deployments_address_length",
+          "value": "octet_length(\"morpho_deployments\".\"address\") = 20"
+        },
+        "morpho_deployments_code_hash_length": {
+          "name": "morpho_deployments_code_hash_length",
+          "value": "octet_length(\"morpho_deployments\".\"code_hash\") = 32"
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.morpho_markets": {
+      "name": "morpho_markets",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bytea",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "morpho_deployment_id": {
+          "name": "morpho_deployment_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "loan_token_id": {
+          "name": "loan_token_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "collateral_token_id": {
+          "name": "collateral_token_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "oracle_address": {
+          "name": "oracle_address",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "irm_address": {
+          "name": "irm_address",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "lltv_wad": {
+          "name": "lltv_wad",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "params_hash_verified": {
+          "name": "params_hash_verified",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status_reason_codes": {
+          "name": "status_reason_codes",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::text[]"
+        },
+        "verified_at": {
+          "name": "verified_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "morpho_markets_deployment_id_idx": {
+          "name": "morpho_markets_deployment_id_idx",
+          "columns": [
+            {
+              "expression": "morpho_deployment_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "morpho_markets_loan_token_id_idx": {
+          "name": "morpho_markets_loan_token_id_idx",
+          "columns": [
+            {
+              "expression": "loan_token_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "morpho_markets_collateral_token_id_idx": {
+          "name": "morpho_markets_collateral_token_id_idx",
+          "columns": [
+            {
+              "expression": "collateral_token_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "morpho_markets_morpho_deployment_id_morpho_deployments_id_fk": {
+          "name": "morpho_markets_morpho_deployment_id_morpho_deployments_id_fk",
+          "tableFrom": "morpho_markets",
+          "tableTo": "morpho_deployments",
+          "columnsFrom": [
+            "morpho_deployment_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "morpho_markets_loan_token_id_token_deployments_id_fk": {
+          "name": "morpho_markets_loan_token_id_token_deployments_id_fk",
+          "tableFrom": "morpho_markets",
+          "tableTo": "token_deployments",
+          "columnsFrom": [
+            "loan_token_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "morpho_markets_collateral_token_id_token_deployments_id_fk": {
+          "name": "morpho_markets_collateral_token_id_token_deployments_id_fk",
+          "tableFrom": "morpho_markets",
+          "tableTo": "token_deployments",
+          "columnsFrom": [
+            "collateral_token_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "morpho_markets_route_unique": {
+          "name": "morpho_markets_route_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "id",
+            "loan_token_id",
+            "lltv_wad"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "morpho_markets_id_length": {
+          "name": "morpho_markets_id_length",
+          "value": "octet_length(\"morpho_markets\".\"id\") = 32"
+        },
+        "morpho_markets_oracle_length": {
+          "name": "morpho_markets_oracle_length",
+          "value": "octet_length(\"morpho_markets\".\"oracle_address\") = 20"
+        },
+        "morpho_markets_irm_length": {
+          "name": "morpho_markets_irm_length",
+          "value": "octet_length(\"morpho_markets\".\"irm_address\") = 20"
+        },
+        "morpho_markets_lltv_range": {
+          "name": "morpho_markets_lltv_range",
+          "value": "\"morpho_markets\".\"lltv_wad\" > 0 and \"morpho_markets\".\"lltv_wad\" <= 1000000000000000000"
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.networks": {
+      "name": "networks",
+      "schema": "",
+      "columns": {
+        "chain_id": {
+          "name": "chain_id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "native_symbol": {
+          "name": "native_symbol",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "confirmation_depth": {
+          "name": "confirmation_depth",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "enabled": {
+          "name": "enabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "networks_slug_unique": {
+          "name": "networks_slug_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "slug"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "networks_confirmation_depth_nonnegative": {
+          "name": "networks_confirmation_depth_nonnegative",
+          "value": "\"networks\".\"confirmation_depth\" >= 0"
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.owners": {
+      "name": "owners",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "address": {
+          "name": "address",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "first_seen_at": {
+          "name": "first_seen_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "last_seen_at": {
+          "name": "last_seen_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "owners_address_unique": {
+          "name": "owners_address_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "address"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "owners_address_length": {
+          "name": "owners_address_length",
+          "value": "octet_length(\"owners\".\"address\") = 20"
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.policies": {
+      "name": "policies",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "crest_account_id": {
+          "name": "crest_account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "policy_nonce": {
+          "name": "policy_nonce",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "schema_version": {
+          "name": "schema_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "typed_json": {
+          "name": "typed_json",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "content_hash": {
+          "name": "content_hash",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source": {
+          "name": "source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "configuration_transaction_hash": {
+          "name": "configuration_transaction_hash",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "effective_block_number": {
+          "name": "effective_block_number",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "effective_block_hash": {
+          "name": "effective_block_hash",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "market_id": {
+          "name": "market_id",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "vault_deployment_id": {
+          "name": "vault_deployment_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "loan_token_id": {
+          "name": "loan_token_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "market_lltv_wad": {
+          "name": "market_lltv_wad",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "drafted_at": {
+          "name": "drafted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "activated_at": {
+          "name": "activated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "invalidated_at": {
+          "name": "invalidated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "policies_account_id_idx": {
+          "name": "policies_account_id_idx",
+          "columns": [
+            {
+              "expression": "crest_account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "policies_market_id_idx": {
+          "name": "policies_market_id_idx",
+          "columns": [
+            {
+              "expression": "market_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "policies_vault_id_idx": {
+          "name": "policies_vault_id_idx",
+          "columns": [
+            {
+              "expression": "vault_deployment_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "policies_crest_account_id_crest_accounts_id_fk": {
+          "name": "policies_crest_account_id_crest_accounts_id_fk",
+          "tableFrom": "policies",
+          "tableTo": "crest_accounts",
+          "columnsFrom": [
+            "crest_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "policies_market_route_fk": {
+          "name": "policies_market_route_fk",
+          "tableFrom": "policies",
+          "tableTo": "morpho_markets",
+          "columnsFrom": [
+            "market_id",
+            "loan_token_id",
+            "market_lltv_wad"
+          ],
+          "columnsTo": [
+            "id",
+            "loan_token_id",
+            "lltv_wad"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "policies_vault_asset_fk": {
+          "name": "policies_vault_asset_fk",
+          "tableFrom": "policies",
+          "tableTo": "vault_deployments",
+          "columnsFrom": [
+            "vault_deployment_id",
+            "loan_token_id"
+          ],
+          "columnsTo": [
+            "id",
+            "asset_token_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "policies_account_nonce_unique": {
+          "name": "policies_account_nonce_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "crest_account_id",
+            "policy_nonce"
+          ]
+        },
+        "policies_account_content_hash_unique": {
+          "name": "policies_account_content_hash_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "crest_account_id",
+            "content_hash"
+          ]
+        },
+        "policies_id_market_lltv_unique": {
+          "name": "policies_id_market_lltv_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "id",
+            "market_lltv_wad"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "policies_source_valid": {
+          "name": "policies_source_valid",
+          "value": "\"policies\".\"source\" in ('manual','llm_import')"
+        },
+        "policies_status_valid": {
+          "name": "policies_status_valid",
+          "value": "\"policies\".\"status\" in ('pending','active','superseded','reorged','rejected')"
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.position_snapshots": {
+      "name": "position_snapshots",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "crest_account_id": {
+          "name": "crest_account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "market_id": {
+          "name": "market_id",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "borrow_shares": {
+          "name": "borrow_shares",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "borrow_assets_up": {
+          "name": "borrow_assets_up",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "collateral_assets": {
+          "name": "collateral_assets",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "collateral_value": {
+          "name": "collateral_value",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ltv_wad": {
+          "name": "ltv_wad",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "morpho_health_wad": {
+          "name": "morpho_health_wad",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "block_number": {
+          "name": "block_number",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "block_hash": {
+          "name": "block_hash",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "block_time": {
+          "name": "block_time",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "canonical": {
+          "name": "canonical",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "observed_at": {
+          "name": "observed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider_key": {
+          "name": "provider_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reorged_at": {
+          "name": "reorged_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "position_snapshots_account_id_idx": {
+          "name": "position_snapshots_account_id_idx",
+          "columns": [
+            {
+              "expression": "crest_account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "position_snapshots_market_id_idx": {
+          "name": "position_snapshots_market_id_idx",
+          "columns": [
+            {
+              "expression": "market_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "position_snapshots_crest_account_id_crest_accounts_id_fk": {
+          "name": "position_snapshots_crest_account_id_crest_accounts_id_fk",
+          "tableFrom": "position_snapshots",
+          "tableTo": "crest_accounts",
+          "columnsFrom": [
+            "crest_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "position_snapshots_market_id_morpho_markets_id_fk": {
+          "name": "position_snapshots_market_id_morpho_markets_id_fk",
+          "tableFrom": "position_snapshots",
+          "tableTo": "morpho_markets",
+          "columnsFrom": [
+            "market_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "position_snapshots_account_market_block_unique": {
+          "name": "position_snapshots_account_market_block_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "crest_account_id",
+            "market_id",
+            "block_hash"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "position_snapshots_no_debt_null_health": {
+          "name": "position_snapshots_no_debt_null_health",
+          "value": "\"position_snapshots\".\"borrow_assets_up\" > 0 or (\"position_snapshots\".\"ltv_wad\" is null and \"position_snapshots\".\"morpho_health_wad\" is null)"
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.postcondition_checks": {
+      "name": "postcondition_checks",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "run_id": {
+          "name": "run_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "passed": {
+          "name": "passed",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expected_json": {
+          "name": "expected_json",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "actual_json": {
+          "name": "actual_json",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "checked_block_number": {
+          "name": "checked_block_number",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "checked_block_hash": {
+          "name": "checked_block_hash",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "checked_at": {
+          "name": "checked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "postcondition_checks_run_id_idx": {
+          "name": "postcondition_checks_run_id_idx",
+          "columns": [
+            {
+              "expression": "run_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "postcondition_checks_run_id_automation_runs_id_fk": {
+          "name": "postcondition_checks_run_id_automation_runs_id_fk",
+          "tableFrom": "postcondition_checks",
+          "tableTo": "automation_runs",
+          "columnsFrom": [
+            "run_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "postcondition_checks_run_kind_unique": {
+          "name": "postcondition_checks_run_kind_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "run_id",
+            "kind"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "postcondition_checks_kind_valid": {
+          "name": "postcondition_checks_kind_valid",
+          "value": "\"postcondition_checks\".\"kind\" in ('frozen','debt_decreased','reserve_floor_held','strategy_floor_held','vault_receiver_fixed','repay_beneficiary_fixed')"
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.rate_observations": {
+      "name": "rate_observations",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "subject_kind": {
+          "name": "subject_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "market_id": {
+          "name": "market_id",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "vault_deployment_id": {
+          "name": "vault_deployment_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rate_value": {
+          "name": "rate_value",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rate_scale": {
+          "name": "rate_scale",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "period_kind": {
+          "name": "period_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "gross_or_net": {
+          "name": "gross_or_net",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_url": {
+          "name": "source_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_generated_at": {
+          "name": "source_generated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "fetched_at": {
+          "name": "fetched_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reason_codes": {
+          "name": "reason_codes",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::text[]"
+        }
+      },
+      "indexes": {
+        "rate_observations_market_id_idx": {
+          "name": "rate_observations_market_id_idx",
+          "columns": [
+            {
+              "expression": "market_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "rate_observations_vault_id_idx": {
+          "name": "rate_observations_vault_id_idx",
+          "columns": [
+            {
+              "expression": "vault_deployment_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "rate_observations_market_id_morpho_markets_id_fk": {
+          "name": "rate_observations_market_id_morpho_markets_id_fk",
+          "tableFrom": "rate_observations",
+          "tableTo": "morpho_markets",
+          "columnsFrom": [
+            "market_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "rate_observations_vault_deployment_id_vault_deployments_id_fk": {
+          "name": "rate_observations_vault_deployment_id_vault_deployments_id_fk",
+          "tableFrom": "rate_observations",
+          "tableTo": "vault_deployments",
+          "columnsFrom": [
+            "vault_deployment_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "rate_observations_one_subject": {
+          "name": "rate_observations_one_subject",
+          "value": "num_nonnulls(\"rate_observations\".\"market_id\", \"rate_observations\".\"vault_deployment_id\") = 1"
+        },
+        "rate_observations_scale_positive": {
+          "name": "rate_observations_scale_positive",
+          "value": "\"rate_observations\".\"rate_scale\" > 0"
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.realized_strategy_events": {
+      "name": "realized_strategy_events",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "crest_account_id": {
+          "name": "crest_account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "transaction_hash": {
+          "name": "transaction_hash",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "shares_before": {
+          "name": "shares_before",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "shares_after": {
+          "name": "shares_after",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "assets_before": {
+          "name": "assets_before",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "assets_after": {
+          "name": "assets_after",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "debt_before_assets": {
+          "name": "debt_before_assets",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "debt_after_assets": {
+          "name": "debt_after_assets",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "debt_repaid_assets": {
+          "name": "debt_repaid_assets",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "attributed_fees_assets": {
+          "name": "attributed_fees_assets",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "block_number": {
+          "name": "block_number",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "block_hash": {
+          "name": "block_hash",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "block_time": {
+          "name": "block_time",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "canonical": {
+          "name": "canonical",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "observed_at": {
+          "name": "observed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reorged_at": {
+          "name": "reorged_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "realized_strategy_events_account_id_idx": {
+          "name": "realized_strategy_events_account_id_idx",
+          "columns": [
+            {
+              "expression": "crest_account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "realized_strategy_events_crest_account_id_crest_accounts_id_fk": {
+          "name": "realized_strategy_events_crest_account_id_crest_accounts_id_fk",
+          "tableFrom": "realized_strategy_events",
+          "tableTo": "crest_accounts",
+          "columnsFrom": [
+            "crest_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "realized_strategy_events_transaction_unique": {
+          "name": "realized_strategy_events_transaction_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "transaction_hash",
+            "kind"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "realized_strategy_events_kind_valid": {
+          "name": "realized_strategy_events_kind_valid",
+          "value": "\"realized_strategy_events\".\"kind\" in ('deposit','withdraw','repay')"
+        },
+        "realized_strategy_events_repay_reconciles": {
+          "name": "realized_strategy_events_repay_reconciles",
+          "value": "\"realized_strategy_events\".\"kind\" <> 'repay' or (\"realized_strategy_events\".\"debt_before_assets\" > \"realized_strategy_events\".\"debt_after_assets\" and \"realized_strategy_events\".\"debt_repaid_assets\" = \"realized_strategy_events\".\"debt_before_assets\" - \"realized_strategy_events\".\"debt_after_assets\" and \"realized_strategy_events\".\"debt_repaid_assets\" > 0)"
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.reserve_policies": {
+      "name": "reserve_policies",
+      "schema": "",
+      "columns": {
+        "policy_id": {
+          "name": "policy_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "loan_token_id": {
+          "name": "loan_token_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reserve_floor_assets": {
+          "name": "reserve_floor_assets",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "max_repay_per_action_assets": {
+          "name": "max_repay_per_action_assets",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "reserve_policies_policy_id_policies_id_fk": {
+          "name": "reserve_policies_policy_id_policies_id_fk",
+          "tableFrom": "reserve_policies",
+          "tableTo": "policies",
+          "columnsFrom": [
+            "policy_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "reserve_policies_loan_token_id_token_deployments_id_fk": {
+          "name": "reserve_policies_loan_token_id_token_deployments_id_fk",
+          "tableFrom": "reserve_policies",
+          "tableTo": "token_deployments",
+          "columnsFrom": [
+            "loan_token_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "reserve_policies_repay_cap_positive": {
+          "name": "reserve_policies_repay_cap_positive",
+          "value": "\"reserve_policies\".\"max_repay_per_action_assets\" > 0"
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.risk_assessments": {
+      "name": "risk_assessments",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "crest_account_id": {
+          "name": "crest_account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "policy_id": {
+          "name": "policy_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "account_snapshot_id": {
+          "name": "account_snapshot_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "position_snapshot_id": {
+          "name": "position_snapshot_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "strategy_position_snapshot_id": {
+          "name": "strategy_position_snapshot_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "market_snapshot_id": {
+          "name": "market_snapshot_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "vault_snapshot_id": {
+          "name": "vault_snapshot_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "risk_engine_version": {
+          "name": "risk_engine_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ltv_wad": {
+          "name": "ltv_wad",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "morpho_health_wad": {
+          "name": "morpho_health_wad",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "policy_health_wad": {
+          "name": "policy_health_wad",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "owner_borrow_capacity_assets": {
+          "name": "owner_borrow_capacity_assets",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "repay_capacity_assets": {
+          "name": "repay_capacity_assets",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "estimated_annual_carry_assets": {
+          "name": "estimated_annual_carry_assets",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "estimated_spread_bps": {
+          "name": "estimated_spread_bps",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "recommended_action": {
+          "name": "recommended_action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reason_codes": {
+          "name": "reason_codes",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::text[]"
+        },
+        "canonical_input_hash": {
+          "name": "canonical_input_hash",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "invalidated_at": {
+          "name": "invalidated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "invalidation_reason": {
+          "name": "invalidation_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "risk_assessments_account_id_idx": {
+          "name": "risk_assessments_account_id_idx",
+          "columns": [
+            {
+              "expression": "crest_account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "risk_assessments_policy_id_idx": {
+          "name": "risk_assessments_policy_id_idx",
+          "columns": [
+            {
+              "expression": "policy_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "risk_assessments_crest_account_id_crest_accounts_id_fk": {
+          "name": "risk_assessments_crest_account_id_crest_accounts_id_fk",
+          "tableFrom": "risk_assessments",
+          "tableTo": "crest_accounts",
+          "columnsFrom": [
+            "crest_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "risk_assessments_policy_id_policies_id_fk": {
+          "name": "risk_assessments_policy_id_policies_id_fk",
+          "tableFrom": "risk_assessments",
+          "tableTo": "policies",
+          "columnsFrom": [
+            "policy_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "risk_assessments_account_snapshot_id_account_snapshots_id_fk": {
+          "name": "risk_assessments_account_snapshot_id_account_snapshots_id_fk",
+          "tableFrom": "risk_assessments",
+          "tableTo": "account_snapshots",
+          "columnsFrom": [
+            "account_snapshot_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "risk_assessments_position_snapshot_id_position_snapshots_id_fk": {
+          "name": "risk_assessments_position_snapshot_id_position_snapshots_id_fk",
+          "tableFrom": "risk_assessments",
+          "tableTo": "position_snapshots",
+          "columnsFrom": [
+            "position_snapshot_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "risk_assessments_strategy_position_snapshot_id_strategy_position_snapshots_id_fk": {
+          "name": "risk_assessments_strategy_position_snapshot_id_strategy_position_snapshots_id_fk",
+          "tableFrom": "risk_assessments",
+          "tableTo": "strategy_position_snapshots",
+          "columnsFrom": [
+            "strategy_position_snapshot_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "risk_assessments_market_snapshot_id_market_snapshots_id_fk": {
+          "name": "risk_assessments_market_snapshot_id_market_snapshots_id_fk",
+          "tableFrom": "risk_assessments",
+          "tableTo": "market_snapshots",
+          "columnsFrom": [
+            "market_snapshot_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "risk_assessments_vault_snapshot_id_vault_snapshots_id_fk": {
+          "name": "risk_assessments_vault_snapshot_id_vault_snapshots_id_fk",
+          "tableFrom": "risk_assessments",
+          "tableTo": "vault_snapshots",
+          "columnsFrom": [
+            "vault_snapshot_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "risk_assessments_state_valid": {
+          "name": "risk_assessments_state_valid",
+          "value": "\"risk_assessments\".\"status\" in ('NORMAL','HARVESTABLE','UPSIZE_AVAILABLE','PROTECT','EXIT_YIELD','CRITICAL','DEGRADED')"
+        },
+        "risk_assessments_action_valid": {
+          "name": "risk_assessments_action_valid",
+          "value": "\"risk_assessments\".\"recommended_action\" in ('none','owner_borrow','freeze','repay_reserve','repay_strategy','owner_review')"
+        },
+        "risk_assessments_degraded_capacity_zero": {
+          "name": "risk_assessments_degraded_capacity_zero",
+          "value": "\"risk_assessments\".\"status\" <> 'DEGRADED' or \"risk_assessments\".\"owner_borrow_capacity_assets\" = 0"
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.robinhood_signals": {
+      "name": "robinhood_signals",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "asset_id": {
+          "name": "asset_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider_signal_id": {
+          "name": "provider_signal_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider_generated_at": {
+          "name": "provider_generated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "fetched_at": {
+          "name": "fetched_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "validated_payload": {
+          "name": "validated_payload",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "payload_hash": {
+          "name": "payload_hash",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reason_codes": {
+          "name": "reason_codes",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::text[]"
+        }
+      },
+      "indexes": {
+        "robinhood_signals_asset_id_idx": {
+          "name": "robinhood_signals_asset_id_idx",
+          "columns": [
+            {
+              "expression": "asset_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "robinhood_signals_asset_id_assets_id_fk": {
+          "name": "robinhood_signals_asset_id_assets_id_fk",
+          "tableFrom": "robinhood_signals",
+          "tableTo": "assets",
+          "columnsFrom": [
+            "asset_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "robinhood_signals_provider_id_unique": {
+          "name": "robinhood_signals_provider_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "kind",
+            "provider_signal_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "robinhood_signals_kind_valid": {
+          "name": "robinhood_signals_kind_valid",
+          "value": "\"robinhood_signals\".\"kind\" in ('asset_status','underlying_price','halt','multiplier')"
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.scenario_results": {
+      "name": "scenario_results",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "assessment_id": {
+          "name": "assessment_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "scenario_id": {
+          "name": "scenario_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "stressed_collateral_value": {
+          "name": "stressed_collateral_value",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "stressed_debt_assets": {
+          "name": "stressed_debt_assets",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "stressed_vault_liquidity_assets": {
+          "name": "stressed_vault_liquidity_assets",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "stressed_health_wad": {
+          "name": "stressed_health_wad",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "stressed_capacity_assets": {
+          "name": "stressed_capacity_assets",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reason_codes": {
+          "name": "reason_codes",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::text[]"
+        }
+      },
+      "indexes": {
+        "scenario_results_assessment_id_idx": {
+          "name": "scenario_results_assessment_id_idx",
+          "columns": [
+            {
+              "expression": "assessment_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "scenario_results_scenario_id_idx": {
+          "name": "scenario_results_scenario_id_idx",
+          "columns": [
+            {
+              "expression": "scenario_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "scenario_results_assessment_id_risk_assessments_id_fk": {
+          "name": "scenario_results_assessment_id_risk_assessments_id_fk",
+          "tableFrom": "scenario_results",
+          "tableTo": "risk_assessments",
+          "columnsFrom": [
+            "assessment_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "scenario_results_scenario_id_stress_scenarios_id_fk": {
+          "name": "scenario_results_scenario_id_stress_scenarios_id_fk",
+          "tableFrom": "scenario_results",
+          "tableTo": "stress_scenarios",
+          "columnsFrom": [
+            "scenario_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "scenario_results_assessment_scenario_unique": {
+          "name": "scenario_results_assessment_scenario_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "assessment_id",
+            "scenario_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": true
+    },
+    "public.strategy_policies": {
+      "name": "strategy_policies",
+      "schema": "",
+      "columns": {
+        "policy_id": {
+          "name": "policy_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "max_strategy_assets": {
+          "name": "max_strategy_assets",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "strategy_floor_assets": {
+          "name": "strategy_floor_assets",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "minimum_net_spread_bps": {
+          "name": "minimum_net_spread_bps",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "enabled": {
+          "name": "enabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "strategy_policies_policy_id_policies_id_fk": {
+          "name": "strategy_policies_policy_id_policies_id_fk",
+          "tableFrom": "strategy_policies",
+          "tableTo": "policies",
+          "columnsFrom": [
+            "policy_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "strategy_policies_floor_bounded": {
+          "name": "strategy_policies_floor_bounded",
+          "value": "\"strategy_policies\".\"strategy_floor_assets\" <= \"strategy_policies\".\"max_strategy_assets\""
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.strategy_position_snapshots": {
+      "name": "strategy_position_snapshots",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "crest_account_id": {
+          "name": "crest_account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "vault_deployment_id": {
+          "name": "vault_deployment_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "share_balance": {
+          "name": "share_balance",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "quoted_assets": {
+          "name": "quoted_assets",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "max_withdrawable_assets": {
+          "name": "max_withdrawable_assets",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "strategy_floor_assets": {
+          "name": "strategy_floor_assets",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "actionable_assets": {
+          "name": "actionable_assets",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "block_number": {
+          "name": "block_number",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "block_hash": {
+          "name": "block_hash",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "block_time": {
+          "name": "block_time",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "canonical": {
+          "name": "canonical",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "observed_at": {
+          "name": "observed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider_key": {
+          "name": "provider_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reorged_at": {
+          "name": "reorged_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "strategy_position_account_id_idx": {
+          "name": "strategy_position_account_id_idx",
+          "columns": [
+            {
+              "expression": "crest_account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "strategy_position_vault_id_idx": {
+          "name": "strategy_position_vault_id_idx",
+          "columns": [
+            {
+              "expression": "vault_deployment_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "strategy_position_snapshots_crest_account_id_crest_accounts_id_fk": {
+          "name": "strategy_position_snapshots_crest_account_id_crest_accounts_id_fk",
+          "tableFrom": "strategy_position_snapshots",
+          "tableTo": "crest_accounts",
+          "columnsFrom": [
+            "crest_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "strategy_position_snapshots_vault_deployment_id_vault_deployments_id_fk": {
+          "name": "strategy_position_snapshots_vault_deployment_id_vault_deployments_id_fk",
+          "tableFrom": "strategy_position_snapshots",
+          "tableTo": "vault_deployments",
+          "columnsFrom": [
+            "vault_deployment_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "strategy_position_account_vault_block_unique": {
+          "name": "strategy_position_account_vault_block_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "crest_account_id",
+            "vault_deployment_id",
+            "block_hash"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "strategy_position_actionable_bounded": {
+          "name": "strategy_position_actionable_bounded",
+          "value": "\"strategy_position_snapshots\".\"actionable_assets\" <= \"strategy_position_snapshots\".\"max_withdrawable_assets\""
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.stress_scenarios": {
+      "name": "stress_scenarios",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "version": {
+          "name": "version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provenance": {
+          "name": "provenance",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "configuration": {
+          "name": "configuration",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "stress_scenarios_status_valid": {
+          "name": "stress_scenarios_status_valid",
+          "value": "\"stress_scenarios\".\"status\" in ('illustrative','calibrated')"
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.token_deployments": {
+      "name": "token_deployments",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "asset_id": {
+          "name": "asset_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "chain_id": {
+          "name": "chain_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "address": {
+          "name": "address",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "decimals": {
+          "name": "decimals",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "code_hash": {
+          "name": "code_hash",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_url": {
+          "name": "source_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "verified_block_number": {
+          "name": "verified_block_number",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "verified_block_hash": {
+          "name": "verified_block_hash",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "verified_at": {
+          "name": "verified_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "token_deployments_asset_id_idx": {
+          "name": "token_deployments_asset_id_idx",
+          "columns": [
+            {
+              "expression": "asset_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "token_deployments_chain_id_idx": {
+          "name": "token_deployments_chain_id_idx",
+          "columns": [
+            {
+              "expression": "chain_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "token_deployments_asset_id_assets_id_fk": {
+          "name": "token_deployments_asset_id_assets_id_fk",
+          "tableFrom": "token_deployments",
+          "tableTo": "assets",
+          "columnsFrom": [
+            "asset_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "token_deployments_chain_id_networks_chain_id_fk": {
+          "name": "token_deployments_chain_id_networks_chain_id_fk",
+          "tableFrom": "token_deployments",
+          "tableTo": "networks",
+          "columnsFrom": [
+            "chain_id"
+          ],
+          "columnsTo": [
+            "chain_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "token_deployments_chain_address_unique": {
+          "name": "token_deployments_chain_address_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "chain_id",
+            "address"
+          ]
+        },
+        "token_deployments_id_asset_unique": {
+          "name": "token_deployments_id_asset_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "id",
+            "asset_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "token_deployments_address_length": {
+          "name": "token_deployments_address_length",
+          "value": "octet_length(\"token_deployments\".\"address\") = 20"
+        },
+        "token_deployments_code_hash_length": {
+          "name": "token_deployments_code_hash_length",
+          "value": "octet_length(\"token_deployments\".\"code_hash\") = 32"
+        },
+        "token_deployments_decimals_range": {
+          "name": "token_deployments_decimals_range",
+          "value": "\"token_deployments\".\"decimals\" between 0 and 255"
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.transaction_attempts": {
+      "name": "transaction_attempts",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "run_id": {
+          "name": "run_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "attempt_number": {
+          "name": "attempt_number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "chain_id": {
+          "name": "chain_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "crest_account_id": {
+          "name": "crest_account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "from_address": {
+          "name": "from_address",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "to_address": {
+          "name": "to_address",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "calldata_hash": {
+          "name": "calldata_hash",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "decoded_operation": {
+          "name": "decoded_operation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "simulation_block_number": {
+          "name": "simulation_block_number",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "simulation_success": {
+          "name": "simulation_success",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "simulation_gas": {
+          "name": "simulation_gas",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "nonce": {
+          "name": "nonce",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "transaction_hash": {
+          "name": "transaction_hash",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "submission_status": {
+          "name": "submission_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "error": {
+          "name": "error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "submitted_at": {
+          "name": "submitted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "transaction_attempts_hash_unique": {
+          "name": "transaction_attempts_hash_unique",
+          "columns": [
+            {
+              "expression": "transaction_hash",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"transaction_attempts\".\"transaction_hash\" is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "transaction_attempts_account_id_idx": {
+          "name": "transaction_attempts_account_id_idx",
+          "columns": [
+            {
+              "expression": "crest_account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "transaction_attempts_run_id_automation_runs_id_fk": {
+          "name": "transaction_attempts_run_id_automation_runs_id_fk",
+          "tableFrom": "transaction_attempts",
+          "tableTo": "automation_runs",
+          "columnsFrom": [
+            "run_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "transaction_attempts_chain_id_networks_chain_id_fk": {
+          "name": "transaction_attempts_chain_id_networks_chain_id_fk",
+          "tableFrom": "transaction_attempts",
+          "tableTo": "networks",
+          "columnsFrom": [
+            "chain_id"
+          ],
+          "columnsTo": [
+            "chain_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "transaction_attempts_fixed_target_fk": {
+          "name": "transaction_attempts_fixed_target_fk",
+          "tableFrom": "transaction_attempts",
+          "tableTo": "crest_accounts",
+          "columnsFrom": [
+            "crest_account_id",
+            "to_address"
+          ],
+          "columnsTo": [
+            "id",
+            "address"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "transaction_attempts_run_number_unique": {
+          "name": "transaction_attempts_run_number_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "run_id",
+            "attempt_number"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "transaction_attempts_operation_allowed": {
+          "name": "transaction_attempts_operation_allowed",
+          "value": "\"transaction_attempts\".\"decoded_operation\" in ('freezeBorrowing()','repayFromReserve(uint256)','repayFromStrategy(uint256)')"
+        },
+        "transaction_attempts_number_positive": {
+          "name": "transaction_attempts_number_positive",
+          "value": "\"transaction_attempts\".\"attempt_number\" > 0"
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.transaction_receipts": {
+      "name": "transaction_receipts",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "attempt_id": {
+          "name": "attempt_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "block_number": {
+          "name": "block_number",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "block_hash": {
+          "name": "block_hash",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "canonical": {
+          "name": "canonical",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "success": {
+          "name": "success",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "revert_reason": {
+          "name": "revert_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "gas_used": {
+          "name": "gas_used",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "decoded_events": {
+          "name": "decoded_events",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "observed_at": {
+          "name": "observed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reorged_at": {
+          "name": "reorged_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "transaction_receipts_attempt_id_transaction_attempts_id_fk": {
+          "name": "transaction_receipts_attempt_id_transaction_attempts_id_fk",
+          "tableFrom": "transaction_receipts",
+          "tableTo": "transaction_attempts",
+          "columnsFrom": [
+            "attempt_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "transaction_receipts_attempt_unique": {
+          "name": "transaction_receipts_attempt_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "attempt_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": true
+    },
+    "public.vault_deployments": {
+      "name": "vault_deployments",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "chain_id": {
+          "name": "chain_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "address": {
+          "name": "address",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "asset_token_id": {
+          "name": "asset_token_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "share_decimals": {
+          "name": "share_decimals",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "interface_kind": {
+          "name": "interface_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "adapter_address": {
+          "name": "adapter_address",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "code_hash": {
+          "name": "code_hash",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "upgradeability_kind": {
+          "name": "upgradeability_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "manager_json": {
+          "name": "manager_json",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reason_codes": {
+          "name": "reason_codes",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::text[]"
+        },
+        "source_url": {
+          "name": "source_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "verified_block_number": {
+          "name": "verified_block_number",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "verified_block_hash": {
+          "name": "verified_block_hash",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "verified_at": {
+          "name": "verified_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "vault_deployments_chain_id_idx": {
+          "name": "vault_deployments_chain_id_idx",
+          "columns": [
+            {
+              "expression": "chain_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "vault_deployments_asset_token_id_idx": {
+          "name": "vault_deployments_asset_token_id_idx",
+          "columns": [
+            {
+              "expression": "asset_token_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "vault_deployments_chain_id_networks_chain_id_fk": {
+          "name": "vault_deployments_chain_id_networks_chain_id_fk",
+          "tableFrom": "vault_deployments",
+          "tableTo": "networks",
+          "columnsFrom": [
+            "chain_id"
+          ],
+          "columnsTo": [
+            "chain_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "vault_deployments_asset_token_id_token_deployments_id_fk": {
+          "name": "vault_deployments_asset_token_id_token_deployments_id_fk",
+          "tableFrom": "vault_deployments",
+          "tableTo": "token_deployments",
+          "columnsFrom": [
+            "asset_token_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "vault_deployments_chain_address_unique": {
+          "name": "vault_deployments_chain_address_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "chain_id",
+            "address"
+          ]
+        },
+        "vault_deployments_id_asset_unique": {
+          "name": "vault_deployments_id_asset_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "id",
+            "asset_token_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "vault_deployments_address_length": {
+          "name": "vault_deployments_address_length",
+          "value": "octet_length(\"vault_deployments\".\"address\") = 20"
+        },
+        "vault_deployments_adapter_length": {
+          "name": "vault_deployments_adapter_length",
+          "value": "\"vault_deployments\".\"adapter_address\" is null or octet_length(\"vault_deployments\".\"adapter_address\") = 20"
+        },
+        "vault_deployments_code_hash_length": {
+          "name": "vault_deployments_code_hash_length",
+          "value": "octet_length(\"vault_deployments\".\"code_hash\") = 32"
+        },
+        "vault_deployments_interface_valid": {
+          "name": "vault_deployments_interface_valid",
+          "value": "\"vault_deployments\".\"interface_kind\" in ('erc4626','fixed_adapter')"
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.vault_snapshots": {
+      "name": "vault_snapshots",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "vault_deployment_id": {
+          "name": "vault_deployment_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "total_assets": {
+          "name": "total_assets",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "total_supply_shares": {
+          "name": "total_supply_shares",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "max_deposit_assets": {
+          "name": "max_deposit_assets",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "max_withdraw_assets": {
+          "name": "max_withdraw_assets",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "preview_redeem_assets": {
+          "name": "preview_redeem_assets",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "pause_status": {
+          "name": "pause_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "downstream_json": {
+          "name": "downstream_json",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reason_codes": {
+          "name": "reason_codes",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::text[]"
+        },
+        "block_number": {
+          "name": "block_number",
+          "type": "numeric(78,0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "block_hash": {
+          "name": "block_hash",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "block_time": {
+          "name": "block_time",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "canonical": {
+          "name": "canonical",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "observed_at": {
+          "name": "observed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider_key": {
+          "name": "provider_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reorged_at": {
+          "name": "reorged_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "vault_snapshots_vault_deployment_id_idx": {
+          "name": "vault_snapshots_vault_deployment_id_idx",
+          "columns": [
+            {
+              "expression": "vault_deployment_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "vault_snapshots_vault_deployment_id_vault_deployments_id_fk": {
+          "name": "vault_snapshots_vault_deployment_id_vault_deployments_id_fk",
+          "tableFrom": "vault_snapshots",
+          "tableTo": "vault_deployments",
+          "columnsFrom": [
+            "vault_deployment_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "vault_snapshots_vault_block_unique": {
+          "name": "vault_snapshots_vault_block_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "vault_deployment_id",
+            "block_hash"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": true
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

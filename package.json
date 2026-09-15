@@ -1,0 +1,26 @@
+{
+  "name": "crest",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "24.21.0"
+  },
+  "packageManager": "pnpm@12.4.1",
+  "scripts": {
+    "generate": "pnpm --filter @crest/domain generate",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "db:generate": "pnpm --filter @crest/db db:generate",
+    "db:migrate": "supabase migration up --local",
+    "db:reset": "supabase db reset --local --no-seed",
+    "db:test": "pnpm db:reset && pnpm --filter @crest/db test:integration",
+    "verify": "pnpm generate && pnpm typecheck && pnpm test"
+  },
+  "devDependencies": {
+    "@types/node": "24.10.0",
+    "supabase": "2.117.0",
+    "turbo": "2.10.12",
+    "typescript": "7.0.2",
+    "vitest": "5.0.0"
+  }
+}

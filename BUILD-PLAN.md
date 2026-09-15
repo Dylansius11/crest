@@ -76,14 +76,14 @@ One route passes both gates. If market passes but vault fails, record `reserve_o
 
 **Steps**
 
-- [ ] Bootstrap the exact compatible version set in [Tech Stack](./technical/TECH-STACK.md); commit exact `packageManager`, lockfile, Foundry, and Solidity pins.
-- [ ] Define branded addresses, hashes, market/vault IDs, base units, shares, WAD, BPS, block, and rate types.
-- [ ] Define `KEEP`, `PROTECT_AND_BORROW`, `EARN_STABLE`, `EARN_ASSET`, and `UNSUPPORTED`.
-- [ ] Define Guardian states and action kinds.
-- [ ] Generate JSON Schema/OpenAPI types from Zod rather than duplicating definitions.
-- [ ] Implement PostgreSQL tables, FKs, CHECKs, idempotency indexes, and reorg fields.
-- [ ] Reject floats, invalid LTV ordering, mismatched loan/vault asset, projected-as-realized data, and invalid Guardian selectors.
-- [ ] Apply migration to a fresh database and exercise insert/read round trips.
+- [x] Bootstrap the exact compatible version set in [Tech Stack](./technical/TECH-STACK.md); commit exact `packageManager`, lockfile, Foundry, and Solidity pins.
+- [x] Define branded addresses, hashes, market/vault IDs, base units, shares, WAD, BPS, block, and rate types.
+- [x] Define `KEEP`, `PROTECT_AND_BORROW`, `EARN_STABLE`, `EARN_ASSET`, and `UNSUPPORTED`.
+- [x] Define Guardian states and action kinds.
+- [x] Generate JSON Schema/OpenAPI types from Zod rather than duplicating definitions.
+- [x] Implement PostgreSQL tables, FKs, CHECKs, idempotency indexes, and reorg fields.
+- [x] Reject floats, invalid LTV ordering, mismatched loan/vault asset, projected-as-realized data, and invalid Guardian selectors.
+- [x] Apply migration to a fresh database and exercise insert/read round trips.
 
 **Acceptance**
 

@@ -1,0 +1,19 @@
+{
+  "name": "@crest/domain",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./generated/schema.json": "./generated/schema.json",
+    "./generated/openapi-components.json": "./generated/openapi-components.json"
+  },
+  "scripts": {
+    "generate": "node src/generate.ts",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "4.6.4"
+  }
+}
