@@ -34,8 +34,15 @@ contract VaultV2LiquidityTest is Test {
         mock(ADAPTER, abi.encodeWithSignature("asset()"), abi.encode(LOAN));
         mock(ADAPTER, abi.encodeWithSignature("morpho()"), abi.encode(MORPHO));
         mock(ADAPTER, abi.encodeWithSignature("adaptiveCurveIrm()"), abi.encode(p.irm));
-        mock(ADAPTER, abi.encodeWithSignature("expectedSupplyAssets(bytes32)", keccak256(data)), abi.encode(uint256(800)));
-        mock(MORPHO, abi.encodeWithSignature("market(bytes32)", keccak256(data)), abi.encode(Market(2000, 2e9, 1500, 15e8, 1, 0)));
+        mock(
+            ADAPTER, abi.encodeWithSignature("expectedSupplyAssets(bytes32)", keccak256(data)), abi.encode(uint256(800))
+        );
+        mock(
+            MORPHO,
+            abi.encodeWithSignature("market(bytes32)", keccak256(data)),
+            abi.encode(Market(2000, 2e9, 1500, 15e8, 1, 0))
+        );
+        mock(VAULT, abi.encodeWithSignature("allocation(bytes32)"), abi.encode(uint256(800)));
     }
 
     function mock(address target, bytes memory input, bytes memory output) internal {
@@ -51,7 +58,9 @@ contract VaultV2LiquidityTest is Test {
     }
 
     function testOnlyOwnedAllocationNotMarketTvlCounts() public {
-        mock(ADAPTER, abi.encodeWithSignature("expectedSupplyAssets(bytes32)", keccak256(data)), abi.encode(uint256(70)));
+        mock(
+            ADAPTER, abi.encodeWithSignature("expectedSupplyAssets(bytes32)", keccak256(data)), abi.encode(uint256(70))
+        );
         assertEq(this.available(), 80);
     }
 
@@ -92,11 +101,26 @@ contract VaultV2LiquidityTest is Test {
         assertEq(dataHash, keccak256(data));
     }
 
-    function validate() external view { VaultV2Liquidity.validate(VAULT, LOAN, MORPHO); }
+    function validate() external view {
+        VaultV2Liquidity.validate(VAULT, LOAN, MORPHO);
+    }
 
     function testRejectAdapterFromAnotherVault() public {
         mock(ADAPTER, abi.encodeWithSignature("parentVault()"), abi.encode(address(0xDEAD)));
         vm.expectRevert(VaultV2Liquidity.InvalidVaultRoute.selector);
         this.validate();
+    }
+
+    function testZeroDeallocationGateCannotCountDustSharesAsLiquidity() public {
+        bytes32[3] memory ids = [
+            keccak256(abi.encode("this", ADAPTER)),
+            keccak256(abi.encode("collateralToken", p.collateralToken)),
+            keccak256(abi.encode("this/marketParams", ADAPTER, p))
+        ];
+        for (uint256 i; i < ids.length; ++i) {
+            mock(VAULT, abi.encodeWithSignature("allocation(bytes32)", ids[i]), abi.encode(uint256(0)));
+            assertEq(this.available(), 10, "only idle assets remain executable");
+            mock(VAULT, abi.encodeWithSignature("allocation(bytes32)", ids[i]), abi.encode(uint256(800)));
+        }
     }
 }

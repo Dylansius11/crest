@@ -59,7 +59,7 @@ function withdrawCollateral(MarketParams memory p, uint256 assets, address onBeh
 
 ### 2.2 Fixed yield vault
 
-Prefer an ERC-4626-compatible vault:
+The selected route is native Morpho Vault V2. Its ERC-4626 `max*` functions deliberately return zero; they are observations, not exit-liquidity limits for this generation.
 
 ```solidity
 interface IERC4626Like {
@@ -75,7 +75,7 @@ interface IERC4626Like {
 }
 ```
 
-If the chosen production vault is not fully ERC-4626-compatible, use one purpose-built audited adapter fixed at account construction/configuration. The adapter must expose the same narrow semantics and no arbitrary routing.
+`VaultV2Liquidity` is a read-only library over the manifest-qualified native vault and MorphoMarketV1AdapterV2, not a custody or routing adapter. Configuration snapshots `liquidityAdapter` and `keccak256(liquidityData)`. New deposits reject route drift until owner reconfiguration; Guardian strategy capacity becomes zero on drift. No alternate adapter, forced deallocation, or in-kind redemption is exposed.
 
 ## 3. State
 
@@ -178,11 +178,13 @@ interface ICrestAccount {
     function idleReserveAssets() external view returns (uint256);
     function strategyAssets() external view returns (uint256);
     function maxWithdrawableStrategyAssets() external view returns (uint256);
-    function policy() external view returns (PolicyView memory);
+    function policy() external view returns (PolicyConfig memory);
 }
 ```
 
 If safe active-position reconfiguration makes one `configure` too ambiguous, split it into explicit owner-only functions. Market, tokens, Morpho address, or vault cannot change while collateral, debt, reserve, or vault shares remain.
+
+The immutable Morpho deployment never changes. Unsupported, unsolicited Morpho supply shares do not lock route reuse: third parties can donate them, and Crest exposes no lending-position recovery path. The supported collateral, borrow shares, idle reserve, and vault shares each independently lock market/vault changes. Owner/Guardian role collapse and ownership renunciation are rejected; Guardian zero revokes authority. Configuration and Guardian changes increment `policyNonce` and emit the complete policy hash. The current policy view exposes every field.
 
 ## 6. Invariants
 
@@ -241,7 +243,7 @@ remaining idle loan-token balance >= reserveFloorAssets
 
 ### I-9 Strategy floor
 
-Routine strategy repayment cannot reduce strategy assets below `strategyFloorAssets`. A critical-policy mode may need a separately signed lower floor; MVP does not let Guardian override it.
+Routine strategy repayment cannot reduce strategy assets below `strategyFloorAssets`. Owner strategy withdrawal may exit below this routine floor; the Guardian cannot override it. Owner idle-loan-token withdrawal still preserves the reserve floor, which the owner can lower through policy configuration before final exit.
 
 ### I-10 Repayment cap
 
@@ -257,7 +259,7 @@ Strategy repayment is bounded by:
 min(
   requested,
   maxRepayPerAction,
-  vault.maxWithdraw(CrestAccount),
+  maxWithdrawableStrategyAssets(),
   strategyAssets - strategyFloor,
   currentDebt
 )
@@ -290,17 +292,19 @@ No delegatecall, arbitrary call, plugin, fallback executor, generic token approv
 Morpho debt uses fresh borrow shares:
 
 $$
-D = \\left\\lceil \\frac{S_u \\times A_t}{S_t} \\right\\rceil
+D = \\left\\lceil \\frac{S_u \\times (A_t + 1)}{S_t + 10^6} \\right\\rceil
 $$
 
-Use Morpho's audited `toAssetsUp` semantics.
+Use Morpho's audited `toAssetsUp` virtual-share semantics after interest accrual. A full repayment uses all account borrow shares; partial repayment uses assets. If rounding burns no effective debt, the whole repayment reverts. Accrued debt can exceed a policy ceiling passively; the ceiling is enforced at configuration and before/after debt creation, not by hiding interest.
 
 Strategy assets are not a cached principal counter:
 
 ```text
 strategyAssets = yieldVault.convertToAssets(yieldVault.balanceOf(address(this)))
-withdrawable = min(strategyAssets, yieldVault.maxWithdraw(address(this)))
+withdrawable = min(strategyAssets, vaultIdleAssets + executableDefaultAdapterAssets)
 ```
+
+For the bound native adapter route, executable adapter assets are the minimum of its own rounded-down expected supply assets, the exact market's `totalSupplyAssets - totalBorrowAssets`, and Morpho's physical loan-token balance. Adapter membership, send-share/receive-asset gates, and all three native deallocation allocation IDs must permit exit. Zero allocation cannot contribute liquidity even if residual adapter shares later accrue quoted value. Exact vault withdrawal remains the atomic, reverting execution check; the read is a conservative capacity bound, not a guarantee against all vault failures.
 
 The contract uses actual return values and before/after balances. Offchain code may calculate projected profit, but contract authorization never depends on an unsigned APY.
 
@@ -400,11 +404,15 @@ event RepaidFromStrategy(
     uint256 withdrawnAssets,
     uint256 burnedShares,
     uint256 debtBefore,
-    uint256 debtAfter
+    uint256 debtAfter,
+    uint256 strategyAssetsBefore,
+    uint256 strategyAssetsAfter
 );
 event CollateralWithdrawn(uint256 assets, address indexed receiver);
 event LoanTokenWithdrawn(uint256 assets, address indexed receiver);
 event StrategyWithdrawn(uint256 assets, uint256 shares, address indexed receiver);
+event OwnerRepaid(uint256 repaidAssets, uint256 debtBefore, uint256 debtAfter);
+event VaultLiquidityRouteBound(address indexed adapter, bytes32 dataHash);
 ```
 
 `PolicyConfigured` may emit every policy field directly if that is more indexable; `policyHash` never substitutes for the public policy view.
@@ -421,7 +429,7 @@ Reject:
 - cap/floor values below current active balances where unsafe;
 - market/token/vault change while any active position, idle reserve, or vault share remains;
 - vault with incompatible interface/behavior;
-- Guardian equal to owner only when deployment policy forbids role collapse.
+- Guardian equal to owner; renouncing ownership is also disabled.
 
 Live liquidity, APY, curator quality, and offchain freshness are onboarding/action gates, not immutable contract facts.
 
@@ -465,7 +473,7 @@ Live liquidity, APY, curator quality, and offchain freshness are onboarding/acti
 - owner borrow-and-deploy mints expected minimum shares;
 - over-cap and frozen borrow revert;
 - accrued debt is used for ceiling;
-- vault `maxWithdraw` constrains repayment;
+- generation-appropriate native withdrawal liquidity constrains repayment; for Vault V2, do not interpret zero `maxWithdraw` as zero executable liquidity;
 - reserve and strategy repayment reduce debt;
 - partial withdrawal/liquidity failure is handled;
 - owner exit follows Morpho/vault semantics.

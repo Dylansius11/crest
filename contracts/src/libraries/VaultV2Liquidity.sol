@@ -13,6 +13,7 @@ interface IVaultV2 is IERC4626 {
     function isAdapter(address adapter) external view returns (bool);
     function canSendShares(address account) external view returns (bool);
     function canReceiveAssets(address account) external view returns (bool);
+    function allocation(bytes32 id) external view returns (uint256);
 }
 
 interface IMarketV1AdapterV2 {
@@ -28,7 +29,9 @@ library VaultV2Liquidity {
     error InvalidVaultRoute();
 
     function validate(address vaultAddress, address loan, address morpho)
-        internal view returns (address adapterAddress, bytes32 dataHash)
+        internal
+        view
+        returns (address adapterAddress, bytes32 dataHash)
     {
         IVaultV2 vault = IVaultV2(vaultAddress);
         if (vaultAddress.code.length == 0 || vault.asset() != loan) revert InvalidVaultRoute();
@@ -50,9 +53,13 @@ library VaultV2Liquidity {
     /// @dev Conservative normal-exit bound, not a promise of execution: withdraw still enforces every vault gate.
     /// Interest increases Morpho supply and borrow assets equally, so their difference needs no rate projection.
     /// No forced deallocation, in-kind redemption, alternate adapter or API-provided amount is accepted.
-    function available(address vaultAddress, address account, address morpho, address fixedAdapter, bytes32 fixedDataHash)
-        internal view returns (uint256)
-    {
+    function available(
+        address vaultAddress,
+        address account,
+        address morpho,
+        address fixedAdapter,
+        bytes32 fixedDataHash
+    ) internal view returns (uint256) {
         IVaultV2 vault = IVaultV2(vaultAddress);
         bytes memory data = vault.liquidityData();
         if (vault.liquidityAdapter() != fixedAdapter || keccak256(data) != fixedDataHash) return 0;
@@ -61,14 +68,25 @@ library VaultV2Liquidity {
         uint256 liquidity = loan.balanceOf(vaultAddress);
         if (fixedAdapter != address(0)) {
             if (!vault.isAdapter(fixedAdapter)) return 0;
-            liquidity += _adapterLiquidity(morpho, fixedAdapter, keccak256(data), loan);
+            liquidity += _adapterLiquidity(vault, morpho, fixedAdapter, data, loan);
         }
         return Math.min(vault.convertToAssets(vault.balanceOf(account)), liquidity);
     }
 
-    function _adapterLiquidity(address morpho, address adapter, bytes32 id, IERC20 loan)
-        private view returns (uint256)
+    function _adapterLiquidity(IVaultV2 vault, address morpho, address adapter, bytes memory data, IERC20 loan)
+        private
+        view
+        returns (uint256)
     {
+        MarketParams memory params = abi.decode(data, (MarketParams));
+        // Vault V2 rejects deallocation when any of its three accounting allocations is zero,
+        // even when residual adapter shares have accrued a positive quoted asset value.
+        if (
+            vault.allocation(keccak256(abi.encode("this", adapter))) == 0
+                || vault.allocation(keccak256(abi.encode("collateralToken", params.collateralToken))) == 0
+                || vault.allocation(keccak256(abi.encode("this/marketParams", adapter, params))) == 0
+        ) return 0;
+        bytes32 id = keccak256(data);
         Market memory market = IMorpho(morpho).market(Id.wrap(id));
         uint256 marketLiquidity = uint256(market.totalSupplyAssets) - market.totalBorrowAssets;
         uint256 supplied = IMarketV1AdapterV2(adapter).expectedSupplyAssets(id);

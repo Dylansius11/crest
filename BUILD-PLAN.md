@@ -100,17 +100,17 @@ All financial values restore exactly to bigint/rational types; database constrai
 
 **Steps**
 
-- [ ] Write failing owner/Guardian/stranger permission tests for every function.
-- [ ] Write failing tests for exact market/vault identity, vault asset mismatch, active-route reconfiguration, freeze, collateral/debt/strategy caps, LTV ordering, reserve/strategy floors, share slippage, repayment cap, and zero repayment.
-- [ ] Implement owner/configuration and immutable Morpho boundary.
-- [ ] Implement collateral supply and owner-only `borrowAndDeploy`.
-- [ ] Force borrowed loan token to Crest Account then fixed vault; enforce minimum shares.
-- [ ] Implement owner strategy deposit/withdraw and owner repay/withdraw.
-- [ ] Implement `freezeBorrowing`, `repayFromReserve`, and `repayFromStrategy`.
-- [ ] Fix strategy withdrawal receiver and Morpho repayment beneficiary to Crest Account.
-- [ ] Use exact temporary approvals and reentrancy protection.
-- [ ] Emit complete policy, borrow/deploy, strategy, and repayment evidence.
-- [ ] Add invariant handler proving all contract invariants under arbitrary sequences.
+- [x] Write failing owner/Guardian/stranger permission tests for every function.
+- [x] Write failing tests for exact market/vault identity, vault asset mismatch, active-route reconfiguration, freeze, collateral/debt/strategy caps, LTV ordering, reserve/strategy floors, share slippage, repayment cap, and zero repayment.
+- [x] Implement owner/configuration and immutable Morpho boundary.
+- [x] Implement collateral supply and owner-only `borrowAndDeploy`.
+- [x] Force borrowed loan token to Crest Account then fixed vault; enforce minimum shares.
+- [x] Implement owner strategy deposit/withdraw and owner repay/withdraw.
+- [x] Implement `freezeBorrowing`, `repayFromReserve`, and `repayFromStrategy`.
+- [x] Fix strategy withdrawal receiver and Morpho repayment beneficiary to Crest Account.
+- [x] Use exact temporary approvals and reentrancy protection.
+- [x] Emit complete policy, borrow/deploy, strategy, and repayment evidence.
+- [x] Add invariant handler proving all contract invariants under arbitrary sequences.
 
 **Acceptance**
 
@@ -132,7 +132,7 @@ ABI contains no Guardian borrowing, unfreeze, receiver, venue, arbitrary call, s
 - [ ] Assert exact borrowed assets, vault shares, and resulting debt.
 - [ ] Assert over-cap/frozen/Guardian borrow attempts fail.
 - [ ] Accrue interest and prove debt ceiling uses fresh rounded-up debt.
-- [ ] Constrain mock/live vault withdrawal and prove `maxWithdraw` bounds strategy repayment.
+- [ ] Constrain mock/live vault withdrawal and prove generation-appropriate `maxWithdrawableStrategyAssets` bounds strategy repayment, including a non-1:1 native adapter share-rate boundary.
 - [ ] Execute reserve repayment and strategy repayment.
 - [ ] Prove debt decreased and floors/caps/receivers held.
 - [ ] Complete owner exit according to Morpho/vault semantics.
@@ -157,7 +157,7 @@ Pinned fork completes supply → owner borrow-and-deploy → Guardian freeze →
 - [ ] Validate all external responses.
 - [ ] Preserve provider source, generation/fetch time, expiry, block/hash, and reason codes.
 - [ ] Implement exact market/position/accrued-debt/liquidity reads.
-- [ ] Implement exact vault identity, share/assets, `maxWithdraw`, and pause/cap reads.
+- [ ] Implement exact vault identity, share/assets, generation-appropriate withdrawal liquidity, and pause/cap reads (`maxWithdraw` is deliberately zero for Vault V2).
 - [ ] Implement withdrawal simulation.
 - [ ] Normalize borrow APY, vault APY, incentives, fees, and conventions without merging them.
 - [ ] Implement Stock Token identity, multiplier, halt, and corporate-action observations.
@@ -189,7 +189,7 @@ toConfigurationCall(policy: CompiledPolicy): PreparedOwnerTransaction
 
 - [ ] Write policy tests for route identity, asset intents, LTV ordering, caps/floors, and forbidden Guardian debt.
 - [ ] Write LTV/health/target-debt tests for no debt and every exact threshold.
-- [ ] Write reserve/strategy repayment tests around `maxWithdraw`, floors, cap, and debt.
+- [ ] Write reserve/strategy repayment tests around generation-appropriate withdrawal liquidity, floors, cap, and debt.
 - [ ] Write carry tests separating borrow APY, vault APY, incentive, fee, estimate, and realized fields.
 - [ ] Prove a small debt denominator cannot hide absolute dollar values in output.
 - [ ] Prove degraded data produces zero owner-borrow capacity but preserves safe debt-reduction planning.
@@ -234,7 +234,7 @@ Replay creates no duplicate trigger. Projected fields never create realized repa
 
 - [ ] Start only through an explicit command with expected chain/account/Guardian.
 - [ ] Atomically claim by idempotency key.
-- [ ] Refresh policy nonce, freeze, debt, reserve, vault shares/assets, and `maxWithdraw`.
+- [ ] Refresh policy nonce, freeze, debt, reserve, vault shares/assets, and generation-appropriate withdrawal liquidity.
 - [ ] Permit exactly three contract selectors.
 - [ ] Simulate from Guardian address.
 - [ ] Persist attempt/hash before retry decisions.
