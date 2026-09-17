@@ -19,7 +19,7 @@ export interface DeploymentManifest {
   network: { chainId: number; name: string };
   evidence: {
     retrievedAt: string;
-    block: { number: string; hash: string; timestamp: string };
+    block: { number: string; hash: string; timestamp: string; finality: "finalized" };
   };
   contracts: Record<string, ContractEvidence>;
   market: {
@@ -116,6 +116,7 @@ export function validateDeploymentManifest(value: unknown): string[] {
   if (at(value, "network", "chainId") !== ROBINHOOD_CHAIN_ID) errors.push("network.chainId must be 4663");
   requirePattern(errors, at(value, "evidence", "block", "number"), UINT, "evidence.block.number");
   requirePattern(errors, at(value, "evidence", "block", "hash"), HASH, "evidence.block.hash");
+  if (at(value, "evidence", "block", "finality") !== "finalized") errors.push("evidence.block.finality must be finalized");
 
   for (const name of REQUIRED_CONTRACTS) {
     requirePattern(errors, at(value, "contracts", name, "address"), ADDRESS, `contracts.${name}.address`);
