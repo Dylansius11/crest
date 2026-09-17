@@ -125,7 +125,7 @@ ABI contains no Guardian borrowing, unfreeze, receiver, venue, arbitrary call, s
 
 **Steps**
 
-- [ ] Pin fork to manifest block and verify chain.
+- [ ] Refresh the manifest to genuinely finalized evidence, validate its hash from a successor block within the EVM 256-block window, then pin the fork and verify chain.
 - [ ] Deploy Crest Account using exact market/vault route.
 - [ ] Fund disposable fork owner and Guardian.
 - [ ] Supply collateral and execute small owner `borrowAndDeploy`.

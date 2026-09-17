@@ -508,6 +508,7 @@ Collateral sale/unwind remains a separate later contract with fixed venue adapte
 
 Before mainnet funding:
 
+- manifest evidence is genuinely finalized, strictly prior to the validation block, no more than 256 blocks old, and matches canonical `blockhash`;
 - exact Morpho market and vault route verified from current sources and bytecode;
 - unit/fuzz/invariant suite passes;
 - pinned fork completes supply → owner borrow-and-deploy → Guardian freeze → strategy repay → owner exit;
