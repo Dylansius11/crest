@@ -64,6 +64,9 @@ Return changed files, exact checks and observed results, assumptions, unresolved
 ## Self Learning Logs
 Newest first. At every completed build-plan task and before handoff, record any newly verified, reusable technical lesson in one line: `YYYY-MM-DD — Root cause → rule`. Do not record status, secrets, speculation, or a duplicate lesson.
 
+- 2026-09-17 — EVM `blockhash` cannot verify current or older-than-256-block evidence → deployment evidence must be finalized, strictly prior, within 256 blocks, and hash-matched or deployment fails closed.
+- 2026-09-17 — Vault V2 governance can drift after policy binding and disabled allocations can retain quoted adapter shares → revalidate the adapter/data before every deposit and require every native deallocation allocation plus exact withdrawal before reporting Guardian liquidity.
+
 - 2026-09-15 — Supabase local bootstrap applies timestamp-prefixed migrations during start and reset → use Supabase migration history as the sole runner and avoid reapplying the same SQL through Drizzle.
 - 2026-09-14 — Robinhood L2 block headers omit Cancun blob fields that Anvil 1.8.1 requires → preserve the canonical block hash/state while normalizing only missing zero-valued header fields; do not downgrade the EVM because Vault V2 uses Cancun opcodes.
 - 2026-09-14 — Morpho Vault V2 deliberately returns zero from all ERC-4626 `max*` functions → identify the exact vault generation and use its fresh withdrawal options plus exact simulation instead of treating zero as unavailable liquidity.
