@@ -33,7 +33,7 @@
             "hash": { "$ref": "#/$defs/hash" },
             "timestamp": { "type": "string", "format": "date-time" },
             "l1BlockNumber": { "$ref": "#/$defs/uint" },
-            "finality": { "enum": ["finalized", "safe", "unfinalized"] }
+            "finality": { "const": "finalized" }
           }
         }
       }
@@ -231,7 +231,7 @@
       "additionalProperties": false,
       "required": ["tool", "rpcSource", "headerNormalization", "blockNumber", "blockHash", "morphoLifecycle", "vaultLifecycle", "morpho", "vault"],
       "properties": {
-        "tool": { "const": "Anvil 1.8.1" },
+        "tool": { "enum": ["Foundry 1.8.1", "Anvil 1.8.1"] },
         "rpcSource": { "type": "string", "format": "uri" },
         "headerNormalization": { "type": "string", "minLength": 1 },
         "blockNumber": { "$ref": "#/$defs/uint" },
