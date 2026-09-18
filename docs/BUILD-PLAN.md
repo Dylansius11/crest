@@ -125,18 +125,18 @@ ABI contains no Guardian borrowing, unfreeze, receiver, venue, arbitrary call, s
 
 **Steps**
 
-- [ ] Refresh the manifest to genuinely finalized evidence, validate its hash from a successor block within the EVM 256-block window, then pin the fork and verify chain.
-- [ ] Deploy Crest Account using exact market/vault route.
-- [ ] Fund disposable fork owner and Guardian.
-- [ ] Supply collateral and execute small owner `borrowAndDeploy`.
-- [ ] Assert exact borrowed assets, vault shares, and resulting debt.
-- [ ] Assert over-cap/frozen/Guardian borrow attempts fail.
-- [ ] Accrue interest and prove debt ceiling uses fresh rounded-up debt.
-- [ ] Constrain mock/live vault withdrawal and prove generation-appropriate `maxWithdrawableStrategyAssets` bounds strategy repayment, including a non-1:1 native adapter share-rate boundary.
-- [ ] Execute reserve repayment and strategy repayment.
-- [ ] Prove debt decreased and floors/caps/receivers held.
-- [ ] Complete owner exit according to Morpho/vault semantics.
-- [ ] Fail CI on source/ABI drift.
+- [x] Refresh the manifest to genuinely finalized evidence, validate its hash from a successor block within the EVM 256-block window, then pin the fork and verify chain.
+- [x] Deploy Crest Account using exact market/vault route.
+- [x] Fund disposable fork owner and Guardian.
+- [x] Supply collateral and execute small owner `borrowAndDeploy`.
+- [x] Assert exact borrowed assets, vault shares, and resulting debt.
+- [x] Assert over-cap/frozen/Guardian borrow attempts fail.
+- [x] Accrue interest and prove debt ceiling uses fresh rounded-up debt.
+- [x] Constrain mock/live vault withdrawal and prove generation-appropriate `maxWithdrawableStrategyAssets` bounds strategy repayment, including a non-1:1 native adapter share-rate boundary.
+- [x] Execute reserve repayment and strategy repayment.
+- [x] Prove debt decreased and floors/caps/receivers held.
+- [x] Complete owner exit according to Morpho/vault semantics.
+- [x] Fail CI on source/ABI drift.
 
 **Acceptance**
 

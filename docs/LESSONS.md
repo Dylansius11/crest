@@ -25,6 +25,24 @@ Rules for this file:
 
 ---
 
+## 2026-09-18 — ISP DNS hijack, not a broken endpoint, blocked the official Robinhood RPC (Technical)
+
+- `rpc.mainnet.chain.robinhood.com` resolved to `202.3.218.139` and every client (curl, Node, Foundry) failed TLS with a certificate for `internetbaik.telkomsel.com`, the local ISP filter host.
+- Cloudflare DNS-over-HTTPS returned the real origin (`customer-origin.offchainlabs.com` → `172.66.147.70`); connecting to that IP with the real hostname as SNI works and answers in ~0.3 s.
+- Rule: when a public RPC fails TLS with an unrelated certificate name, resolve it out-of-band before concluding the endpoint is down, and pin the resolved IP in the local proxy instead of switching to an unqualified community endpoint.
+
+## 2026-09-18 — Robinhood Chain nodes prune state in minutes and serve proofs only at the head (Technical)
+
+- Measured against the official node: `eth_getBalance` succeeded at head-1 through head-4096 and failed at head-16384 (~85 ms blocks, so roughly a 6–20 minute state window); `eth_getProof` succeeded at `latest` and failed at head-256.
+- The community pool `rpc.ordofi.network` mixes one archive backend with pruned ones, so identical pinned reads succeeded about one attempt in twelve and took ~26 s through retries.
+- Rule: pin fork proofs to a freshly refreshed block immediately before running them, anchor identity and finality to the finalized evidence block header, and re-read immutable state (code hashes, market params, vault asset) at `latest` where account proofs are actually served.
+
+## 2026-09-18 — Exact-asset ERC-4626 exits leave sub-wei share dust (Technical)
+
+- On the live Steakhouse USDG Vault V2, withdrawing `convertToAssets(balance)` burned round-up shares and left 9.93e11 of 9.93e20 shares, worth zero loan-token assets.
+- Morpho likewise returns debt one wei above the borrowed amount because borrow shares convert back with round-up virtual-share math.
+- Rule: assert protocol-reconciled quantities (`expectedBorrowAssets`, `convertToAssets`) and bound residues explicitly; never assert that an exact-asset exit zeroes the share balance.
+
 ## 2026-09-18 — Robinhood Chain finality lag makes finalized evidence unverifiable by block hash (Technical)
 
 - Measured on chain 4663 via `rpc.ordofi.network`: 118 blocks in 10 s (~85 ms per block); `latest` 66342088 versus `finalized` 66333849, a lag of 8239 blocks.
