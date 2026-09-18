@@ -11,7 +11,11 @@ optimizer = true
 optimizer_runs = 200
 bytecode_hash = "none"
 cbor_metadata = false
-fs_permissions = [{ access = "read", path = "../config" }]
+fs_permissions = [
+    { access = "read", path = "../config" },
+    # The pinned-fork lifecycle writes its measured amounts here for the manifest recorder.
+    { access = "read-write", path = "../.tmp" },
+]
 
 [fuzz]
 runs = 256

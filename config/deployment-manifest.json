@@ -191,7 +191,7 @@
       "loanUpdatedAt": "1789659304",
       "checkedAtBlockTimestamp": "1789659834"
     },
-    "liquidityAssets": "44537532539292",
+    "liquidityAssets": "238958227292",
     "plannedBorrowAssets": "1000000000"
   },
   "vault": {
@@ -242,7 +242,7 @@
       "forceDeallocatable": "14356182689424",
       "forceDeallocationPenalty": "0"
     },
-    "withdrawableAssets": "29411438793263",
+    "withdrawableAssets": "33089056487521",
     "plannedWithdrawalAssets": "1000000000",
     "adapterCap": {
       "allocatedAssets": "466456400807229",
@@ -334,19 +334,40 @@
     "headerNormalization": "Not required: Foundry 1.8.1 consumed the pinned Robinhood header directly.",
     "blockNumber": "66371581",
     "blockHash": "0x8ef2c55207cd632f77c15bd7a3404d552d561d7c2cb47e5b8c29c4b1ac6507cf",
-    "morphoLifecycle": "not_executed",
-    "vaultLifecycle": "not_executed",
-    "morpho": null,
-    "vault": null
+    "morphoLifecycle": "passed",
+    "vaultLifecycle": "passed",
+    "morpho": {
+      "collateralAssets": "10000000000000000000",
+      "borrowAssets": "1000000000",
+      "repaidAssets": "1000000001",
+      "withdrawnCollateralAssets": "10000000000000000000",
+      "proofTests": [
+        "testRecordedLifecycleProducesManifestEvidence"
+      ]
+    },
+    "vault": {
+      "depositAssets": "999999999",
+      "mintedShares": "992724796550122539256",
+      "withdrawAssets": "500000000",
+      "withdrawnShares": "496362398275061269629",
+      "redeemedShares": "496362397282336473079",
+      "redeemedAssets": "499999999",
+      "finalAssetDelta": "0",
+      "finalShares": "992724796548",
+      "assetBalanceRestored": true,
+      "proofTests": [
+        "testRecordedLifecycleProducesManifestEvidence"
+      ]
+    }
   },
   "gate": {
-    "outcome": "stop",
-    "marketGate": "failed",
-    "vaultGate": "not_evaluated",
-    "reason": "Finalized route evidence is refreshed and hash-matched, but the CrestAccount lifecycle has not yet executed at this pinned block."
+    "outcome": "full_route",
+    "marketGate": "passed",
+    "vaultGate": "passed",
+    "reason": "Pinned fork testRecordedLifecycleProducesManifestEvidence executed supply, owner borrow-and-deploy, Guardian strategy repayment and owner exit at Robinhood block 66371581."
   },
   "integrity": {
     "algorithm": "sha256",
-    "digest": "sha256:4e3b5d6eca2a79bbbde18e3bdb5394e3d9a1277c79d65f9aa0e84fd93b0b0b5b"
+    "digest": "sha256:d40cd3e18c8d2c5a8448af632f0f66c7285120e6d73ed5b8e78652993830597b"
   }
 }

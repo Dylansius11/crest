@@ -9,6 +9,7 @@ import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {IMorpho, Id, Market, MarketParams, Position} from "morpho-blue/src/interfaces/IMorpho.sol";
 import {DeployCrestAccount} from "../script/DeployCrestAccount.s.sol";
 import {MorphoBalancesLib} from "morpho-blue/src/libraries/periphery/MorphoBalancesLib.sol";
+import {VaultV2Liquidity} from "../src/libraries/VaultV2Liquidity.sol";
 import {CrestAccount} from "../src/CrestAccount.sol";
 
 interface IArbSysFork {
@@ -219,6 +220,67 @@ contract RobinhoodForkTest is Test {
         // worth zero loan-token assets and cannot be redeemed for value.
         assertEq(account.strategyAssets(), 0, "strategy value remains");
         assertLt(vault.convertToAssets(vault.balanceOf(address(account))), 1, "redeemable dust is not sub-wei");
+    }
+
+    /// @dev Full supply -> borrow-and-deploy -> Guardian repay -> owner exit run, whose measured amounts are
+    /// written for `scripts/record-fork-lifecycle.ts`. The manifest gate may only be promoted from this file.
+    function testRecordedLifecycleProducesManifestEvidence() public {
+        uint256 vaultSharesBefore = vault.balanceOf(address(account));
+        uint256 loanBefore = loan.balanceOf(address(account));
+        _openPosition();
+
+        uint256 mintedShares = vault.balanceOf(address(account)) - vaultSharesBefore;
+        uint256 strategyDeposit = account.strategyAssets();
+        uint256 vaultLiquidity = account.maxWithdrawableStrategyAssets();
+
+        vm.prank(guardian);
+        account.repayFromStrategy(type(uint256).max);
+        uint256 strategyRepaid = strategyDeposit - account.strategyAssets();
+        uint256 sharesAfterRepay = vault.balanceOf(address(account));
+
+        vm.startPrank(owner);
+        uint256 remainingStrategy = account.strategyAssets();
+        account.withdrawStrategy(remainingStrategy, owner, type(uint256).max);
+        uint256 debt = account.currentDebtAssets();
+        deal(address(loan), owner, debt, true);
+        loan.approve(address(account), debt);
+        account.ownerRepay(type(uint256).max);
+        account.withdrawCollateral(COLLATERAL_ASSETS, owner);
+        vm.stopPrank();
+
+        assertEq(account.currentDebtAssets(), 0, "lifecycle left debt");
+        assertEq(loan.balanceOf(address(account)), loanBefore, "lifecycle left loan tokens in the account");
+
+        string memory record = "forkLifecycle";
+        vm.serializeUint(record, "blockNumber", forkBlock);
+        vm.serializeUint(record, "collateralAssets", COLLATERAL_ASSETS);
+        vm.serializeUint(record, "borrowAssets", BORROW_ASSETS);
+        vm.serializeUint(record, "repaidAssets", strategyRepaid + debt);
+        vm.serializeUint(record, "withdrawnCollateralAssets", COLLATERAL_ASSETS);
+        vm.serializeUint(record, "depositAssets", strategyDeposit);
+        vm.serializeUint(record, "mintedShares", mintedShares);
+        vm.serializeUint(record, "withdrawAssets", strategyRepaid);
+        vm.serializeUint(record, "withdrawnShares", mintedShares - sharesAfterRepay);
+        vm.serializeUint(record, "redeemedAssets", remainingStrategy);
+        vm.serializeUint(record, "redeemedShares", sharesAfterRepay - vault.balanceOf(address(account)));
+        vm.serializeUint(record, "finalShares", vault.balanceOf(address(account)));
+        vm.serializeUint(record, "vaultWithdrawableAssets", _vaultCapacity());
+        vm.serializeUint(record, "marketLiquidityAssets", _marketLiquidity());
+        vm.serializeBool(record, "assetBalanceRestored", loan.balanceOf(address(account)) == loanBefore);
+        string memory json = vm.serializeString(record, "test", "testRecordedLifecycleProducesManifestEvidence");
+        vm.writeJson(json, "../.tmp/fork-lifecycle.json");
+    }
+
+    function _marketLiquidity() internal view returns (uint256) {
+        Market memory market = morpho.market(Id.wrap(marketId));
+        return uint256(market.totalSupplyAssets) - uint256(market.totalBorrowAssets);
+    }
+
+    /// @dev Vault-wide withdrawal capacity, the manifest's `vault.withdrawableAssets` fact.
+    function _vaultCapacity() internal view returns (uint256) {
+        return VaultV2Liquidity.vaultCapacity(
+            address(vault), address(morpho), account.vaultLiquidityAdapter(), account.vaultLiquidityDataHash()
+        );
     }
 
     function testPolicyCapsAndReceiverRulesHoldOnLiveProtocols() public {
