@@ -25,6 +25,13 @@ Rules for this file:
 
 ---
 
+## 2026-09-19 — A dev transport workaround must never become a runtime default (Technical)
+
+- The local retrying proxy (`127.0.0.1:8599`) is the only reliable way to read pinned Robinhood state from this workstation, so proof tooling defaults to it: `pnpm fork:pin`, `pnpm fork:test`, `pnpm fork:record`, `pnpm manifest:verify`.
+- Runtime components (API, monitor, Guardian) read `ROBINHOOD_CHAIN_RPC_URL` instead and have no localhost fallback; an unset or unreachable endpoint must abort, never silently degrade to a developer machine.
+- This split is safe because transport is not authority: the route comes from the reviewed manifest, `CrestAccount` enforces the three Guardian selectors onchain, and every Guardian action simulates and reconciles against a canonical receipt, so a wrong or stale RPC can only stop an action, not widen one.
+- Rule: keep workaround transports in dev-only scripts with an env override, document them in the installation runbook, and keep runtime endpoints explicit and fail-closed.
+
 ## 2026-09-18 — ISP DNS hijack, not a broken endpoint, blocked the official Robinhood RPC (Technical)
 
 - `rpc.mainnet.chain.robinhood.com` resolved to `202.3.218.139` and every client (curl, Node, Foundry) failed TLS with a certificate for `internetbaik.telkomsel.com`, the local ISP filter host.
