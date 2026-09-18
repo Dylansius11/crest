@@ -31,6 +31,7 @@ contract ManifestAdapter {
     }
 }
 
+
 contract DeployCrestAccountHarness is DeployCrestAccount {
     function deployForTest(DeploymentParameters memory parameters, string memory manifestJson)
         external
@@ -51,6 +52,9 @@ contract DeployCrestAccountTest is CrestFixture {
     bytes32 internal morphoHash;
     bytes32 internal liquidityId;
     address internal manifestAsset;
+    string internal morphoLifecycle;
+    string internal vaultLifecycle;
+    string internal gateOutcome;
 
     function setUp() public override {
         super.setUp();
@@ -67,6 +71,9 @@ contract DeployCrestAccountTest is CrestFixture {
         morphoHash = address(morpho).codehash;
         liquidityId = keccak256(abi.encode(market));
         manifestAsset = address(loan);
+        morphoLifecycle = "passed";
+        vaultLifecycle = "passed";
+        gateOutcome = "full_route";
     }
 
     function testDeploymentAuthorizationAndConfiguredBroadcastSequence() public {
@@ -101,6 +108,7 @@ contract DeployCrestAccountTest is CrestFixture {
         deployed.freezeBorrowing();
         assertTrue(deployed.borrowingFrozen());
     }
+
 
     function testManifestRejectsFutureEvidence() public {
         evidenceBlock = block.number + 1;
@@ -159,6 +167,23 @@ contract DeployCrestAccountTest is CrestFixture {
         string memory json = manifest();
         vm.expectRevert(DeployCrestAccount.ManifestRejected.selector);
         deployer.validateManifest(json);
+    }
+
+    function testManifestRejectsUnexecutedOrDegradedLifecycleEvidence() public {
+        morphoLifecycle = "not_executed";
+        vm.expectRevert(DeployCrestAccount.ManifestRejected.selector);
+        deployer.validateManifest(manifest());
+
+        morphoLifecycle = "passed";
+        vaultLifecycle = "failed";
+        vm.expectRevert(DeployCrestAccount.ManifestRejected.selector);
+        deployer.validateManifest(manifest());
+
+        // A reserve-only route is a valid gate outcome, but it must not deploy the yield-loop configuration.
+        vaultLifecycle = "passed";
+        gateOutcome = "reserve_only";
+        vm.expectRevert(DeployCrestAccount.ManifestRejected.selector);
+        deployer.validateManifest(manifest());
     }
 
     function testParametersRejectUnsafeUint128AndUint64Downcasts() public {
@@ -269,8 +294,13 @@ contract DeployCrestAccountTest is CrestFixture {
             vm.toString(evidenceBlock),
             '","blockHash":"',
             vm.toString(evidenceHash),
-            '","morphoLifecycle":"passed","vaultLifecycle":"passed"},',
-            '"gate":{"outcome":"full_route","marketGate":"passed","vaultGate":"passed"}}'
+            '","morphoLifecycle":"',
+            morphoLifecycle,
+            '","vaultLifecycle":"',
+            vaultLifecycle,
+            '"},"gate":{"outcome":"',
+            gateOutcome,
+            '","marketGate":"passed","vaultGate":"passed"}}'
         );
     }
 

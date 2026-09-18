@@ -16,7 +16,7 @@ function fixture() {
     network: { chainId: 4663, name: "Robinhood Chain" },
     evidence: {
       retrievedAt: "2026-09-14T09:12:04Z",
-      block: { number: "62692076", hash: hash("11"), timestamp: "2026-09-14T09:12:04Z" },
+      block: { number: "62692076", hash: hash("11"), timestamp: "2026-09-14T09:12:04Z", finality: "finalized" },
     },
     contracts: {
       morpho: { address: address("1"), codeHash: hash("a1") },
@@ -76,6 +76,13 @@ test("rejects altered chain evidence", () => {
   assert.ok(validateDeploymentManifest(manifest).length > 0);
 });
 
+test("rejects evidence that is not finalized", () => {
+  const manifest = structuredClone(fixture());
+  manifest.evidence.block.finality = "unfinalized";
+  manifest.integrity.digest = computeManifestIntegrity(manifest);
+  assert.deepEqual(validateDeploymentManifest(manifest), ["evidence.block.finality must be finalized"]);
+});
+
 test("rejects altered code hash evidence", () => {
   const manifest = structuredClone(fixture());
   manifest.contracts.morpho.codeHash = hash("ff");
@@ -98,6 +105,21 @@ test("rejects altered block hash evidence", () => {
   const manifest = structuredClone(fixture());
   manifest.evidence.block.hash = hash("ff");
   assert.ok(validateDeploymentManifest(manifest).length > 0);
+});
+
+test("accepts a fork pinned at a block after the finalized evidence block", () => {
+  const manifest = structuredClone(fixture());
+  manifest.forkProof.blockNumber = String(BigInt(manifest.evidence.block.number) + 4096n);
+  manifest.forkProof.blockHash = hash("ab");
+  manifest.integrity.digest = computeManifestIntegrity(manifest);
+  assert.deepEqual(validateDeploymentManifest(manifest), []);
+});
+
+test("rejects a fork pinned before the finalized evidence block", () => {
+  const manifest = structuredClone(fixture());
+  manifest.forkProof.blockNumber = String(BigInt(manifest.evidence.block.number) - 1n);
+  manifest.integrity.digest = computeManifestIntegrity(manifest);
+  assert.deepEqual(validateDeploymentManifest(manifest), ["fork proof block precedes the evidence block"]);
 });
 
 test("market failure stops the route", () => {

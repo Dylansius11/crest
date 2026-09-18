@@ -9,6 +9,11 @@ import {MarketParams} from "morpho-blue/src/interfaces/IMorpho.sol";
 import {CrestAccount} from "../src/CrestAccount.sol";
 import {IVaultV2, IMarketV1AdapterV2} from "../src/libraries/VaultV2Liquidity.sol";
 
+interface IArbSys {
+    function arbBlockNumber() external view returns (uint256);
+    function arbBlockHash(uint256 number) external view returns (bytes32);
+}
+
 /// @notice Deploys and configures one non-upgradeable Crest account from reviewed route evidence.
 /// @dev Foundry's selected wallet must be `initialOwner`; this script never reads a private key.
 contract DeployCrestAccount is Script {
@@ -18,6 +23,7 @@ contract DeployCrestAccount is Script {
     string internal constant DEFAULT_MANIFEST = "../config/deployment-manifest.json";
     uint256 internal constant ROBINHOOD_CHAIN_ID = 4663;
     uint256 internal constant BLOCKHASH_HISTORY = 256;
+    address internal constant ARBSYS = address(100);
 
     error BroadcastFlagRequired();
     error BroadcasterIsNotInitialOwner(address broadcaster, address initialOwner);
@@ -107,7 +113,7 @@ contract DeployCrestAccount is Script {
     }
 
     /// @notice Validates the reviewed manifest against the active chain before account creation/configuration.
-    function validateManifest(string memory json) public view returns (ManifestRoute memory route) {
+    function validateManifest(string memory json) public returns (ManifestRoute memory route) {
         _require(_manifestUint(json, ".schemaVersion") == 1);
         _require(_manifestUint(json, ".network.chainId") == block.chainid);
         _require(_same(json.readString(".vault.generation"), "Morpho Vault V2"));
@@ -183,14 +189,32 @@ contract DeployCrestAccount is Script {
         }
     }
 
-    function _validateEvidence(string memory json, ManifestRoute memory route) internal view {
+    /// @dev Robinhood Chain finalizes thousands of blocks behind head, so finalized evidence can never sit
+    ///      inside the 256-block hash window; there finality and the canonical hash come from the chain itself.
+    function _validateEvidence(string memory json, ManifestRoute memory route) internal {
         _require(route.evidenceBlock != 0 && route.evidenceBlockHash != bytes32(0));
         _require(_same(json.readString(".evidence.block.finality"), "finalized"));
-        _require(route.evidenceBlock < block.number);
-        _require(block.number - route.evidenceBlock <= BLOCKHASH_HISTORY);
-        _require(_manifestUint(json, ".forkProof.blockNumber") == route.evidenceBlock);
-        _require(json.readBytes32(".forkProof.blockHash") == route.evidenceBlockHash);
-        _require(blockhash(route.evidenceBlock) == route.evidenceBlockHash);
+        uint256 forkBlock = _manifestUint(json, ".forkProof.blockNumber");
+        bytes32 forkHash = json.readBytes32(".forkProof.blockHash");
+        // Public nodes prune old state, so the lifecycle proof runs at or after the finalized evidence block.
+        _require(forkBlock >= route.evidenceBlock && forkHash != bytes32(0));
+
+        if (block.chainid != ROBINHOOD_CHAIN_ID) {
+            _require(forkHash == route.evidenceBlockHash && forkBlock == route.evidenceBlock);
+            _require(route.evidenceBlock < block.number);
+            _require(block.number - route.evidenceBlock <= BLOCKHASH_HISTORY);
+            _require(blockhash(route.evidenceBlock) == route.evidenceBlockHash);
+            return;
+        }
+
+        _require(route.evidenceBlock < IArbSys(ARBSYS).arbBlockNumber());
+        _require(vm.parseJsonBytes32(_rpcBlock(_rpcQuantity(route.evidenceBlock)), ".hash") == route.evidenceBlockHash);
+        _require(vm.parseJsonBytes32(_rpcBlock(_rpcQuantity(forkBlock)), ".hash") == forkHash);
+        _require(vm.parseJsonUint(_rpcBlock("finalized"), ".number") >= route.evidenceBlock);
+    }
+
+    function _rpcBlock(string memory tag) internal returns (string memory) {
+        return vm.rpcJson("eth_getBlockByNumber", string.concat("[\"", tag, "\",false]"));
     }
 
     function _validateLiquidityRoute(string memory json, ManifestRoute memory route)
@@ -290,6 +314,19 @@ contract DeployCrestAccount is Script {
         });
     }
 
+
+    function _rpcQuantity(uint256 value) internal pure returns (string memory) {
+        bytes memory full = bytes(Strings.toHexString(value));
+        uint256 start = 2;
+        while (start + 1 < full.length && full[start] == bytes1("0")) ++start;
+        bytes memory quantity = new bytes(full.length - start + 2);
+        quantity[0] = "0";
+        quantity[1] = "x";
+        for (uint256 i = start; i < full.length; ++i) {
+            quantity[i - start + 2] = full[i];
+        }
+        return string(quantity);
+    }
     function _same(string memory left, string memory right) internal pure returns (bool) {
         return keccak256(bytes(left)) == keccak256(bytes(right));
     }

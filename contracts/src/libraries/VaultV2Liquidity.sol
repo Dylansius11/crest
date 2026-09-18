@@ -61,16 +61,27 @@ library VaultV2Liquidity {
         bytes32 fixedDataHash
     ) internal view returns (uint256) {
         IVaultV2 vault = IVaultV2(vaultAddress);
+        if (!vault.canSendShares(account) || !vault.canReceiveAssets(account)) return 0;
+        uint256 capacity = vaultCapacity(vaultAddress, morpho, fixedAdapter, fixedDataHash);
+        return Math.min(vault.convertToAssets(vault.balanceOf(account)), capacity);
+    }
+
+    /// @dev Vault-wide withdrawal capacity, independent of any holder: idle assets plus native adapter exit.
+    function vaultCapacity(address vaultAddress, address morpho, address fixedAdapter, bytes32 fixedDataHash)
+        internal
+        view
+        returns (uint256)
+    {
+        IVaultV2 vault = IVaultV2(vaultAddress);
         bytes memory data = vault.liquidityData();
         if (vault.liquidityAdapter() != fixedAdapter || keccak256(data) != fixedDataHash) return 0;
-        if (!vault.canSendShares(account) || !vault.canReceiveAssets(account)) return 0;
         IERC20 loan = IERC20(vault.asset());
         uint256 liquidity = loan.balanceOf(vaultAddress);
         if (fixedAdapter != address(0)) {
             if (!vault.isAdapter(fixedAdapter)) return 0;
             liquidity += _adapterLiquidity(vault, morpho, fixedAdapter, data, loan);
         }
-        return Math.min(vault.convertToAssets(vault.balanceOf(account)), liquidity);
+        return liquidity;
     }
 
     function _adapterLiquidity(IVaultV2 vault, address morpho, address adapter, bytes memory data, IERC20 loan)

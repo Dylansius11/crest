@@ -33,7 +33,7 @@
             "hash": { "$ref": "#/$defs/hash" },
             "timestamp": { "type": "string", "format": "date-time" },
             "l1BlockNumber": { "$ref": "#/$defs/uint" },
-            "finality": { "enum": ["finalized", "safe", "unfinalized"] }
+            "finality": { "const": "finalized" }
           }
         }
       }
@@ -231,7 +231,7 @@
       "additionalProperties": false,
       "required": ["tool", "rpcSource", "headerNormalization", "blockNumber", "blockHash", "morphoLifecycle", "vaultLifecycle", "morpho", "vault"],
       "properties": {
-        "tool": { "const": "Anvil 1.8.1" },
+        "tool": { "enum": ["Foundry 1.8.1", "Anvil 1.8.1"] },
         "rpcSource": { "type": "string", "format": "uri" },
         "headerNormalization": { "type": "string", "minLength": 1 },
         "blockNumber": { "$ref": "#/$defs/uint" },
@@ -241,19 +241,19 @@
         "morpho": {
           "type": ["object", "null"],
           "additionalProperties": false,
-          "required": ["collateralAssets", "borrowAssets", "repaidAssets", "withdrawnCollateralAssets", "transactionHashes"],
+          "required": ["collateralAssets", "borrowAssets", "repaidAssets", "withdrawnCollateralAssets", "proofTests"],
           "properties": {
             "collateralAssets": { "$ref": "#/$defs/uint" },
             "borrowAssets": { "$ref": "#/$defs/uint" },
             "repaidAssets": { "$ref": "#/$defs/uint" },
             "withdrawnCollateralAssets": { "$ref": "#/$defs/uint" },
-            "transactionHashes": { "type": "array", "minItems": 4, "items": { "$ref": "#/$defs/hash" } }
+            "proofTests": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } }
           }
         },
         "vault": {
           "type": ["object", "null"],
           "additionalProperties": false,
-          "required": ["depositAssets", "mintedShares", "withdrawAssets", "withdrawnShares", "redeemedShares", "redeemedAssets", "finalAssetDelta", "finalShares", "assetBalanceRestored", "transactionHashes"],
+          "required": ["depositAssets", "mintedShares", "withdrawAssets", "withdrawnShares", "redeemedShares", "redeemedAssets", "finalAssetDelta", "finalShares", "assetBalanceRestored", "proofTests"],
           "properties": {
             "depositAssets": { "$ref": "#/$defs/uint" },
             "mintedShares": { "$ref": "#/$defs/uint" },
@@ -264,7 +264,7 @@
             "finalAssetDelta": { "$ref": "#/$defs/uint" },
             "finalShares": { "$ref": "#/$defs/uint" },
             "assetBalanceRestored": { "type": "boolean" },
-            "transactionHashes": { "type": "array", "minItems": 3, "items": { "$ref": "#/$defs/hash" } }
+            "proofTests": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } }
           }
         }
       }

@@ -7,13 +7,19 @@
   },
   "packageManager": "pnpm@12.4.1",
   "scripts": {
-    "generate": "pnpm --filter @crest/domain generate",
+    "generate": "pnpm --filter @crest/domain generate && pnpm --filter @crest/contracts generate",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "db:generate": "pnpm --filter @crest/db db:generate",
     "db:migrate": "supabase migration up --local",
     "db:reset": "supabase db reset --local --no-seed",
     "db:test": "pnpm db:reset && pnpm --filter @crest/db test:integration",
+    "fork:proxy": "node scripts/rpc-retry-proxy.ts",
+    "fork:pin": "node scripts/pin-fork-block.ts",
+    "fork:test": "cd contracts && forge test --match-contract RobinhoodForkTest",
+    "fork:record": "node scripts/record-fork-lifecycle.ts",
+    "manifest:verify": "node scripts/verify-deployment-manifest.ts",
+    "manifest:test": "node scripts/verify-deployment-manifest.test.ts",
     "verify": "pnpm generate && pnpm typecheck && pnpm test"
   },
   "devDependencies": {
