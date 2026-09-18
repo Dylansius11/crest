@@ -31,6 +31,7 @@ contract ManifestAdapter {
     }
 }
 
+
 contract DeployCrestAccountHarness is DeployCrestAccount {
     function deployForTest(DeploymentParameters memory parameters, string memory manifestJson)
         external
@@ -101,6 +102,7 @@ contract DeployCrestAccountTest is CrestFixture {
         deployed.freezeBorrowing();
         assertTrue(deployed.borrowingFrozen());
     }
+
 
     function testManifestRejectsFutureEvidence() public {
         evidenceBlock = block.number + 1;

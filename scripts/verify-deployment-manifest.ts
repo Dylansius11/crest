@@ -142,10 +142,15 @@ export function validateDeploymentManifest(value: unknown): string[] {
   if (!sameAddress(at(value, "vault", "asset"), at(value, "contracts", "loanToken", "address"))) errors.push("vault asset is not the market loan token");
   if (!sameAddress(at(value, "vault", "address"), at(value, "contracts", "vault", "address") ?? at(value, "vault", "address"))) errors.push("vault address mismatch");
 
-  const blockNumber = at(value, "evidence", "block", "number");
-  const blockHash = at(value, "evidence", "block", "hash");
-  if (at(value, "forkProof", "blockNumber") !== blockNumber) errors.push("fork proof block number mismatch");
-  if (at(value, "forkProof", "blockHash") !== blockHash) errors.push("fork proof block hash mismatch");
+  // The fork proof runs at or after the finalized evidence block: state at older blocks is pruned by public
+  // nodes, so the lifecycle is simulated at a later pinned block while identities stay bound to the evidence.
+  const evidenceNumber = at(value, "evidence", "block", "number");
+  const forkNumber = at(value, "forkProof", "blockNumber");
+  requirePattern(errors, forkNumber, UINT, "forkProof.blockNumber");
+  requirePattern(errors, at(value, "forkProof", "blockHash"), HASH, "forkProof.blockHash");
+  if (typeof evidenceNumber === "string" && typeof forkNumber === "string" && UINT.test(evidenceNumber) && UINT.test(forkNumber)) {
+    if (BigInt(forkNumber) < BigInt(evidenceNumber)) errors.push("fork proof block precedes the evidence block");
+  }
   const marketGate = at(value, "gate", "marketGate");
   const vaultGate = at(value, "gate", "vaultGate");
   const morphoLifecycle = at(value, "forkProof", "morphoLifecycle");

@@ -107,6 +107,21 @@ test("rejects altered block hash evidence", () => {
   assert.ok(validateDeploymentManifest(manifest).length > 0);
 });
 
+test("accepts a fork pinned at a block after the finalized evidence block", () => {
+  const manifest = structuredClone(fixture());
+  manifest.forkProof.blockNumber = String(BigInt(manifest.evidence.block.number) + 4096n);
+  manifest.forkProof.blockHash = hash("ab");
+  manifest.integrity.digest = computeManifestIntegrity(manifest);
+  assert.deepEqual(validateDeploymentManifest(manifest), []);
+});
+
+test("rejects a fork pinned before the finalized evidence block", () => {
+  const manifest = structuredClone(fixture());
+  manifest.forkProof.blockNumber = String(BigInt(manifest.evidence.block.number) - 1n);
+  manifest.integrity.digest = computeManifestIntegrity(manifest);
+  assert.deepEqual(validateDeploymentManifest(manifest), ["fork proof block precedes the evidence block"]);
+});
+
 test("market failure stops the route", () => {
   assert.equal(classifyRoute({ marketVerified: false, marketLiquidityAssets: 10n, plannedBorrowAssets: 1n, vaultVerified: true, vaultWithdrawableAssets: 10n, plannedWithdrawalAssets: 1n }), "stop");
 });

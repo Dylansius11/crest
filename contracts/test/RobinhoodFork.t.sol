@@ -1,0 +1,134 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+pragma solidity 0.8.37;
+
+import {Test} from "forge-std/Test.sol";
+import {stdJson} from "forge-std/StdJson.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
+import {IMorpho, Id, Market, MarketParams, Position} from "morpho-blue/src/interfaces/IMorpho.sol";
+import {DeployCrestAccount} from "../script/DeployCrestAccount.s.sol";
+import {MorphoBalancesLib} from "morpho-blue/src/libraries/periphery/MorphoBalancesLib.sol";
+import {CrestAccount} from "../src/CrestAccount.sol";
+
+interface IArbSysFork {
+    function arbBlockNumber() external view returns (uint256);
+    function arbBlockHash(uint256 number) external view returns (bytes32);
+}
+
+contract ForkEvidenceHarness is DeployCrestAccount {
+    function validateEvidenceOnly(string memory json, uint256 number, bytes32 hash) external {
+        ManifestRoute memory route;
+        route.evidenceBlock = number;
+        route.evidenceBlockHash = hash;
+        _validateEvidence(json, route);
+    }
+}
+
+contract RobinhoodForkTest is Test {
+    using stdJson for string;
+    using MorphoBalancesLib for IMorpho;
+
+    string internal constant MANIFEST_PATH = "../config/deployment-manifest.json";
+    uint256 internal constant COLLATERAL_ASSETS = 10 ether;
+    uint256 internal constant BORROW_ASSETS = 1_000e6;
+
+    string internal manifest;
+    uint256 internal evidenceBlock;
+    uint256 internal forkBlock;
+    bytes32 internal marketId;
+    address internal owner = makeAddr("fork owner");
+    address internal guardian = makeAddr("fork guardian");
+
+    IMorpho internal morpho;
+    IERC20 internal collateral;
+    IERC20 internal loan;
+    IERC4626 internal vault;
+    MarketParams internal marketParams;
+    CrestAccount internal account;
+
+    function setUp() public {
+        manifest = vm.readFile(MANIFEST_PATH);
+        evidenceBlock = _manifestUint(".evidence.block.number");
+        forkBlock = _manifestUint(".forkProof.blockNumber");
+        // Public nodes prune old state, so the lifecycle runs at the manifest's pinned proof block, which sits
+        // at or after the finalized evidence block. CREST_FORK_RPC points at the retrying proxy.
+        string memory rpc = vm.envOr("CREST_FORK_RPC", manifest.readString(".forkProof.rpcSource"));
+        vm.createSelectFork(rpc, forkBlock);
+        assertEq(block.chainid, _manifestUint(".network.chainId"), "wrong fork chain");
+        assertEq(IArbSysFork(address(100)).arbBlockNumber(), forkBlock, "wrong pinned L2 block");
+        new ForkEvidenceHarness().validateEvidenceOnly(
+            manifest, evidenceBlock, manifest.readBytes32(".evidence.block.hash")
+        );
+
+        morpho = IMorpho(manifest.readAddress(".contracts.morpho.address"));
+        collateral = IERC20(manifest.readAddress(".contracts.collateralToken.address"));
+        loan = IERC20(manifest.readAddress(".contracts.loanToken.address"));
+        vault = IERC4626(manifest.readAddress(".vault.address"));
+        marketParams = MarketParams({
+            loanToken: address(loan),
+            collateralToken: address(collateral),
+            oracle: manifest.readAddress(".market.oracle"),
+            irm: manifest.readAddress(".market.irm"),
+            lltv: _manifestUint(".market.lltv")
+        });
+        marketId = keccak256(abi.encode(marketParams));
+        assertEq(marketId, manifest.readBytes32(".market.id"), "wrong market params");
+        assertEq(vault.asset(), address(loan), "wrong vault asset");
+
+        vm.deal(owner, 10 ether);
+        vm.deal(guardian, 1 ether);
+        deal(address(collateral), owner, COLLATERAL_ASSETS, true);
+
+        vm.startPrank(owner);
+        account = new CrestAccount(owner, address(morpho));
+        account.configure(_policy());
+        vm.stopPrank();
+    }
+
+    function testPinnedSupplyBorrowDeployUsesExactManifestRoute() public {
+        Market memory marketBefore = morpho.market(Id.wrap(marketId));
+        uint256 expectedShares = vault.previewDeposit(BORROW_ASSETS);
+
+        vm.startPrank(owner);
+        collateral.approve(address(account), COLLATERAL_ASSETS);
+        account.supplyCollateral(COLLATERAL_ASSETS);
+        account.borrowAndDeploy(BORROW_ASSETS, expectedShares);
+        vm.stopPrank();
+
+        Position memory position = morpho.position(Id.wrap(marketId), address(account));
+        Market memory marketAfter = morpho.market(Id.wrap(marketId));
+        assertEq(position.collateral, COLLATERAL_ASSETS, "collateral mismatch");
+        assertGt(position.borrowShares, 0, "missing debt shares");
+        assertEq(uint256(marketAfter.totalBorrowAssets), uint256(marketBefore.totalBorrowAssets) + BORROW_ASSETS, "borrow assets mismatch");
+        assertEq(vault.balanceOf(address(account)), expectedShares, "vault shares mismatch");
+        assertEq(loan.balanceOf(address(account)), 0, "borrow receiver drift");
+        // Morpho converts borrow shares back to assets with round-up virtual-share math, so the account's
+        // canonical debt is the borrowed amount plus at most one wei of rounding dust.
+        uint256 expectedDebt = morpho.expectedBorrowAssets(marketParams, address(account));
+        assertEq(account.currentDebtAssets(), expectedDebt, "debt mismatch");
+        assertLe(expectedDebt - BORROW_ASSETS, 1, "debt rounding drift");
+        assertEq(account.strategyAssets(), vault.convertToAssets(expectedShares), "strategy accounting mismatch");
+    }
+
+    function _policy() internal view returns (CrestAccount.PolicyConfig memory) {
+        return CrestAccount.PolicyConfig({
+            market: marketParams,
+            yieldVault: address(vault),
+            maxCollateralAssets: uint128(COLLATERAL_ASSETS),
+            debtCeilingAssets: uint128(2_000e6),
+            maxStrategyAssets: uint128(2_000e6),
+            reserveFloorAssets: uint128(100e6),
+            strategyFloorAssets: uint128(100e6),
+            maxRepayPerActionAssets: uint128(500e6),
+            lowerLtvWad: uint64(0.20e18),
+            targetLtvWad: uint64(0.30e18),
+            upperLtvWad: uint64(0.40e18),
+            criticalLtvWad: uint64(0.50e18),
+            guardian: guardian
+        });
+    }
+
+    function _manifestUint(string memory path) internal view returns (uint256) {
+        return vm.parseUint(manifest.readString(path));
+    }
+}
