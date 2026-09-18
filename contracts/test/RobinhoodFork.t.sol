@@ -4,6 +4,7 @@ pragma solidity 0.8.37;
 import {Test} from "forge-std/Test.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {IMorpho, Id, Market, MarketParams, Position} from "morpho-blue/src/interfaces/IMorpho.sol";
 import {DeployCrestAccount} from "../script/DeployCrestAccount.s.sol";
@@ -108,6 +109,148 @@ contract RobinhoodForkTest is Test {
         assertEq(account.currentDebtAssets(), expectedDebt, "debt mismatch");
         assertLe(expectedDebt - BORROW_ASSETS, 1, "debt rounding drift");
         assertEq(account.strategyAssets(), vault.convertToAssets(expectedShares), "strategy accounting mismatch");
+    }
+
+    function testGuardianCannotBorrowAndFreezeStopsOwnerBorrowing() public {
+        _openPosition();
+
+        // Debt creation and unfreezing are `onlyOwner`, so the Guardian is rejected by Ownable itself.
+        vm.prank(guardian);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, guardian));
+        account.borrowAndDeploy(1e6, 0);
+
+        vm.prank(guardian);
+        account.freezeBorrowing();
+        assertTrue(account.borrowingFrozen(), "freeze not recorded");
+
+        vm.prank(owner);
+        vm.expectRevert(CrestAccount.BorrowingIsFrozen.selector);
+        account.borrowAndDeploy(1e6, 0);
+
+        vm.prank(guardian);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, guardian));
+        account.unfreezeBorrowing();
+
+        vm.prank(owner);
+        account.unfreezeBorrowing();
+        assertFalse(account.borrowingFrozen(), "owner unfreeze failed");
+    }
+
+    function testDebtCeilingUsesFreshAccruedDebt() public {
+        _openPosition();
+        uint256 headroom = uint256(account.policy().debtCeilingAssets) - account.currentDebtAssets();
+
+        // Interest accrues on the live IRM, so the ceiling check must price debt at the current block.
+        vm.warp(block.timestamp + 180 days);
+        morpho.accrueInterest(marketParams);
+        uint256 accruedDebt = account.currentDebtAssets();
+        assertGt(accruedDebt, BORROW_ASSETS, "no interest accrued on the live market");
+
+        uint256 ceiling = uint256(account.policy().debtCeilingAssets);
+        bytes memory expectedRevert =
+            abi.encodeWithSelector(CrestAccount.DebtCeilingExceeded.selector, ceiling, accruedDebt + headroom);
+
+        vm.prank(owner);
+        vm.expectRevert(expectedRevert);
+        account.borrowAndDeploy(headroom, 0);
+    }
+
+    function testStrategyRepaymentIsBoundedByNativeVaultLiquidity() public {
+        _openPosition();
+        uint256 liquidity = account.maxWithdrawableStrategyAssets();
+        assertEq(vault.maxWithdraw(address(account)), 0, "Vault V2 max functions are not zero");
+        assertGt(liquidity, 0, "no native vault withdrawal liquidity");
+
+        uint256 perAction = uint256(account.policy().maxRepayPerActionAssets);
+        uint256 aboveFloor = account.strategyAssets() - uint256(account.policy().strategyFloorAssets);
+        uint256 expected = _min(_min(perAction, aboveFloor), _min(liquidity, account.currentDebtAssets()));
+
+        uint256 debtBefore = account.currentDebtAssets();
+        uint256 strategyBefore = account.strategyAssets();
+        uint256 reserveBefore = account.idleReserveAssets();
+
+        vm.prank(guardian);
+        account.repayFromStrategy(type(uint256).max);
+
+        assertApproxEqAbs(debtBefore - account.currentDebtAssets(), expected, 1, "strategy repayment amount drift");
+        assertApproxEqAbs(strategyBefore - account.strategyAssets(), expected, 1, "strategy balance drift");
+        assertEq(account.idleReserveAssets(), reserveBefore, "withdrawn assets left the repayment path");
+        assertGe(account.strategyAssets(), uint256(account.policy().strategyFloorAssets), "strategy floor broken");
+    }
+
+    function testReserveRepaymentReducesDebtAndHoldsFloor() public {
+        _openPosition();
+        uint256 floor = uint256(account.policy().reserveFloorAssets);
+        deal(address(loan), address(account), floor + 300e6, true);
+
+        uint256 debtBefore = account.currentDebtAssets();
+        vm.prank(guardian);
+        account.repayFromReserve(type(uint256).max);
+
+        assertApproxEqAbs(debtBefore - account.currentDebtAssets(), 300e6, 1, "reserve repayment amount drift");
+        assertEq(account.idleReserveAssets(), floor, "reserve floor broken");
+
+        vm.prank(guardian);
+        vm.expectRevert(CrestAccount.RepayAmountZero.selector);
+        account.repayFromReserve(type(uint256).max);
+    }
+
+    function testOwnerExitClosesThePositionOnLiveProtocols() public {
+        _openPosition();
+
+        // Value only ever leaves to the owner: the account refuses itself as a withdrawal receiver, and the
+        // owner funds the final repayment from their own balance.
+        vm.startPrank(owner);
+        account.withdrawStrategy(account.strategyAssets(), owner, type(uint256).max);
+        uint256 debt = account.currentDebtAssets();
+        deal(address(loan), owner, debt, true);
+        loan.approve(address(account), debt);
+        account.ownerRepay(type(uint256).max);
+        assertEq(account.currentDebtAssets(), 0, "debt not cleared");
+
+        account.withdrawCollateral(COLLATERAL_ASSETS, owner);
+        vm.stopPrank();
+
+        Position memory position = morpho.position(Id.wrap(marketId), address(account));
+        assertEq(position.collateral, 0, "collateral not returned");
+        assertEq(position.borrowShares, 0, "borrow shares remain");
+        assertEq(collateral.balanceOf(owner), COLLATERAL_ASSETS, "owner did not receive collateral");
+        // ERC-4626 burns round-up shares for an exact asset withdrawal, so sub-wei share dust remains; it is
+        // worth zero loan-token assets and cannot be redeemed for value.
+        assertEq(account.strategyAssets(), 0, "strategy value remains");
+        assertLt(vault.convertToAssets(vault.balanceOf(address(account))), 1, "redeemable dust is not sub-wei");
+    }
+
+    function testPolicyCapsAndReceiverRulesHoldOnLiveProtocols() public {
+        _openPosition();
+        uint256 cap = uint256(account.policy().maxCollateralAssets);
+
+        deal(address(collateral), owner, 1 ether, true);
+        vm.startPrank(owner);
+        collateral.approve(address(account), 1 ether);
+        vm.expectRevert(abi.encodeWithSelector(CrestAccount.CollateralCapExceeded.selector, cap, cap + 1 ether));
+        account.supplyCollateral(1 ether);
+
+        // Value may only leave to a third-party receiver: the account and the zero address are refused.
+        vm.expectRevert(CrestAccount.InvalidConfiguration.selector);
+        account.withdrawCollateral(1, address(account));
+        vm.expectRevert(CrestAccount.InvalidConfiguration.selector);
+        account.withdrawStrategy(1, address(0), type(uint256).max);
+        vm.expectRevert(CrestAccount.InvalidConfiguration.selector);
+        account.withdrawLoanToken(1, address(account));
+        vm.stopPrank();
+    }
+
+    function _openPosition() internal {
+        vm.startPrank(owner);
+        collateral.approve(address(account), COLLATERAL_ASSETS);
+        account.supplyCollateral(COLLATERAL_ASSETS);
+        account.borrowAndDeploy(BORROW_ASSETS, vault.previewDeposit(BORROW_ASSETS));
+        vm.stopPrank();
+    }
+
+    function _min(uint256 left, uint256 right) internal pure returns (uint256) {
+        return left < right ? left : right;
     }
 
     function _policy() internal view returns (CrestAccount.PolicyConfig memory) {

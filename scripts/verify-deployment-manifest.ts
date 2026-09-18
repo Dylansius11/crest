@@ -249,7 +249,12 @@ function recordMismatch(errors: string[], actual: unknown, expected: unknown, la
 
 export async function verifyDeploymentManifestOnline(manifest: DeploymentManifest, rpcUrl: string): Promise<string[]> {
   const errors: string[] = [];
+  // Identity and finality stay anchored to the finalized evidence block header. Robinhood Chain nodes prune
+  // historical state and serve account proofs only at the head, so immutable state (code hashes, market
+  // params, decimals, vault asset) is re-read at `latest`: that is also the stronger drift check, because a
+  // mismatch means the live deployment no longer matches the recorded route.
   const pinnedBlock = blockTag(manifest.evidence.block.number);
+  const stateBlock = "latest";
   recordMismatch(errors, Number(BigInt(await rpcHex(rpcUrl, "eth_chainId"))), manifest.network.chainId, "chain ID");
 
   const block = await rpc(rpcUrl, "eth_getBlockByNumber", [pinnedBlock, false]);
@@ -259,14 +264,14 @@ export async function verifyDeploymentManifestOnline(manifest: DeploymentManifes
   else recordMismatch(errors, new Date(Number(BigInt(block.timestamp)) * 1000).toISOString(), manifest.evidence.block.timestamp, "pinned block timestamp");
 
   for (const [name, contract] of Object.entries(manifest.contracts)) {
-    const code = await rpcHex(rpcUrl, "eth_getCode", [contract.address, pinnedBlock]);
+    const code = await rpcHex(rpcUrl, "eth_getCode", [contract.address, stateBlock]);
     if (code === "0x") errors.push(`${name} has no code at the pinned block`);
-    const proof = await rpc(rpcUrl, "eth_getProof", [contract.address, [], pinnedBlock]);
+    const proof = await rpc(rpcUrl, "eth_getProof", [contract.address, [], stateBlock]);
     if (!isRecord(proof)) throw new Error(`RPC eth_getProof returned invalid ${name} proof`);
     recordMismatch(errors, proof.codeHash, contract.codeHash, `${name} code hash`);
   }
 
-  const marketParams = await ethCall(rpcUrl, manifest.contracts.morpho.address, callData("0x2c3c9157", manifest.market.id), pinnedBlock);
+  const marketParams = await ethCall(rpcUrl, manifest.contracts.morpho.address, callData("0x2c3c9157", manifest.market.id), stateBlock);
   for (const [index, expected, label] of [
     [0, manifest.market.loanToken, "market loan token"],
     [1, manifest.market.collateralToken, "market collateral token"],
@@ -277,15 +282,15 @@ export async function verifyDeploymentManifestOnline(manifest: DeploymentManifes
 
   for (const name of ["loanToken", "collateralToken"] as const) {
     const expected = manifest.contracts[name].decimals;
-    recordMismatch(errors, Number(abiUint(await ethCall(rpcUrl, manifest.contracts[name].address, "0x313ce567", pinnedBlock))), expected, `${name} decimals`);
+    recordMismatch(errors, Number(abiUint(await ethCall(rpcUrl, manifest.contracts[name].address, "0x313ce567", stateBlock))), expected, `${name} decimals`);
   }
-  if (abiUint(await ethCall(rpcUrl, manifest.contracts.oracle.address, "0xa035b1fe", pinnedBlock)) === 0n) errors.push("oracle price is zero");
-  recordMismatch(errors, abiAddress(await ethCall(rpcUrl, manifest.contracts.irm.address, "0x3acb5624", pinnedBlock)), manifest.contracts.morpho.address, "IRM Morpho binding");
-  recordMismatch(errors, abiAddress(await ethCall(rpcUrl, manifest.vault.address, "0x38d52e0f", pinnedBlock)), manifest.contracts.loanToken.address, "vault asset");
+  if (abiUint(await ethCall(rpcUrl, manifest.contracts.oracle.address, "0xa035b1fe", stateBlock)) === 0n) errors.push("oracle price is zero");
+  recordMismatch(errors, abiAddress(await ethCall(rpcUrl, manifest.contracts.irm.address, "0x3acb5624", stateBlock)), manifest.contracts.morpho.address, "IRM Morpho binding");
+  recordMismatch(errors, abiAddress(await ethCall(rpcUrl, manifest.vault.address, "0x38d52e0f", stateBlock)), manifest.contracts.loanToken.address, "vault asset");
 
   const account = "0x0000000000000000000000000000000000000001";
   for (const [name, selector] of Object.entries({ maxDeposit: "0x402d267d", maxMint: "0xc63d75b6", maxWithdraw: "0xce96cb77", maxRedeem: "0xd905777e" })) {
-    const actual = abiUint(await ethCall(rpcUrl, manifest.vault.address, callData(selector, account), pinnedBlock)).toString();
+    const actual = abiUint(await ethCall(rpcUrl, manifest.vault.address, callData(selector, account), stateBlock)).toString();
     recordMismatch(errors, actual, manifest.vault.maxFunctions[name], `vault ${name}`);
   }
   return errors;

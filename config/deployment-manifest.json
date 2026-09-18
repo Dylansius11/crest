@@ -332,8 +332,8 @@
     "tool": "Foundry 1.8.1",
     "rpcSource": "https://rpc.mainnet.chain.robinhood.com",
     "headerNormalization": "Not required: Foundry 1.8.1 consumed the pinned Robinhood header directly.",
-    "blockNumber": "66369345",
-    "blockHash": "0x47d3a7d06b632cdffbe7de8d9c2a5885e5ab6e6940541f879e56f7b879dd01a7",
+    "blockNumber": "66371581",
+    "blockHash": "0x8ef2c55207cd632f77c15bd7a3404d552d561d7c2cb47e5b8c29c4b1ac6507cf",
     "morphoLifecycle": "not_executed",
     "vaultLifecycle": "not_executed",
     "morpho": null,
@@ -347,6 +347,6 @@
   },
   "integrity": {
     "algorithm": "sha256",
-    "digest": "sha256:3e03fb12fe68f5c1b4407744ec57082b020c08ad692b388689aca0ed96d14214"
+    "digest": "sha256:4e3b5d6eca2a79bbbde18e3bdb5394e3d9a1277c79d65f9aa0e84fd93b0b0b5b"
   }
 }
