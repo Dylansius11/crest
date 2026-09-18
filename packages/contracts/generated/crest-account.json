@@ -1,0 +1,1290 @@
+{
+  "contract": "CrestAccount",
+  "abi": [
+    {
+      "type": "constructor",
+      "inputs": [
+        {
+          "name": "initialOwner",
+          "type": "address",
+          "internalType": "address"
+        },
+        {
+          "name": "morpho_",
+          "type": "address",
+          "internalType": "address"
+        }
+      ],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "error",
+      "name": "ActivePositionOrBalance",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "BorrowingIsFrozen",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "CollateralCapExceeded",
+      "inputs": [
+        {
+          "name": "cap",
+          "type": "uint256",
+          "internalType": "uint256"
+        },
+        {
+          "name": "resulting",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ]
+    },
+    {
+      "type": "error",
+      "name": "DebtCeilingExceeded",
+      "inputs": [
+        {
+          "name": "cap",
+          "type": "uint256",
+          "internalType": "uint256"
+        },
+        {
+          "name": "resulting",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ]
+    },
+    {
+      "type": "error",
+      "name": "ExcessiveVaultShares",
+      "inputs": [
+        {
+          "name": "maximum",
+          "type": "uint256",
+          "internalType": "uint256"
+        },
+        {
+          "name": "actual",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ]
+    },
+    {
+      "type": "error",
+      "name": "InsufficientVaultShares",
+      "inputs": [
+        {
+          "name": "minimum",
+          "type": "uint256",
+          "internalType": "uint256"
+        },
+        {
+          "name": "actual",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ]
+    },
+    {
+      "type": "error",
+      "name": "InvalidConfiguration",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "InvalidVaultRoute",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "LtvPolicyInvalid",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "OwnableInvalidOwner",
+      "inputs": [
+        {
+          "name": "owner",
+          "type": "address",
+          "internalType": "address"
+        }
+      ]
+    },
+    {
+      "type": "error",
+      "name": "OwnableUnauthorizedAccount",
+      "inputs": [
+        {
+          "name": "account",
+          "type": "address",
+          "internalType": "address"
+        }
+      ]
+    },
+    {
+      "type": "error",
+      "name": "PostconditionFailed",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "ReentrancyGuardReentrantCall",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "RepayAmountZero",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "ReserveFloorViolation",
+      "inputs": [
+        {
+          "name": "floor",
+          "type": "uint256",
+          "internalType": "uint256"
+        },
+        {
+          "name": "resulting",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ]
+    },
+    {
+      "type": "error",
+      "name": "SafeERC20FailedOperation",
+      "inputs": [
+        {
+          "name": "token",
+          "type": "address",
+          "internalType": "address"
+        }
+      ]
+    },
+    {
+      "type": "error",
+      "name": "StrategyCapExceeded",
+      "inputs": [
+        {
+          "name": "cap",
+          "type": "uint256",
+          "internalType": "uint256"
+        },
+        {
+          "name": "resulting",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ]
+    },
+    {
+      "type": "error",
+      "name": "StrategyFloorViolation",
+      "inputs": [
+        {
+          "name": "floor",
+          "type": "uint256",
+          "internalType": "uint256"
+        },
+        {
+          "name": "resulting",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ]
+    },
+    {
+      "type": "error",
+      "name": "Unauthorized",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "VaultAssetMismatch",
+      "inputs": [
+        {
+          "name": "expected",
+          "type": "address",
+          "internalType": "address"
+        },
+        {
+          "name": "actual",
+          "type": "address",
+          "internalType": "address"
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "name": "BorrowedAndDeployed",
+      "inputs": [
+        {
+          "name": "borrowedAssets",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        },
+        {
+          "name": "vaultShares",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        },
+        {
+          "name": "debtAfter",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        },
+        {
+          "name": "strategyAssetsAfter",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "BorrowingFrozen",
+      "inputs": [
+        {
+          "name": "actor",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        },
+        {
+          "name": "policyNonce",
+          "type": "uint64",
+          "indexed": true,
+          "internalType": "uint64"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "BorrowingUnfrozen",
+      "inputs": [
+        {
+          "name": "owner",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        },
+        {
+          "name": "policyNonce",
+          "type": "uint64",
+          "indexed": true,
+          "internalType": "uint64"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "CollateralSupplied",
+      "inputs": [
+        {
+          "name": "assets",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        },
+        {
+          "name": "resultingCollateral",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "CollateralWithdrawn",
+      "inputs": [
+        {
+          "name": "assets",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        },
+        {
+          "name": "receiver",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "GuardianChanged",
+      "inputs": [
+        {
+          "name": "oldGuardian",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        },
+        {
+          "name": "newGuardian",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "LoanTokenWithdrawn",
+      "inputs": [
+        {
+          "name": "assets",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        },
+        {
+          "name": "receiver",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "OwnerRepaid",
+      "inputs": [
+        {
+          "name": "repaidAssets",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        },
+        {
+          "name": "debtBefore",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        },
+        {
+          "name": "debtAfter",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "OwnershipTransferred",
+      "inputs": [
+        {
+          "name": "previousOwner",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        },
+        {
+          "name": "newOwner",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "OwnershipTransferStarted",
+      "inputs": [
+        {
+          "name": "previousOwner",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        },
+        {
+          "name": "newOwner",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "PolicyConfigured",
+      "inputs": [
+        {
+          "name": "policyNonce",
+          "type": "uint64",
+          "indexed": true,
+          "internalType": "uint64"
+        },
+        {
+          "name": "marketId",
+          "type": "bytes32",
+          "indexed": true,
+          "internalType": "bytes32"
+        },
+        {
+          "name": "yieldVault",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        },
+        {
+          "name": "policyHash",
+          "type": "bytes32",
+          "indexed": false,
+          "internalType": "bytes32"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "RepaidFromReserve",
+      "inputs": [
+        {
+          "name": "actor",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        },
+        {
+          "name": "requestedAssets",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        },
+        {
+          "name": "repaidAssets",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        },
+        {
+          "name": "debtBefore",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        },
+        {
+          "name": "debtAfter",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "RepaidFromStrategy",
+      "inputs": [
+        {
+          "name": "actor",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        },
+        {
+          "name": "requestedAssets",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        },
+        {
+          "name": "withdrawnAssets",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        },
+        {
+          "name": "burnedShares",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        },
+        {
+          "name": "debtBefore",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        },
+        {
+          "name": "debtAfter",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        },
+        {
+          "name": "strategyAssetsBefore",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        },
+        {
+          "name": "strategyAssetsAfter",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "StrategyDeposited",
+      "inputs": [
+        {
+          "name": "assets",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        },
+        {
+          "name": "shares",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        },
+        {
+          "name": "strategyAssetsAfter",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "StrategyWithdrawn",
+      "inputs": [
+        {
+          "name": "assets",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        },
+        {
+          "name": "shares",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        },
+        {
+          "name": "receiver",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "VaultLiquidityRouteBound",
+      "inputs": [
+        {
+          "name": "adapter",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        },
+        {
+          "name": "dataHash",
+          "type": "bytes32",
+          "indexed": false,
+          "internalType": "bytes32"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "function",
+      "name": "acceptOwnership",
+      "inputs": [],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "borrowAndDeploy",
+      "inputs": [
+        {
+          "name": "assets",
+          "type": "uint256",
+          "internalType": "uint256"
+        },
+        {
+          "name": "minVaultShares",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "borrowingFrozen",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "bool",
+          "internalType": "bool"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "collateralToken",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "address",
+          "internalType": "address"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "configure",
+      "inputs": [
+        {
+          "name": "c",
+          "type": "tuple",
+          "internalType": "struct CrestAccount.PolicyConfig",
+          "components": [
+            {
+              "name": "market",
+              "type": "tuple",
+              "internalType": "struct MarketParams",
+              "components": [
+                {
+                  "name": "loanToken",
+                  "type": "address",
+                  "internalType": "address"
+                },
+                {
+                  "name": "collateralToken",
+                  "type": "address",
+                  "internalType": "address"
+                },
+                {
+                  "name": "oracle",
+                  "type": "address",
+                  "internalType": "address"
+                },
+                {
+                  "name": "irm",
+                  "type": "address",
+                  "internalType": "address"
+                },
+                {
+                  "name": "lltv",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                }
+              ]
+            },
+            {
+              "name": "yieldVault",
+              "type": "address",
+              "internalType": "address"
+            },
+            {
+              "name": "maxCollateralAssets",
+              "type": "uint128",
+              "internalType": "uint128"
+            },
+            {
+              "name": "debtCeilingAssets",
+              "type": "uint128",
+              "internalType": "uint128"
+            },
+            {
+              "name": "maxStrategyAssets",
+              "type": "uint128",
+              "internalType": "uint128"
+            },
+            {
+              "name": "reserveFloorAssets",
+              "type": "uint128",
+              "internalType": "uint128"
+            },
+            {
+              "name": "strategyFloorAssets",
+              "type": "uint128",
+              "internalType": "uint128"
+            },
+            {
+              "name": "maxRepayPerActionAssets",
+              "type": "uint128",
+              "internalType": "uint128"
+            },
+            {
+              "name": "lowerLtvWad",
+              "type": "uint64",
+              "internalType": "uint64"
+            },
+            {
+              "name": "targetLtvWad",
+              "type": "uint64",
+              "internalType": "uint64"
+            },
+            {
+              "name": "upperLtvWad",
+              "type": "uint64",
+              "internalType": "uint64"
+            },
+            {
+              "name": "criticalLtvWad",
+              "type": "uint64",
+              "internalType": "uint64"
+            },
+            {
+              "name": "guardian",
+              "type": "address",
+              "internalType": "address"
+            }
+          ]
+        }
+      ],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "currentDebtAssets",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "depositToStrategy",
+      "inputs": [
+        {
+          "name": "assets",
+          "type": "uint256",
+          "internalType": "uint256"
+        },
+        {
+          "name": "minVaultShares",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "freezeBorrowing",
+      "inputs": [],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "guardian",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "address",
+          "internalType": "address"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "idleReserveAssets",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "loanToken",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "address",
+          "internalType": "address"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "marketId",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "bytes32",
+          "internalType": "bytes32"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "maxWithdrawableStrategyAssets",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "morpho",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "address",
+          "internalType": "contract IMorpho"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "owner",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "address",
+          "internalType": "address"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "ownerRepay",
+      "inputs": [
+        {
+          "name": "assets",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "pendingOwner",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "address",
+          "internalType": "address"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "policy",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "tuple",
+          "internalType": "struct CrestAccount.PolicyConfig",
+          "components": [
+            {
+              "name": "market",
+              "type": "tuple",
+              "internalType": "struct MarketParams",
+              "components": [
+                {
+                  "name": "loanToken",
+                  "type": "address",
+                  "internalType": "address"
+                },
+                {
+                  "name": "collateralToken",
+                  "type": "address",
+                  "internalType": "address"
+                },
+                {
+                  "name": "oracle",
+                  "type": "address",
+                  "internalType": "address"
+                },
+                {
+                  "name": "irm",
+                  "type": "address",
+                  "internalType": "address"
+                },
+                {
+                  "name": "lltv",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                }
+              ]
+            },
+            {
+              "name": "yieldVault",
+              "type": "address",
+              "internalType": "address"
+            },
+            {
+              "name": "maxCollateralAssets",
+              "type": "uint128",
+              "internalType": "uint128"
+            },
+            {
+              "name": "debtCeilingAssets",
+              "type": "uint128",
+              "internalType": "uint128"
+            },
+            {
+              "name": "maxStrategyAssets",
+              "type": "uint128",
+              "internalType": "uint128"
+            },
+            {
+              "name": "reserveFloorAssets",
+              "type": "uint128",
+              "internalType": "uint128"
+            },
+            {
+              "name": "strategyFloorAssets",
+              "type": "uint128",
+              "internalType": "uint128"
+            },
+            {
+              "name": "maxRepayPerActionAssets",
+              "type": "uint128",
+              "internalType": "uint128"
+            },
+            {
+              "name": "lowerLtvWad",
+              "type": "uint64",
+              "internalType": "uint64"
+            },
+            {
+              "name": "targetLtvWad",
+              "type": "uint64",
+              "internalType": "uint64"
+            },
+            {
+              "name": "upperLtvWad",
+              "type": "uint64",
+              "internalType": "uint64"
+            },
+            {
+              "name": "criticalLtvWad",
+              "type": "uint64",
+              "internalType": "uint64"
+            },
+            {
+              "name": "guardian",
+              "type": "address",
+              "internalType": "address"
+            }
+          ]
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "policyNonce",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint64",
+          "internalType": "uint64"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "renounceOwnership",
+      "inputs": [],
+      "outputs": [],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "repayFromReserve",
+      "inputs": [
+        {
+          "name": "requestedAssets",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "repayFromStrategy",
+      "inputs": [
+        {
+          "name": "requestedAssets",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "setGuardian",
+      "inputs": [
+        {
+          "name": "newGuardian",
+          "type": "address",
+          "internalType": "address"
+        }
+      ],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "strategyAssets",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "supplyCollateral",
+      "inputs": [
+        {
+          "name": "assets",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "transferOwnership",
+      "inputs": [
+        {
+          "name": "newOwner",
+          "type": "address",
+          "internalType": "address"
+        }
+      ],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "unfreezeBorrowing",
+      "inputs": [],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "vaultLiquidityAdapter",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "address",
+          "internalType": "address"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "vaultLiquidityDataHash",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "bytes32",
+          "internalType": "bytes32"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "withdrawCollateral",
+      "inputs": [
+        {
+          "name": "assets",
+          "type": "uint256",
+          "internalType": "uint256"
+        },
+        {
+          "name": "receiver",
+          "type": "address",
+          "internalType": "address"
+        }
+      ],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "withdrawLoanToken",
+      "inputs": [
+        {
+          "name": "assets",
+          "type": "uint256",
+          "internalType": "uint256"
+        },
+        {
+          "name": "receiver",
+          "type": "address",
+          "internalType": "address"
+        }
+      ],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "withdrawStrategy",
+      "inputs": [
+        {
+          "name": "assets",
+          "type": "uint256",
+          "internalType": "uint256"
+        },
+        {
+          "name": "receiver",
+          "type": "address",
+          "internalType": "address"
+        },
+        {
+          "name": "maxShares",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "yieldVault",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "address",
+          "internalType": "address"
+        }
+      ],
+      "stateMutability": "view"
+    }
+  ],
+  "methodIdentifiers": {
+    "acceptOwnership()": "79ba5097",
+    "borrowAndDeploy(uint256,uint256)": "874d0e39",
+    "borrowingFrozen()": "6500a4f6",
+    "collateralToken()": "b2016bd4",
+    "configure(((address,address,address,address,uint256),address,uint128,uint128,uint128,uint128,uint128,uint128,uint64,uint64,uint64,uint64,address))": "00b22fc0",
+    "currentDebtAssets()": "0c8f54e5",
+    "depositToStrategy(uint256,uint256)": "b0656c39",
+    "freezeBorrowing()": "95b485cc",
+    "guardian()": "452a9320",
+    "idleReserveAssets()": "debf1335",
+    "loanToken()": "06d37817",
+    "marketId()": "6ed71ede",
+    "maxWithdrawableStrategyAssets()": "2d02c617",
+    "morpho()": "d8fbc833",
+    "owner()": "8da5cb5b",
+    "ownerRepay(uint256)": "4f4550d9",
+    "pendingOwner()": "e30c3978",
+    "policy()": "0505c8c9",
+    "policyNonce()": "1b630851",
+    "renounceOwnership()": "715018a6",
+    "repayFromReserve(uint256)": "1c04809a",
+    "repayFromStrategy(uint256)": "692340a4",
+    "setGuardian(address)": "8a0dac4a",
+    "strategyAssets()": "b4d0c36b",
+    "supplyCollateral(uint256)": "367febea",
+    "transferOwnership(address)": "f2fde38b",
+    "unfreezeBorrowing()": "5fd3b602",
+    "vaultLiquidityAdapter()": "79fec78d",
+    "vaultLiquidityDataHash()": "64bda0a9",
+    "withdrawCollateral(uint256,address)": "0af504cc",
+    "withdrawLoanToken(uint256,address)": "e39687ea",
+    "withdrawStrategy(uint256,address,uint256)": "2fea200a",
+    "yieldVault()": "a7f8a5e2"
+  },
+  "guardianSelectors": {
+    "freezeBorrowing()": "0x95b485cc",
+    "repayFromReserve(uint256)": "0x1c04809a",
+    "repayFromStrategy(uint256)": "0x692340a4"
+  }
+}
