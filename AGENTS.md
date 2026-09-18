@@ -3,15 +3,40 @@
 ## Mission
 Build Crest as a policy-controlled Stock Token borrowing product: owner-approved debt, one verified Morpho market, one fixed loan-token vault, and a Guardian that can only freeze or reduce the account's own debt.
 
-This repository currently contains specifications, not a working implementation. Never present planned, forked, simulated, cached, or projected behavior as live.
+Never present planned, forked, simulated, cached, or projected behavior as live.
+
+## Repository map
+| Path | Owns | Read or change it when |
+| --- | --- | --- |
+| `AGENTS.md` | Operating contract and routing | Every session, task, and commit boundary |
+| `CONTEXT.md` | Kickoff orientation and corrected assumptions | Implementation kickoff, or a product decision changes |
+| `docs/BUILD-PLAN.md` | Ordered execution contract, Tasks 1–11 | Before starting or closing any task |
+| `docs/PRD.md`, `docs/STRATEGY.md` | Product scope | Scope, feature, or positioning questions |
+| `docs/DESIGN-SYSTEMS.md` | Visual and interaction system | UI work |
+| `docs/LESSONS.md` | Dated technical and workflow lessons | A new lesson is verified, or a past decision needs grounding |
+| `docs/technical/ARCHITECTURE.md` | Trust boundaries and service split | Component, boundary, or data-flow changes |
+| `docs/technical/SMART-CONTRACT.md` | Onchain authority and contract spec | Any contract, ABI, or permission change |
+| `docs/technical/INTEGRATIONS.md` | Candidate matrix and qualification status | Chain, Morpho, vault, or API integration work |
+| `docs/technical/ERD.md` | Persistence model | Schema or query changes |
+| `docs/technical/TECH-STACK.md` | Exact pinned versions | Adding or upgrading any dependency |
+| `docs/technical/INSTALLATION.md` | Local enablement and workflow stages | Environment or tooling setup |
+| `contracts/src/CrestAccount.sol` | The single non-upgradeable account | Authority, caps, floors, repayment, withdrawal logic |
+| `contracts/src/libraries/VaultV2Liquidity.sol` | Vault V2 adapter and withdrawable-liquidity math | Vault route or liquidity bounds |
+| `contracts/script/DeployCrestAccount.s.sol` | Manifest-checked deployment and route validation | Deployment, evidence, or route gating |
+| `contracts/test/` | Unit, invariant, and pinned-fork proofs | Every permanent behavior change |
+| `config/deployment-manifest.json` + `.schema.json` | The reviewed route registry | Route, block, code hash, liquidity, or rate evidence changes |
+| `scripts/verify-deployment-manifest.ts` (+ `.test.ts`) | Offline and online manifest verification | Manifest shape, gate, or finality rules change |
+| `packages/domain/src/` | Branded identities, units, policy, risk, carry, Guardian states, Zod schemas | Domain vocabulary or generated schema changes |
+| `packages/db/src/` | Drizzle schema, client, integration tests | Persistence changes |
+| `supabase/` | Local Postgres config and migration history | Any schema migration |
+| `.agents/skills/` | Project-local skills | Task routing |
+
+Command surface: `pnpm verify` (generate, typecheck, test), `pnpm db:reset`, `pnpm db:test`, `forge test`, `forge test --match-contract RobinhoodForkTest` for the pinned-fork proof, and `node scripts/verify-deployment-manifest.test.ts` plus `node scripts/verify-deployment-manifest.ts --rpc <url>` for manifest gates.
 
 ## Persistent instructions and focused reading
-1. Read this `AGENTS.md` at session start, before every `BUILD-PLAN.md` task, before every commit, and immediately after it changes. It is the persistent operating contract, not one-time orientation.
+1. Read this `AGENTS.md` at session start, before every build-plan task, before every commit, and immediately after it changes. It is the persistent operating contract, not one-time orientation.
 2. Read `CONTEXT.md` once at implementation kickoff; reread it only when a product decision changes or a conflict requires re-grounding.
-3. Product scope: `STRATEGY.md` and `PRD.md`.
-4. Boundaries: `technical/ARCHITECTURE.md`.
-5. Contract authority: `technical/SMART-CONTRACT.md`.
-6. Then read only the relevant integration, ERD, UI, stack, installation, or active build-plan section.
+3. Then read only the row of the repository map that the active task touches.
 
 Conflict order: PRD owns product scope; Smart Contract owns onchain permissions; Architecture owns trust boundaries; current deployed state and reproducible runtime evidence outrank prose. Official product skills refine protocol mechanics but cannot widen Crest authority.
 
@@ -25,12 +50,23 @@ Conflict order: PRD owns product scope; Smart Contract owns onchain permissions;
 
 Load only the skills relevant to the active task. Protocol-specific official skills outrank generic examples on protocol mechanics; Crest invariants still outrank any suggestion that broadens authority or scope.
 
+## Documentation is part of the change
+- Any work that contradicts, extends, or invalidates a document updates that document in the same change, before the commit. Never leave a document describing behavior the code no longer has.
+- Contract or ABI change updates `docs/technical/SMART-CONTRACT.md` and every caller, test, and generated artifact in the same cutover.
+- Boundary or service change updates `docs/technical/ARCHITECTURE.md`; schema change updates `docs/technical/ERD.md`; dependency or version change updates `docs/technical/TECH-STACK.md`; integration status change updates `docs/technical/INTEGRATIONS.md`.
+- Route, block, code hash, liquidity, rate, or gate change updates `config/deployment-manifest.json`, its schema, and the verifier together.
+- Completing a build-plan checklist item ticks it in `docs/BUILD-PLAN.md` immediately.
+- A newly verified technical fact or durable user preference is appended to `docs/LESSONS.md` using its dated headline and bullet format, before the commit that carries the work.
+- If a document and the code disagree, the reproducible runtime evidence wins and the document is corrected in that same change.
+
 ## Execution tracking and commits
-- Keep all eleven `BUILD-PLAN.md` tasks visible as ordered top-level todos for the entire implementation.
+- Keep all eleven `docs/BUILD-PLAN.md` tasks visible as ordered top-level todos for the entire implementation.
 - Expand only the active top-level task into one child todo per checklist item and acceptance requirement; never collapse, replace, or hide future tasks.
 - A blocked gate remains visible with its exact evidence-based reason. Never skip ahead past a failed market gate.
-- Commit every completed top-level task and any earlier independently reviewable, verified milestone. Never commit a failing or half-wired state.
-- Before each commit, reread this file, run the narrow behavioral proof for the milestone, and consider whether a new Self Learning or Self Insight entry is warranted.
+- Commit frequently: after each completed top-level task, and after every earlier slice that is independently reviewable and verified. A green narrow proof plus its document update is a commit.
+- Never commit a failing or half-wired state, and keep unrelated changes out of a commit.
+- Use conventional, factual messages such as `feat(contracts): enforce Guardian repayment bounds`, `test(contracts): prove pinned fork borrow lifecycle`, `chore(evidence): refresh finalized Robinhood route`, or `docs: record Robinhood finality lesson`.
+- Before each commit: reread this file, run the narrow behavioral proof for the milestone, confirm affected documents were updated, and consider a new `docs/LESSONS.md` entry.
 
 ## Non-negotiable MVP invariants
 - One non-upgradeable `CrestAccount`, one exact Morpho market, one exact loan token, one fixed qualified vault.
@@ -56,29 +92,9 @@ Load only the skills relevant to the active task. Protocol-specific official ski
 ## Security and evidence
 Treat wallets, Guardian credentials, APIs, RPCs, tokens, vaults, rates, metadata, UI input, and LLM output as untrusted. Preserve bigint units/scales and block context. Never log secrets. No generic executor, proxy, custom oracle, collateral sale, dynamic router, Redis, Kafka, Rust, or Stylus in MVP.
 
-Use `technical/TECH-STACK.md` for exact bootstrap versions. Re-check official stable releases and compatibility before changing pins; newest independently is not necessarily compatible or safer.
+Use `docs/technical/TECH-STACK.md` for exact bootstrap versions. Re-check official stable releases and compatibility before changing pins; newest independently is not necessarily compatible or safer.
 
 ## Delivery
 Return changed files, exact checks and observed results, assumptions, unresolved runtime gates, and one next action. Do not claim completion without behavioral evidence.
 
-## Self Learning Logs
-Newest first. At every completed build-plan task and before handoff, record any newly verified, reusable technical lesson in one line: `YYYY-MM-DD — Root cause → rule`. Do not record status, secrets, speculation, or a duplicate lesson.
-
-- 2026-09-17 — EVM `blockhash` cannot verify current or older-than-256-block evidence → deployment evidence must be finalized, strictly prior, within 256 blocks, and hash-matched or deployment fails closed.
-- 2026-09-17 — Vault V2 governance can drift after policy binding and disabled allocations can retain quoted adapter shares → revalidate the adapter/data before every deposit and require every native deallocation allocation plus exact withdrawal before reporting Guardian liquidity.
-
-- 2026-09-15 — Supabase local bootstrap applies timestamp-prefixed migrations during start and reset → use Supabase migration history as the sole runner and avoid reapplying the same SQL through Drizzle.
-- 2026-09-14 — Robinhood L2 block headers omit Cancun blob fields that Anvil 1.8.1 requires → preserve the canonical block hash/state while normalizing only missing zero-valued header fields; do not downgrade the EVM because Vault V2 uses Cancun opcodes.
-- 2026-09-14 — Morpho Vault V2 deliberately returns zero from all ERC-4626 `max*` functions → identify the exact vault generation and use its fresh withdrawal options plus exact simulation instead of treating zero as unavailable liquidity.
-- 2026-09-13 — Morpho collateral does not earn supply yield → attribute yield only to deployed loan-token assets.
-- 2026-09-13 — A broad automation key turns optimization into custody risk → enforce Guardian authority in the contract ABI, not an HTTP allowlist.
-
-## Self Insight Logs
-Newest first. At every completed build-plan task and before handoff, record any newly observed durable user/workflow preference in one line: `YYYY-MM-DD — Observation → application`. Do not record transient status or restate an existing preference.
-
-- 2026-09-14 — The user wants high assurance without wasteful verification context → use narrow reads, persist evidence in manifests, and avoid repeated or speculative checks.
-- 2026-09-14 — The user requires the complete Build Plan to remain visible → retain Tasks 1–11 as top-level todos and expand only the active task into checklist and acceptance children.
-- 2026-09-14 — The user expects repository instructions to remain active → reread `AGENTS.md` at every task and commit boundary while treating `CONTEXT.md` as one-time orientation unless decisions change.
-- 2026-09-14 — The user chose Supabase rather than Neon → use Supabase-hosted PostgreSQL and its selected global skills without introducing a second managed database provider.
-- 2026-09-13 — The user wants ambitious output without speculative complexity → maximize product quality while keeping MVP authority and stack minimal.
-- 2026-09-13 — Repeated context must stay compact → link normative docs instead of duplicating full specifications here.
+Lessons learned live in [`docs/LESSONS.md`](./docs/LESSONS.md); read it before repeating a past investigation and append to it when a new lesson is verified.
