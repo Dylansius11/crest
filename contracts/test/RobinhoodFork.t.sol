@@ -53,8 +53,9 @@ contract RobinhoodForkTest is Test {
         evidenceBlock = _manifestUint(".evidence.block.number");
         forkBlock = _manifestUint(".forkProof.blockNumber");
         // Public nodes prune old state, so the lifecycle runs at the manifest's pinned proof block, which sits
-        // at or after the finalized evidence block. CREST_FORK_RPC points at the retrying proxy.
-        string memory rpc = vm.envOr("CREST_FORK_RPC", manifest.readString(".forkProof.rpcSource"));
+        // at or after the finalized evidence block. Reads default to the local retrying proxy (`pnpm fork:proxy`),
+        // which pins the official endpoint's real IP; `CREST_FORK_RPC` overrides it.
+        string memory rpc = vm.envOr("CREST_FORK_RPC", string("http://127.0.0.1:8599"));
         vm.createSelectFork(rpc, forkBlock);
         assertEq(block.chainid, _manifestUint(".network.chainId"), "wrong fork chain");
         assertEq(IArbSysFork(address(100)).arbBlockNumber(), forkBlock, "wrong pinned L2 block");

@@ -9,8 +9,9 @@ import { computeManifestIntegrity, validateDeploymentManifest } from "./verify-d
  */
 
 const MANIFEST_PATH = process.env.CREST_MANIFEST_PATH ?? "config/deployment-manifest.json";
-const RPC = process.env.CREST_UPSTREAM_RPC ?? "https://rpc.ordofi.network";
-const DEPTH = Number(process.env.CREST_PIN_DEPTH ?? 512);
+// Reads go through the local retrying proxy by default; provenance stays the public endpoint recorded below.
+const RPC = process.env.CREST_UPSTREAM_RPC ?? "http://127.0.0.1:8599";
+const DEPTH = Number(process.env.CREST_PIN_DEPTH ?? 256);
 
 async function rpc(method: string, params: unknown[]): Promise<Record<string, unknown>> {
   const response = await fetch(RPC, {

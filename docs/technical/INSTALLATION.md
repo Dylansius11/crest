@@ -259,25 +259,42 @@ Ellipses are schema examples only. A shipped manifest contains current verified 
 
 The verifier recomputes market ID, confirms code and vault asset, and reads current market/vault state.
 
-## 10. Fork setup
+## 10. Fork setup (verified runbook)
+
+Robinhood Chain RPC access has two verified defects; both are already handled by tooling in this repository, so
+follow this runbook instead of rediscovering them.
+
+1. **The official endpoint may be DNS-hijacked locally.** On the Telkomsel network `rpc.mainnet.chain.robinhood.com`
+   resolves to a filter host (`202.3.218.139`, certificate `internetbaik.telkomsel.com`) and every client fails TLS.
+   Resolve the real origin out-of-band and pin it:
+
+   ```bash
+   curl -sS -H 'accept: application/dns-json' \
+     'https://cloudflare-dns.com/dns-query?name=rpc.mainnet.chain.robinhood.com&type=A'
+   # customer-origin.offchainlabs.com -> 172.66.147.70
+   ```
+
+2. **Nodes prune state within minutes.** `eth_getBalance` is served roughly from head to head-4096 (~6–20 minutes at
+   85 ms blocks) and `eth_getProof` only at `latest`. Community pools such as `rpc.ordofi.network` mix one archive
+   backend with pruned ones, so pinned reads succeed about one attempt in twelve.
+
+Run the proof:
 
 ```bash
-anvil \
-  --fork-url "$ROBINHOOD_CHAIN_RPC_URL" \
-  --fork-block-number <manifest-verified-block>
+CREST_UPSTREAM_IP=172.66.147.70 pnpm fork:proxy     # retrying, disk-cached JSON-RPC proxy on 127.0.0.1:8599
+pnpm fork:pin                                       # repins forkProof to a fresh block (head-256) and revalidates
+pnpm fork:test                                      # forge test --match-contract RobinhoodForkTest
+pnpm fork:record                                    # promotes the manifest gate from the measured lifecycle
+pnpm manifest:verify                                # local rules plus onchain drift check
 ```
 
-Run:
-
-```bash
-forge test --match-contract RobinhoodForkTest -vvv
-pnpm test:integration:fork
-pnpm smoke:fork
-```
+The proxy pins the upstream IP while keeping the real TLS hostname as SNI, retries the pruned-backend error, and
+caches immutable block-pinned reads, so reruns finish in under a second. Foundry also caches fork state on disk.
 
 Fork prerequisites:
 
-- exact manifest block available;
+- `forkProof.blockNumber` refreshed immediately before the run (state ages out in minutes);
+- identity and finality still anchored to the finalized `evidence.block`;
 - market and vault exist at that block;
 - test funding/impersonation is local and labeled;
 - no production key loaded.

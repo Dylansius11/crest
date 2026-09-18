@@ -305,9 +305,9 @@ async function main(): Promise<void> {
   const localErrors = validateDeploymentManifest(raw);
   if (localErrors.length > 0 || !isDeploymentManifest(raw)) throw new Error(localErrors.join("\n"));
 
-  const onlineErrors = args.includes("--offline")
-    ? []
-    : await verifyDeploymentManifestOnline(raw, rpcArg >= 0 ? args[rpcArg + 1] : "https://rpc.mainnet.chain.robinhood.com");
+  // Default to the local retrying proxy (`pnpm fork:proxy`), which pins the official endpoint's real IP.
+  const rpcUrl = rpcArg >= 0 ? args[rpcArg + 1] : (process.env.CREST_UPSTREAM_RPC ?? "http://127.0.0.1:8599");
+  const onlineErrors = args.includes("--offline") ? [] : await verifyDeploymentManifestOnline(raw, rpcUrl);
   if (onlineErrors.length > 0) throw new Error(onlineErrors.join("\n"));
   console.log(`Verified ${raw.gate.outcome} at Robinhood block ${raw.evidence.block.number} (${args.includes("--offline") ? "offline evidence" : "onchain"})`);
 }
