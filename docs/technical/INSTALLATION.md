@@ -335,18 +335,22 @@ Fixtures test adapters. They are never live demo evidence.
 ## 12. Canonical commands
 
 ```bash
-pnpm dev
-pnpm guardian:dev
+pnpm --filter @crest/web dev            # Next.js owner surface on :3000
+pnpm --filter @crest/api start          # read-only route/authority API on :8787
+pnpm --filter @crest/monitor observe:once   # one route-drift observation, exits 1 on drift
+pnpm --filter @crest/automation doctor  # Guardian authority check; never signs
 pnpm db:migrate
 pnpm generate
 pnpm verify
+pnpm manifest:verify
 forge fmt --check
 forge build
 forge test
 forge test --match-contract CrestAccountInvariantTest
-pnpm test:e2e
-pnpm smoke:fork
 ```
+
+`@crest/monitor` and `@crest/automation` require `ROBINHOOD_CHAIN_RPC_URL`; the Guardian CLI additionally
+requires `GUARDIAN_EXPECTED_ADDRESS` and `GUARDIAN_ALLOWED_ACCOUNT`. Each refuses to start without them.
 
 Guardian defaults off. Starting it requires an explicit command and allowlisted account.
 

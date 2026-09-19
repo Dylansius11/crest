@@ -23,6 +23,7 @@
     "verify": "pnpm generate && pnpm typecheck && pnpm test"
   },
   "devDependencies": {
+    "@crest/contracts": "workspace:*",
     "@types/node": "24.10.0",
     "supabase": "2.117.0",
     "turbo": "2.10.12",

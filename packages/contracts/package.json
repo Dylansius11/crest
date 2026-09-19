@@ -5,7 +5,9 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./generated/crest-account.json": "./generated/crest-account.json"
+    "./manifest": "./src/manifest.ts",
+    "./generated/crest-account.json": "./generated/crest-account.json",
+    "./manifest/file": "./src/manifest-file.ts"
   },
   "scripts": {
     "generate": "node src/generate.ts",

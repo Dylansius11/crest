@@ -1,0 +1,17 @@
+{
+  "name": "@crest/monitor",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node src/main.ts",
+    "observe:once": "node src/main.ts --once",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@crest/contracts": "workspace:*",
+    "@crest/domain": "workspace:*",
+    "viem": "2.56.8"
+  }
+}
