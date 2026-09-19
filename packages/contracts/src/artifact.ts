@@ -2,35 +2,13 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-/** Selectors the Guardian may call; every other state-changing entry point is owner-only. */
-export const GUARDIAN_SELECTORS = ["freezeBorrowing()", "repayFromReserve(uint256)", "repayFromStrategy(uint256)"] as const;
+import { GUARDIAN_SELECTORS } from "./surface.ts";
+import type { AbiEntry, CrestAccountArtifact } from "./surface.ts";
 
-/** Entry points that must never exist, because they would let a delegate move value or debt freely. */
-export const FORBIDDEN_SIGNATURE_PATTERNS = [/^execute/i, /^multicall/i, /^call\(/i, /delegatecall/i, /^upgrade/i, /^sweep/i] as const;
+export { FORBIDDEN_SIGNATURE_PATTERNS, GUARDIAN_SELECTORS } from "./surface.ts";
+export type { AbiEntry, AbiInput, CrestAccountArtifact } from "./surface.ts";
 
-export interface AbiInput {
-  name: string;
-  type: string;
-  internalType?: string;
-  components?: AbiInput[];
-}
-
-export interface AbiEntry {
-  type: string;
-  name?: string;
-  inputs?: AbiInput[];
-  outputs?: AbiInput[];
-  stateMutability?: string;
-  anonymous?: boolean;
-}
-
-export interface CrestAccountArtifact {
-  contract: string;
-  abi: AbiEntry[];
-  methodIdentifiers: Record<string, string>;
-  guardianSelectors: Record<string, string>;
-}
-
+/** Reads the Foundry build output; used only by the generator, never by an application runtime. */
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const artifactPath = process.env.CREST_FOUNDRY_ARTIFACT ?? resolve(packageRoot, "../../contracts/out/CrestAccount.sol/CrestAccount.json");
 

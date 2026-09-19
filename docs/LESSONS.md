@@ -25,6 +25,13 @@ Rules for this file:
 
 ---
 
+## 2026-09-19 — Node-only code must not sit on a package's default import path (Technical)
+
+- `next build` traced the whole repository into the server bundle because `@crest/contracts` reached `readFileSync` (Foundry artifact) and a dynamic `readFile`/`resolve` (manifest loader) through its main entry.
+- Splitting the package fixed it without changing behaviour: `src/surface.ts` (pure ABI surface) and `src/manifest.ts` (pure validation rules) are importable anywhere; `src/artifact.ts` (Foundry reader) and `src/manifest-file.ts` (`loadDeploymentManifest`) stay Node-only behind the `./manifest/file` export.
+- The web app now imports `config/deployment-manifest.json` directly and validates it at module load, so the reviewed route is bound at build time and a request-time path lookup cannot fail or drift.
+- Rule: keep filesystem, process, and secret-touching code behind an explicit Node-only subpath export; a shared package's default path must stay importable by a browser or edge build.
+
 ## 2026-09-19 — A dev transport workaround must never become a runtime default (Technical)
 
 - The local retrying proxy (`127.0.0.1:8599`) is the only reliable way to read pinned Robinhood state from this workstation, so proof tooling defaults to it: `pnpm fork:pin`, `pnpm fork:test`, `pnpm fork:record`, `pnpm manifest:verify`.

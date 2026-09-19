@@ -1,6 +1,10 @@
 node_modules/
 .turbo/
 dist/
+.next/
+next-env.d.ts
+# Per-tool mirror of .agents/skills created by the skills CLI
+.claude/
 coverage/
 .env
 .env.*

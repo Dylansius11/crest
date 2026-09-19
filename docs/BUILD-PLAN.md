@@ -34,10 +34,10 @@ packages/chain
 packages/policy
 packages/risk
 packages/db
-apps/monitor
-apps/automation
-apps/api
-apps/web
+apps/monitor          route-drift observation
+apps/automation       Crest Guardian operator CLI
+apps/api              typed read-only route/authority API
+apps/web              Next.js owner surface
 ```
 
 ## Task 1: Verify one complete market-and-vault route
@@ -84,6 +84,8 @@ One route passes both gates. If market passes but vault fails, record `reserve_o
 - [x] Implement PostgreSQL tables, FKs, CHECKs, idempotency indexes, and reorg fields.
 - [x] Reject floats, invalid LTV ordering, mismatched loan/vault asset, projected-as-realized data, and invalid Guardian selectors.
 - [x] Apply migration to a fresh database and exercise insert/read round trips.
+- [x] Scaffold `apps/{web,api,monitor,automation}` on the pinned stack, each wired into workspace `typecheck`/`test`, each already serving or verifying reviewed evidence rather than placeholder data.
+- [x] Move the brand mark to `apps/web/public/crest-logo.png` and bind the reviewed manifest into the web build so an unreviewed route cannot render.
 
 **Acceptance**
 
@@ -250,8 +252,12 @@ Compromised API/monitor cannot make Guardian borrow or redirect value; duplicate
 
 **Files**
 
-- Create routes/services for inventory, routes, accounts, policy, assessments, recommendations, interventions
+- Extend `apps/api` (already serves `/health`, `/v1/route`, `/v1/authority` from reviewed evidence)
+- Extend `apps/web` (Next.js App Router shell, brand mark, route verification screen)
 - Create web screens/components from [DESIGN-SYSTEMS](./DESIGN-SYSTEMS.md)
+
+The styling foundation — global stylesheet, theme tokens, and the shadcn/ui component base — is scaffolded
+separately by the product owner. Build screens on top of it; do not introduce a second styling convention.
 
 **Steps**
 

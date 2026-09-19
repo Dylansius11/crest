@@ -28,10 +28,10 @@ Pin exact versions, compiler, ABIs, deployment manifest, and rate conventions.
 ```text
 crest/
 ├─ apps/
-│  ├─ web/                   asset intents, policy, position, evidence
-│  ├─ api/                   typed read/config API
-│  ├─ monitor/               market + vault + rate + lifecycle assessment
-│  └─ automation/            isolated Crest Guardian
+│  ├─ web/                   Next.js App Router shell and owner screens
+│  ├─ api/                   typed read-only route/authority API (Hono)
+│  ├─ monitor/               route-drift observation; market/vault/rate assessment
+│  └─ automation/            isolated Crest Guardian operator CLI
 ├─ packages/
 │  ├─ domain/                IDs, units, states, reason codes, schemas
 │  ├─ risk/                  LTV, health, carry, capacity, action planning
@@ -69,12 +69,14 @@ Use the newest stable **compatible** release, not every newest tag independently
 | Next.js / React / React DOM | `16.3.5` / `19.3.0` / `19.3.0` | Stable web baseline |
 | TypeScript | `7.0.2` | Stable compiler; strict mode required |
 | Tailwind CSS / PostCSS adapter | `4.3.3` / `4.3.3` | Stable UI build path |
-| Radix UI | `1.6.7` | Accessible primitives; import only used components |
+| Radix UI (via shadcn/ui) | `1.6.7` | Accessible primitives; installed per component by the shadcn CLI, never as a blanket dependency |
+| Motion / GSAP | `13.4.0` / `3.15.0` | Motion for React component transitions; GSAP for timeline/scroll sequences. Both obey `prefers-reduced-motion` |
+| lucide-react / class-variance-authority / tailwind-merge / clsx | `1.47.0` / `0.7.1` / `3.7.0` / `2.1.1` | shadcn/ui component dependencies |
 | Turborepo | `2.10.12` | Workspace task graph |
-| viem / wagmi | `2.56.5` / `3.7.7` | EVM reads, simulation, wallet state |
+| viem / wagmi | `2.56.8` / `3.7.7` | EVM reads, simulation, wallet state |
 | TanStack Query | `5.102.8` | wagmi-compatible async cache |
 | Morpho Blue SDK / morpho-ts | `6.7.0` / `2.11.1` | Official market entities, ABI, and time/math helpers |
-| Hono / Node adapter | `4.13.7` / `2.1.1` | Typed API runtime |
+| Hono / Node adapter | `4.13.8` / `2.1.1` | Typed API runtime |
 | Zod | `4.6.4` | Trust-boundary schemas |
 | Drizzle ORM / Kit / Postgres.js | `0.45.2` / `0.31.10` / `3.4.9` | PostgreSQL schema, migrations, driver |
 | Vitest / Playwright | `5.0.0` / `1.63.0` | Pure/integration and browser checks |

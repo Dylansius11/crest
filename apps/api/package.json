@@ -1,0 +1,19 @@
+{
+  "name": "@crest/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/server.ts",
+    "start": "node src/server.ts",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@crest/contracts": "workspace:*",
+    "@crest/domain": "workspace:*",
+    "@hono/node-server": "2.1.1",
+    "hono": "4.13.8",
+    "zod": "4.6.4"
+  }
+}
