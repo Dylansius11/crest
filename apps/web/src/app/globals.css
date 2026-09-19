@@ -1,0 +1,173 @@
+@import "tailwindcss";
+@import "@fontsource-variable/archivo";
+@import "@fontsource-variable/inter";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+
+/*
+ * Crest poster system. Tokens sampled from the supplied logo artwork:
+ * plate blue #006AFC, wordmark white #FCFDFD. The design language is
+ * flat print-poster: one blue field, hard 1px ink borders, no shadows,
+ * no gradients. Depth comes from scale and contrast, never elevation.
+ */
+@theme {
+  --font-display: "Archivo Variable", "Arial Narrow", system-ui, sans-serif;
+  --font-sans: "Inter Variable", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+  /* Ink: near-black blue used for borders, rules, and body text. */
+  --color-ink: #0a1626;
+  --color-ink-soft: #33414f;
+
+  /* Paper: warm-white surfaces and page background. */
+  --color-paper: #f5f4f0;
+  --color-paper-soft: #efeee9;
+
+  /* Brand blue ramp anchored at the logo plate color. */
+  --color-crest-100: #d9e6ff;
+  --color-crest-200: #b8d0ff;
+  --color-crest-300: #8ab2ff;
+  --color-crest-400: #4d8bff;
+  --color-crest-500: #006afc;
+  --color-crest-600: #0057d6;
+  --color-crest-700: #0044ab;
+  --color-crest-900: #06214f;
+  --color-crest-950: #041630;
+
+  /* Signal colors. Green only after a verified postcondition. */
+  --color-signal-verified: #0e7a46;
+  --color-signal-warn: #a35a00;
+  --color-signal-stop: #b3231a;
+  --color-signal-degraded: #6f52a8;
+
+  /* Accent: the single orange reserved for owner actions and the CTA. */
+  --color-flame: #ff4d1c;
+  --color-flame-press: #e63e10;
+
+  /* Poster type scale: condensed, huge, tight-leading. */
+  --text-poster-sm: 0.8125rem;
+  --text-poster-sm--line-height: 1.1;
+  --text-poster-sm--letter-spacing: 0.02em;
+  --text-poster-base: 1rem;
+  --text-poster-base--line-height: 1.15;
+  --text-poster-base--letter-spacing: 0.01em;
+  --text-poster-md: 1.5rem;
+  --text-poster-md--line-height: 1.05;
+  --text-poster-md--letter-spacing: -0.01em;
+  --text-poster-lg: 2.25rem;
+  --text-poster-lg--line-height: 0.98;
+  --text-poster-lg--letter-spacing: -0.015em;
+  --text-poster-xl: 3.5rem;
+  --text-poster-xl--line-height: 0.94;
+  --text-poster-xl--letter-spacing: -0.02em;
+  --text-poster-2xl: 5rem;
+  --text-poster-2xl--line-height: 0.9;
+  --text-poster-2xl--letter-spacing: -0.025em;
+  --text-poster-3xl: 7.5rem;
+  --text-poster-3xl--line-height: 0.86;
+  --text-poster-3xl--letter-spacing: -0.03em;
+
+  --radius-cell: 2px;
+  --radius-card: 4px;
+
+  --animate-marquee: marquee 28s linear infinite;
+
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+}
+
+/* Base */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--color-crest-500);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--color-ink);
+  color: var(--color-crest-500);
+}
+
+/* Visible focus for keyboard users on every surface. */
+:focus-visible {
+  outline: 2px solid var(--color-flame);
+  outline-offset: 2px;
+}
+
+.blue-field :focus-visible {
+  outline-color: var(--color-paper);
+}
+
+/* Numeric data keeps tabular alignment everywhere. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* Display face utility: condensed uppercase poster type. */
+.type-display {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-stretch: 87.5%;
+  text-transform: uppercase;
+}
+
+/* Blueprint dotted grid on paper sections. */
+.paper-grid {
+  background-image: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--color-ink) 22%, transparent) 1px,
+    transparent 1px
+  );
+  background-size: 22px 22px;
+}
+
+/* Blueprint dotted grid tinted for blue fields. */
+.blue-grid {
+  background-image: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--color-paper) 30%, transparent) 1px,
+    transparent 1px
+  );
+  background-size: 22px 22px;
+}
+
+/* One-pulse attention sweep for a state change, then static. */
+@keyframes crest-pulse {
+  0% {
+    box-shadow: inset 0 0 0 0 color-mix(in srgb, var(--color-flame) 55%, transparent);
+  }
+  100% {
+    box-shadow: inset 0 0 0 6px transparent;
+  }
+}
+
+.pulse-once {
+  animation: crest-pulse 0.5s ease-out 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
