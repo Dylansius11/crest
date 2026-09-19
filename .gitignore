@@ -15,3 +15,5 @@ supabase/.temp/
 contracts/out/
 contracts/cache/
 contracts/broadcast/
+
+reference/
