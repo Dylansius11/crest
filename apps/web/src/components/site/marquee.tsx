@@ -16,7 +16,7 @@ const FACTS = [
 const TONES = {
   flame: "border-y border-paper/40 bg-flame text-ink",
   ink: "border-y border-ink bg-ink text-paper",
-  blue: "border-y border-ink bg-crest-500 text-paper",
+  blue: "border-y border-ink bg-crest-600 text-paper",
 } as const;
 
 export function Marquee({

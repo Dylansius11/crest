@@ -88,7 +88,7 @@ html {
 }
 
 body {
-  background-color: var(--color-crest-500);
+  background-color: var(--color-crest-600);
   color: var(--color-ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
@@ -104,6 +104,14 @@ body {
 :focus-visible {
   outline: 2px solid var(--color-flame);
   outline-offset: 2px;
+}
+
+/* Blue field: the poster's blue plate. crest-600 rather than the logo plate
+   crest-500, because 13-16px paper text on the lighter plate measures 4.3:1
+   and fails AA; the deeper plate measures 5.6:1 and keeps the same brand hue. */
+.blue-field {
+  background-color: var(--color-crest-600);
+  color: var(--color-paper);
 }
 
 .blue-field :focus-visible {

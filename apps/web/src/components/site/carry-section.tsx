@@ -35,7 +35,7 @@ export function CarrySection() {
             <div className="mb-6">
               <div className="flex h-14 w-full overflow-hidden border border-ink" role="img" aria-label={`Vault APY ${carry.vaultApy} against borrow APY ${carry.borrowApy}`}>
                 <div
-                  className="flex items-center bg-crest-500 px-3"
+                  className="flex items-center bg-crest-600 px-3"
                   style={{ width: `${vaultShare}%` }}
                 >
                   <span className="type-display text-poster-sm text-paper uppercase">

@@ -49,7 +49,7 @@ export function AuthoritySection() {
         </Cell>
 
         <Cell
-          className="flex flex-col border-paper bg-crest-500"
+          className="flex flex-col border-paper bg-crest-600 text-paper"
           index="G"
           meta="Three selectors"
           headerTone="paper"
@@ -57,7 +57,7 @@ export function AuthoritySection() {
         >
           <div className="flex-1 p-6">
             <h3 className="type-display text-poster-md text-paper">Guardian</h3>
-            <p className="mt-1 text-poster-sm text-paper/80">Freeze or repay. Nothing more.</p>
+            <p className="mt-1 text-poster-sm text-paper">Freeze or repay. Nothing more.</p>
             <ul className="mt-4 border-t border-paper/40">
               {authority.guardian.map((selector) => (
                 <li

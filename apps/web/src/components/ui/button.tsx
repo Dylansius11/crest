@@ -13,7 +13,7 @@ import { cn } from "@/lib/cn";
  */
 
 const buttonVariants = cva(
-  "type-display inline-flex items-center justify-center gap-2 uppercase select-none " +
+  "type-display inline-flex min-h-11 items-center justify-center gap-2 uppercase select-none " +
     "px-5 py-3 rounded-cell text-poster-sm leading-none " +
     "transition-colors duration-150 " +
     "disabled:cursor-not-allowed disabled:opacity-45",
@@ -23,7 +23,7 @@ const buttonVariants = cva(
         solid: "bg-ink text-paper hover:bg-crest-900 active:bg-crest-950",
         flame: "bg-flame text-ink hover:bg-flame-press active:bg-flame-press",
         outline: "border border-current hover:bg-ink hover:text-paper active:bg-crest-950",
-        outlineLight: "border border-paper text-paper hover:bg-paper hover:text-ink",
+        paper: "border border-ink bg-paper text-ink hover:bg-crest-100 active:bg-crest-200",
       },
       size: {
         md: "",

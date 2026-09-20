@@ -16,7 +16,7 @@ import { evidenceDate, heroStats, routeFacts } from "@/lib/content";
  */
 export function Hero() {
   return (
-    <div className="bg-crest-500 text-paper">
+    <div className="bg-crest-600 text-paper">
       <section className="blue-field blue-grid relative overflow-hidden px-5 pt-8 pb-24 sm:px-10 sm:pt-10 sm:pb-28">
         <div
           aria-hidden
@@ -64,13 +64,13 @@ export function Hero() {
                   </span>
                 </span>
                 <span className="block overflow-hidden">
-                  <span data-hero-item="line" className="block text-flame">
-                    Prove everything.
+                  <span data-hero-item="line" className="block">
+                    <span className="inline-block bg-flame px-3 text-ink">Prove everything.</span>
                   </span>
                 </span>
               </h1>
 
-              <p data-hero-item="lead" className="mt-7 max-w-lg text-poster-base text-paper/90">
+              <p data-hero-item="lead" className="mt-7 max-w-lg text-poster-base text-paper">
                 Most borrowing against stock just adds a loan that quietly grows.
                 Crest puts <strong className="font-semibold text-paper">Custos</strong>, a
                 Guardian with three moves and no discretion, on the account. It
@@ -89,9 +89,9 @@ export function Hero() {
                 </ButtonLink>
                 <ButtonLink
                   href="#authority"
-                  variant="outlineLight"
+                  variant="paper"
                   size="lg"
-                  className="h-14 transition-colors duration-150 hover:bg-paper hover:text-ink"
+                  className="h-14 transition-colors duration-150"
                 >
                   What Custos can't do
                 </ButtonLink>
@@ -108,9 +108,9 @@ export function Hero() {
               <div
                 key={stat.label}
                 data-hero-item="stat"
-                className="flex flex-col bg-crest-500 px-5 py-4"
+                className="flex flex-col bg-crest-600 px-5 py-4"
               >
-                <dt className="type-display order-2 text-poster-sm text-paper/80 uppercase">
+                <dt className="type-display order-2 text-poster-sm text-paper uppercase">
                   {stat.label}
                 </dt>
                 <dd className="type-display order-1 text-poster-lg text-paper">{stat.value}</dd>
