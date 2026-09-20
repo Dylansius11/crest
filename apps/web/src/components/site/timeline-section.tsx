@@ -108,18 +108,18 @@ export function TimelineSection() {
               failed and the frozen state stays.
             </p>
           </div>
-          <div className="grid grid-cols-3 gap-px border border-ink bg-ink">
+          <div className="grid grid-cols-1 gap-px border border-ink bg-ink sm:grid-cols-3">
             <div className="bg-paper px-4 py-3">
               <p className="type-display text-poster-sm text-ink-soft uppercase">before</p>
-              <p className="tnum font-mono text-poster-base text-ink">2,000.81</p>
+              <p className="tnum font-mono text-poster-base whitespace-nowrap text-ink">2,000.81</p>
             </div>
             <div className="bg-paper px-4 py-3">
               <p className="type-display text-poster-sm text-ink-soft uppercase">after</p>
-              <p className="tnum font-mono text-poster-base text-signal-verified">1,750.79</p>
+              <p className="tnum font-mono text-poster-base whitespace-nowrap text-signal-verified">1,750.79</p>
             </div>
             <div className="bg-paper px-4 py-3">
               <p className="type-display text-poster-sm text-ink-soft uppercase">reduced</p>
-              <p className="tnum font-mono text-poster-base text-ink">250.02</p>
+              <p className="tnum font-mono text-poster-base whitespace-nowrap text-ink">250.02</p>
             </div>
           </div>
         </article>
