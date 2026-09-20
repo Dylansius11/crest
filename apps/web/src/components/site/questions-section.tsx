@@ -1,6 +1,7 @@
 "use client";
 
-import { motion, useReducedMotion } from "motion/react";
+import { LazyMotion, domAnimation, useReducedMotion } from "motion/react";
+import * as m from "motion/react-m";
 import { useState } from "react";
 
 import { CellLabel } from "@/components/ui/cell";
@@ -68,58 +69,67 @@ export function QuestionsSection() {
         </p>
       </div>
 
-      <ul className="border-t border-ink">
-        {questions.map((item, index) => {
-          const isOpen = open === index;
-          return (
-            <li key={item.q} className="border-b border-ink">
-              <h3>
-                <button
-                  type="button"
-                  aria-expanded={isOpen}
-                  aria-controls={`answer-${index}`}
-                  id={`question-${index}`}
-                  onClick={() => setOpen(isOpen ? -1 : index)}
-                  className="flex w-full items-center gap-5 py-5 text-left transition-colors duration-150 hover:bg-crest-100 focus-visible:bg-crest-100"
-                >
-                  <span className="type-display tnum w-10 shrink-0 text-poster-base text-ink-soft">
-                    {String(index + 1).padStart(2, "0")}
-                  </span>
-                  <span className="type-display flex-1 text-poster-md text-ink uppercase">
-                    {item.q}
-                  </span>
-                  <motion.span
-                    aria-hidden
-                    initial={false}
-                    animate={{ rotate: isOpen ? 45 : 0 }}
-                    transition={reduce ? { duration: 0 } : { type: "spring", stiffness: 420, damping: 30 }}
-                    className="relative grid size-8 shrink-0 place-items-center border border-ink bg-paper"
+      <LazyMotion features={domAnimation} strict>
+        <ul className="border-t border-ink">
+          {questions.map((item, index) => {
+            const isOpen = open === index;
+            return (
+              <li key={item.q} className="border-b border-ink">
+                <h3>
+                  <button
+                    type="button"
+                    aria-expanded={isOpen}
+                    aria-controls={`answer-${index}`}
+                    id={`question-${index}`}
+                    onClick={() => setOpen(isOpen ? -1 : index)}
+                    className="flex w-full items-center gap-5 py-5 text-left transition-colors duration-150 hover:bg-crest-100 focus-visible:bg-crest-100"
                   >
-                    <span className="absolute h-3 w-px bg-ink" />
-                    <span className="absolute h-px w-3 bg-ink" />
-                  </motion.span>
-                </button>
-              </h3>
+                    <span className="type-display tnum w-10 shrink-0 text-poster-base text-ink-soft">
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
+                    <span className="type-display flex-1 text-poster-md text-ink uppercase">
+                      {item.q}
+                    </span>
+                    <m.span
+                      aria-hidden
+                      initial={false}
+                      animate={{ rotate: isOpen ? 45 : 0 }}
+                      transition={
+                        reduce
+                          ? { duration: 0 }
+                          : { type: "spring", stiffness: 420, damping: 30 }
+                      }
+                      className="relative grid size-8 shrink-0 place-items-center border border-ink bg-paper"
+                    >
+                      <span className="absolute h-3 w-px bg-ink" />
+                      <span className="absolute h-px w-3 bg-ink" />
+                    </m.span>
+                  </button>
+                </h3>
 
-              <motion.div
-                id={`answer-${index}`}
-                role="region"
-                aria-labelledby={`question-${index}`}
-                initial={false}
-                animate={{ height: isOpen ? "auto" : 0, opacity: isOpen ? 1 : 0 }}
-                transition={
-                  reduce
-                    ? { duration: 0 }
-                    : { height: { duration: 0.28, ease: [0.32, 0.72, 0, 1] }, opacity: { duration: 0.18 } }
-                }
-                className="overflow-hidden"
-              >
-                <p className="max-w-2xl pb-6 pl-15 text-poster-base text-ink-soft">{item.a}</p>
-              </motion.div>
-            </li>
-          );
-        })}
-      </ul>
+                <m.div
+                  id={`answer-${index}`}
+                  role="region"
+                  aria-labelledby={`question-${index}`}
+                  initial={false}
+                  animate={{ height: isOpen ? "auto" : 0, opacity: isOpen ? 1 : 0 }}
+                  transition={
+                    reduce
+                      ? { duration: 0 }
+                      : {
+                          height: { duration: 0.28, ease: [0.32, 0.72, 0, 1] },
+                          opacity: { duration: 0.18 },
+                        }
+                  }
+                  className="overflow-hidden"
+                >
+                  <p className="max-w-2xl pb-6 pl-15 text-poster-base text-ink-soft">{item.a}</p>
+                </m.div>
+              </li>
+            );
+          })}
+        </ul>
+      </LazyMotion>
     </section>
   );
 }
