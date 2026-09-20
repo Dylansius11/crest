@@ -25,6 +25,19 @@ Rules for this file:
 
 ---
 
+## 2026-09-20 — The reference site's mechanics transfer, its pixels do not (Workflow)
+
+- The landing page was re-skinned from a marketing reference (`reference/crest-ref.mp4`): one saturated blue field, one paper field, huge condensed uppercase display, hard 1px rules, offset ink shadows, and one orange reserved for owner actions.
+- Sampling tokens from the supplied artwork instead of matching the reference by eye kept the palette defensible: the brand blue is the logo plate `#006AFC`, so the theme ramp is a tint/shade scale of that single value.
+- What did not transfer: the reference's illustration style and constant motion assume a consumer product. A borrowing console must keep exact amounts, sources, and blocked states visible, so texture, marquee, and reveal motion were budgeted to decoration only.
+- Rule: take layout mechanics, type scale, and motion grammar from a reference; derive colors from the product's own artwork; keep every normative honesty rule in `docs/DESIGN-SYSTEMS.md` intact.
+
+## 2026-09-20 — Name the Guardian without widening it (Workflow)
+
+- `Custos` is now the display name for the Crest Guardian across the landing page, while the three selectors in `contracts/src/CrestAccount.sol` are unchanged.
+- A character name makes automation easier to explain and easier to over-trust; a name that reads as an advisor invites the claim that it decides.
+- Rule: any Guardian naming must appear beside the exact callable surface and the cannot-do list, and no MVP screen may attribute Post-MVP automation to that name.
+
 ## 2026-09-19 — Node-only code must not sit on a package's default import path (Technical)
 
 - `next build` traced the whole repository into the server bundle because `@crest/contracts` reached `readFileSync` (Foundry artifact) and a dynamic `readFile`/`resolve` (manifest loader) through its main entry.

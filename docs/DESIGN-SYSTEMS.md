@@ -1,11 +1,14 @@
 # Crest Design System
 
-**Source mark:** [`crest-logo.png`](./crest-logo.png)  
+**Source marks:** `apps/web/public/crest-bw-no-bg.png` (ink plate, for blue fields), `apps/web/public/crest-logo-no-bg.png` (brand-blue plate, for paper and light surfaces)
 **Design objective:** Make asset intent, LTV, yield liquidity, Guardian authority, and realized debt repayment legible before encouraging leverage.
+**Visual language:** printed poster. One blue field, one paper field, hard 1px rules, huge condensed type, and offset ink shadows instead of soft elevation.
+
+This document is normative for every Crest screen. It changed on 2026-09-20 from an institutional light theme to the poster system below; the product-honesty rules are unchanged.
 
 ## 1. Brand foundation
 
-Crest should feel controlled, transparent, and calm under pressure.
+Crest should feel controlled, transparent, and calm under pressure, printed rather than styled.
 
 Brand attributes:
 
@@ -13,47 +16,64 @@ Brand attributes:
 - **Legible:** exact amounts, rates, permissions, and evidence.
 - **Honest:** projected carry never looks realized; unsupported routes remain visible.
 - **Consent-first:** additional borrowing is clearly an owner action.
-- **Institutional but usable:** dense enough for risk, simple enough for a live demo.
+- **Loud where it matters, quiet everywhere else:** the poster voice is reserved for the claim and the authority story; every number stays in plain, ruled tables.
 
-Use “Crest” in prose and the supplied wordmark in brand placement. `Crest Guardian` is the role name for automation; a later character/agent name must not obscure its permissions.
+Use “Crest” in prose and the supplied wordmark in brand placement.
+
+### 1.1 Guardian naming
+
+`Custos` is the name of the Crest Guardian, the automation an owner authorizes. Naming never changes authority:
+
+- Custos is the Guardian role from `docs/technical/SMART-CONTRACT.md`; the three selectors are unchanged.
+- Copy states what Custos may call and what it may never do in the same breath as any name-drop.
+- Never present Custos as an advisor, an agent with discretion, or an AI that decides. It executes a fixed policy and a fixed route.
+- Post-MVP automation (signed borrow envelope, target-LTV upsize) must be labeled as such and must not be attributed to Custos in MVP screens.
 
 ## 2. Logo rules
 
-- Minimum digital width: `144px`.
+- Minimum digital width: `144px`; header and footer render it at `56px` height or more.
 - Clear space: at least the cap-height of the `C`.
-- Preferred surface: white or slate-50.
-- Do not recolor the raster, add gradients/shadows, or turn the slope into a price chart.
-- Accessible name: `Crest — policy-controlled borrowing`.
+- Use the ink variant on the blue field; use the blue plate variant on paper or light surfaces. Never place the blue plate on the blue field.
+- Do not recolor either raster, add gradients or soft shadows, or turn the plate slope into a price chart.
+- Accessible name: `Crest`.
 - Confirm trademark status before production claims.
+
+### 2.1 Brand geometry
+
+The wordmark plate drops `3.5%` of its width across the top edge. This slope is the only recurring brand geometry: it may appear as a section divider, a headline underline, or a diagonal hatch. Cards, tables, forms, charts, and numeric regions stay rectangular.
 
 ## 3. Color tokens
 
+Tokens are declared once in `apps/web/src/app/globals.css` under `@theme`. Values below are sampled from the supplied artwork, not chosen by eye.
+
 ```css
 :root {
-  --crest-blue-50:  #eef5ff;
-  --crest-blue-100: #d9e9ff;
-  --crest-blue-300: #8bb9ff;
-  --crest-blue-500: #2d71db;
-  --crest-blue-600: #236ad8;
-  --crest-blue-700: #1955b8;
-  --crest-blue-800: #173f82;
-  --crest-blue-950: #10244b;
+  /* Brand blue ramp, anchored at the logo plate #006AFC */
+  --color-crest-100: #d9e6ff;
+  --color-crest-200: #b8d0ff;
+  --color-crest-300: #8ab2ff;
+  --color-crest-400: #4d8bff;
+  --color-crest-500: #006afc;
+  --color-crest-600: #0057d6;
+  --color-crest-700: #0044ab;
+  --color-crest-900: #06214f;
+  --color-crest-950: #041630;
 
-  --crest-slate-25:  #fbfcfe;
-  --crest-slate-50:  #f6f8fb;
-  --crest-slate-100: #edf1f6;
-  --crest-slate-200: #dce3eb;
-  --crest-slate-400: #8795a8;
-  --crest-slate-600: #526174;
-  --crest-slate-800: #263445;
-  --crest-slate-950: #101923;
+  /* Ink and paper */
+  --color-ink: #0a1626;
+  --color-ink-soft: #33414f;
+  --color-paper: #f5f4f0;
+  --color-paper-soft: #efeee9;
 
-  --crest-normal:   #236ad8;
-  --crest-success:  #147a4b;
-  --crest-warning:  #a55b00;
-  --crest-critical: #b42318;
-  --crest-degraded: #7557a8;
-  --crest-surface:  #ffffff;
+  /* Signals */
+  --color-signal-verified: #0e7a46;
+  --color-signal-warn: #a35a00;
+  --color-signal-stop: #b3231a;
+  --color-signal-degraded: #6f52a8;
+
+  /* The single orange: owner actions and the primary CTA */
+  --color-flame: #ff4d1c;
+  --color-flame-press: #e63e10;
 }
 ```
 
@@ -61,36 +81,48 @@ Use “Crest” in prose and the supplied wordmark in brand placement. `Crest Gu
 
 | State | Color | Required label |
 |---|---|---|
-| Normal | Blue | `Normal` |
-| Owner approval | Blue outline | `Owner approval required` |
+| Normal | Ink on paper | `Normal` |
+| Owner approval | Ink outline or flame plate | `Owner approval required` |
 | Intervention verified | Green | `Debt reduced` plus exact amount |
-| Warning | Amber | `Warning` plus threshold/source |
+| Warning | Amber, or the flame plate at full bleed | `Warning` plus threshold/source |
 | Critical | Red | `Critical` plus action |
 | Degraded/unknown | Purple | `Degraded` or `Unknown` |
 | Unsupported | Slate | `Unsupported` plus reason |
 
-Blue never means safe. Green is reserved for a verified outcome. Color always has text and icon.
+Blue never means safe. Green is reserved for a verified outcome. Color always has text and an icon.
+
+### Color usage budget
+
+- One blue field and one paper field per screen length; never alternate them section by section without a purpose.
+- Flame is budgeted: primary CTA, the Guardian-cannot plate, the closing headline line. At most three flame surfaces per screen, and never two of them adjacent.
+- Hard offset shadows (`shadow-[Npx_Npx_0_0_...]`) are reserved for objects that represent authority or money movement. Everything else is flat.
 
 ## 4. Typography
 
-- Display/headings: `Inter Tight`, then `Inter, system-ui, sans-serif`.
-- Body/UI: `Inter`, then `system-ui, sans-serif`.
-- Amounts, rates, addresses, policy: `IBM Plex Mono`, then `ui-monospace, monospace`.
+- Display/headings: `Archivo Variable` (variable width, set to `font-stretch: 87.5%`), fallback `Arial Narrow, system-ui`.
+- Body/UI: `Inter Variable`, fallback `system-ui`.
+- Amounts, rates, addresses, policy, timestamps: `IBM Plex Mono`, fallback `ui-monospace`.
 - Logo: supplied artwork only.
 
-Use tabular numerals. Every percentage includes metric and basis: `Current LTV`, `Target LTV`, `Morpho LLTV`, `Borrow APY`, or `Vault APY`.
+Type scale (`--text-poster-*`): `sm` 13px, `base` 16px, `md` 24px, `lg` 36px, `xl` 56px, `2xl` 80px, `3xl` 120px. Display sizes carry tight leading (`0.86` to `0.98`) and tight tracking.
+
+Rules:
+
+- Display type is always uppercase and always reserves its own line: a headline line never shares a row with body copy.
+- Display type never sets numbers. Numbers use the mono face with tabular figures (`.tnum`).
+- Every percentage includes metric and basis: `Current LTV`, `Target LTV`, `Morpho LLTV`, `Borrow APY`, `Vault APY`.
+- Body copy measures cap at roughly `65ch`.
 
 ## 5. Layout
 
 - Base spacing: `4px`; scale `4, 8, 12, 16, 24, 32, 48, 64, 96`.
-- Card radius: `12px`; control radius: `8px`.
-- Border: `1px solid slate-200`.
-- Default elevation: none.
+- Rules: `1px` solid ink on paper, `1px` solid paper on blue. Hairline grids come from `gap-px` over an ink or paper background, never from borders on every child.
+- Cell/card radius: `2px` to `4px`. Controls: `2px`.
+- Page gutters: `20px` mobile, `40px` from `sm`.
+- Content maximum: `1360px`.
+- Texture: dotted `22px` grid on both fields; a diagonal hatch band may mark a transition. Texture never sits under body copy at full opacity.
 - Minimum target: `44x44px`.
-- Desktop nav: `240px`; content maximum: `1360px`.
 - Mobile: one column; action state, LTV, debt, and withdrawable liquidity precede charts.
-
-Reference the logo slope only in hero/dividers. Cards, tables, forms, charts, and numeric regions stay rectangular.
 
 ## 6. Information hierarchy
 
@@ -108,11 +140,35 @@ Position screen order:
 10. intervention timeline and transaction evidence;
 11. stress scenarios and limitations.
 
+Landing-page order (marketing surface, same rules, different emphasis):
+
+1. cover: the claim plus the Custos panel, with the observed block and date;
+2. how it works: the three-move sequence;
+3. the route: exact market, vault, and pinned-fork evidence;
+4. authority: owner, Guardian selectors, and the Guardian-cannot list;
+5. the band: LTV band against Morpho LLTV;
+6. the carry: both APY sides and the net spread;
+7. the watch: one intervention, bento.
+
 Never place “Borrow more” above the risk/liquidity summary. It is always an owner-approval card.
 
 ## 7. Core components
 
-### 7.1 Wallet Asset Intent Table
+### 7.1 Custos panel
+
+Hero and dashboard centrepiece. One panel, in this order:
+
+1. identity strip: `Custos` with the live-state dot, and the role label `Crest Guardian`;
+2. one paragraph of what it watches and what it may do;
+3. the band strip it enforces, with zone ticks and the Morpho LLTV terminal marker;
+4. the callable surface, one row per selector, each row stating the outcome it can produce;
+5. the rule line: everything else is not callable;
+6. an illustration disclaimer and the verification stamp for the observed block;
+7. the mono identity footer: chain, market id prefix, vault prefix.
+
+The panel must never display a position, a balance, or a projection. It describes authority and policy only; account numbers appear on the account screen once they exist.
+
+### 7.2 Wallet Asset Intent Table
 
 | Asset | Balance | Intent | Route | Status/reason |
 |---|---:|---|---|---|
@@ -123,7 +179,7 @@ Never place “Borrow more” above the risk/liquidity summary. It is always an 
 
 Each row offers only verified intents. `KEEP` does not request approval. Unsupported rows are not hidden.
 
-### 7.2 LTV Band Panel
+### 7.3 LTV Band Panel
 
 ```text
 Current LTV       38.2%
@@ -131,7 +187,7 @@ Lower             30.0%
 Target            35.0%
 Upper guard       42.0%
 Critical          50.0%
-Morpho LLTV       65.0%
+Morpho LLTV       62.5%
 
 [---- lower -- target -- current -- upper ---- critical ---- LLTV]
 ```
@@ -143,9 +199,11 @@ Also show:
 - additional-borrow capacity as `Owner approval required`;
 - source block and oracle status.
 
+The band may be scrubbed by scroll on marketing surfaces. Zone labels may brighten as the sweep passes them; the numbers themselves never count, tick, or animate.
+
 Do not combine LTV with health factor. Show Morpho health and policy health in a secondary exact table.
 
-### 7.3 Capital Allocation Panel
+### 7.4 Capital Allocation Panel
 
 ```text
 Collateral in Morpho                 10 NVDA
@@ -159,7 +217,7 @@ Guardian-actionable                    850 USDG
 
 The hierarchy must prevent quoted vault assets from being mistaken for immediately repayable liquidity.
 
-### 7.4 Carry Breakdown
+### 7.5 Carry Breakdown
 
 ```text
 Vault base APY                  +6.20%
@@ -177,11 +235,13 @@ Required:
 - exact denominator;
 - projected label;
 - stale/degraded indicator;
-- realized section below, not blended into estimate.
+- a realized section below, never blended into the estimate.
+
+The spread may be drawn as a two-sided bar once both rates are observed: earn side in brand blue, pay side in flame, net printed beneath. An inverted spread is stated in words, not hidden by color.
 
 Never make a giant negative “loan APY” the primary metric.
 
-### 7.5 Realized Repayment Card
+### 7.6 Realized Repayment Card
 
 Only canonical post-state can turn this card green.
 
@@ -193,19 +253,11 @@ Accrued debt reduced    250.02 USDG
 Status                  Verified at block …
 ```
 
-If receipt succeeds but debt does not decrease, display `Postcondition failed`, not success.
+An empty realized card states why it is empty. If a receipt succeeds but debt does not decrease, display `Postcondition failed`, never success.
 
-### 7.6 Guardian State Card
+### 7.7 Guardian State Card
 
-States:
-
-- `NORMAL`;
-- `HARVESTABLE`;
-- `UPSIZE_AVAILABLE`;
-- `PROTECT`;
-- `EXIT_YIELD`;
-- `CRITICAL`;
-- `DEGRADED`.
+States: `NORMAL`, `HARVESTABLE`, `UPSIZE_AVAILABLE`, `PROTECT`, `EXIT_YIELD`, `CRITICAL`, `DEGRADED`.
 
 Required fields:
 
@@ -217,7 +269,7 @@ Required fields:
 - owner action needed;
 - receipt/postcondition.
 
-### 7.7 Permission Inspector
+### 7.8 Permission Inspector
 
 ```text
 Owner can:
@@ -231,9 +283,20 @@ borrow · unfreeze · choose venue · choose receiver · transfer · swap
 sell collateral · change policy · call arbitrary targets
 ```
 
-Display before Guardian authorization and on every position.
+Three cells share one grid and one frame height. The Guardian-cannot cell carries the flame plate; it is the loudest cell on the page and is never larger than its siblings. Display the inspector before Guardian authorization and on every position.
 
-### 7.8 Route Verification Drawer
+### 7.9 Intervention Bento
+
+One intervention is laid out as tiles sized by weight, not chronology:
+
+- largest tile: the verified debt reduction, with before, after, and reduced amounts on ruled figures;
+- guard and freeze tiles at half width;
+- liquidity refresh, repayment submission, and restored policy as smaller tiles;
+- one flame tile stating the failure path.
+
+Every tile carries its timestamp in mono. The sequence is labeled illustrative when it is not a live receipt, and the illustrative label is part of the tile, not a footnote.
+
+### 7.10 Route Verification Drawer
 
 Morpho:
 
@@ -250,116 +313,35 @@ Vault:
 - quoted versus withdrawable assets;
 - verification block/time.
 
-Use `Verified at block …`, not an unqualified checkmark.
+Use `Verified at block …`, not an unqualified checkmark. A rotating stamp may carry the same fact; the stamp is decoration, the sentence is the record.
 
-### 7.9 Evidence Provenance
+### 7.11 Evidence Provenance
 
 Onchain oracle, Morpho state, vault state, rate sources, and Robinhood lifecycle data are separate rows. Each shows source, generated/fetched time, block where applicable, freshness, use, and non-use.
 
-## 8. Screen specifications
+### 7.12 Marquee ticker
 
-### 8.1 Wallet inventory
+A ticker may carry route facts and nothing else: counts, selectors, observed block, finality. It never carries a rate, a balance, or an outcome, because scrolling text cannot show a source or a timestamp. It pauses and duplicates with `aria-hidden` on the copy so assistive technology reads the facts once.
 
-- Works read-only until an owner transaction is needed.
-- Shows all detected assets and available intents.
-- Defaults to `KEEP`; never preselect leverage.
-- Explains why an asset cannot borrow or earn.
+## 8. Motion
 
-### 8.2 Route review
+- Library split: GSAP with ScrollTrigger for scroll-linked sequences; Motion for component-level transitions.
+- GSAP runs only in client components, inside `useGSAP` with a scope ref, and is registered once.
+- `prefers-reduced-motion` is a hard gate: every effect lives inside `gsap.matchMedia()` on `(prefers-reduced-motion: no-preference)`, so reduced motion renders a static page rather than a faster one.
+- Durations: `120–180ms` for state feedback, `400–800ms` for entrance reveals, `200–240ms` for drawers and modals.
+- Allowed: mask wipes on headline lines, one batched settle for cells, a rail that draws with scroll, a band sweep driven by scroll, a slow rotating verification stamp, marquee translation.
+- Forbidden: any animation of a debt, balance, rate, or LTV value; counters and odometers; pulses that repeat; animating debt down before a canonical postcondition; countdowns; parallax that moves text off its baseline; anything that replays on scroll-back.
+- Texture and decoration may drift; content may not.
 
-- One combined market-and-vault qualification summary.
-- User can inspect independent gates.
-- Primary action is `Review policy`, not `Borrow now`.
-- If vault fails, offer reserve-only protection without APY copy.
-
-### 8.3 Policy compiler
-
-Three synchronized views:
-
-1. optional natural-language draft;
-2. typed form;
-3. exact onchain configuration and consequence preview.
-
-Form order:
-
-```text
-asset intent
-→ exact market/vault
-→ debt/collateral/strategy caps
-→ lower/target/upper/critical LTV
-→ minimum net spread
-→ reserve/strategy floors
-→ repayment cap
-→ Guardian address and permissions
-```
-
-### 8.4 Account setup
-
-```text
-Deploy account
-→ configure fixed route/policy
-→ authorize Guardian
-→ supply collateral
-→ owner reviews borrow-and-deploy
-```
-
-Each step shows target, selector, network, amounts, share bounds, and receipt.
-
-### 8.5 Position dashboard
-
-No promotional hero after setup. Lead with Guardian state, LTV band, debt, withdrawable liquidity, carry breakdown, and evidence.
-
-### 8.6 Owner borrow approval
-
-Show:
-
-- current and resulting debt/LTV;
-- lower/target/upper/critical and Morpho LLTV;
-- borrow APY and vault APY sources;
-- estimated annual carry in USDG;
-- vault deposit amount and minimum shares;
-- degradation and spread-inversion consequences;
-- `Guardian cannot borrow this amount`.
-
-### 8.7 Intervention timeline
-
-```text
-12:00:28 Upper LTV crossed · 42.4% > 42.0%
-12:00:31 Borrowing frozen · tx 0x…
-12:00:34 Vault maxWithdraw refreshed · 850 USDG
-12:00:36 Strategy repayment submitted · 250 USDG
-12:00:40 Debt reduced · 2,000.81 → 1,750.79 USDG
-12:00:42 Policy LTV restored · 35.1%
-```
-
-Failure remains visible and states whether risk improved, stayed unchanged, or worsened.
-
-### 8.8 Roadmap preview
-
-Post-MVP A: signed borrow envelope and target-LTV automation.
-Post-MVP B: several isolated accounts and independently qualified strategies.
-
-Preview is informational; disabled controls must not simulate production capability.
-
-## 9. Charts
-
-- LTV over time with lower/target/upper/critical/LLTV direct labels.
-- Debt and realized repayments; never animate debt down before confirmation.
-- Vault quoted versus withdrawable assets.
-- Borrow APY, vault APY, and net spread on one basis only when conventions match.
-- Corporate action/halt/oracle/vault-pause as discrete event intervals.
-- No dual-axis by default.
-- No smoothing across missing data.
-- Every chart has a table and exact hover time/block.
-
-## 10. Copy system
+## 9. Copy system
 
 ### Use
 
-- “Keep tokenized-equity exposure while borrowing USDG.”
-- “Guardian can reduce debt; only you can create debt.”
-- “Estimated net carry: +38 USDG/year at current rates.”
-- “Realized debt reduced: 250.02 USDG.”
+- “Keep the stock. Watch the debt. Prove everything.”
+- “Custos can reduce this account's debt; only you can create it.”
+- “Three selectors, and every one of them moves debt down.”
+- “Estimated net spread: 4.01% inverted at the observed block.”
+- “Realized debt reduced: 250.02 USDG, verified at block 66,386,239.”
 - “850 USDG is currently withdrawable and permitted for repayment.”
 - “Additional borrow available; owner approval required.”
 - “Yield route unavailable; reserve-only protection remains.”
@@ -370,13 +352,14 @@ Preview is informational; disabled controls must not simulate production capabil
 - “Guaranteed self-repaying.”
 - “Risk-free” or “guaranteed negative APY.”
 - “Collateral earns Morpho yield.”
-- “AI keeps you safe.”
-- “Best yield” without verified full comparison.
+- “Custos keeps you safe” or any phrasing that gives the Guardian judgment it does not have.
+- “Best yield” without a verified full comparison.
 - “Trading halt stops liquidation.”
 - “Every Stock Token is supported.”
 - “Auto-borrowing” for MVP.
+- Em dashes, exclamation marks, and hype adjectives such as “revolutionary” or “seamless.”
 
-## 11. Transaction confirmation
+## 10. Transaction confirmation
 
 Every owner transaction preview shows:
 
@@ -389,9 +372,9 @@ Every owner transaction preview shows:
 - simulation block/gas;
 - whether Guardian authority changes.
 
-High-risk owner actions—raising debt/strategy caps, lowering floors, changing Guardian, or unfreezing—use a precise consequence statement.
+High-risk owner actions — raising debt or strategy caps, lowering floors, changing Guardian, or unfreezing — use a precise consequence statement.
 
-## 12. States and recovery
+## 11. States and recovery
 
 | State | UI treatment | Recovery |
 |---|---|---|
@@ -405,23 +388,19 @@ High-risk owner actions—raising debt/strategy caps, lowering floors, changing 
 | Repay reverted | Failure reason | Keep frozen; fresh assessment |
 | Debt unchanged | Postcondition failure | Keep frozen; owner review |
 
-## 13. Motion and accessibility
+## 12. Accessibility
 
-- 120–180ms transitions; 200–240ms drawers/modals.
-- A state change may pulse once, then remain static.
-- Never animate projected earnings as balance.
-- Never animate debt down before canonical postcondition.
-- No liquidation countdown.
-- Respect `prefers-reduced-motion`.
-- WCAG 2.2 AA contrast.
-- Full keyboard setup and visible focus.
+- WCAG 2.2 AA contrast. Ink on paper and paper on brand blue both clear it; flame requires ink text only.
+- Full keyboard setup, visible focus on every control, and focus parity with hover on interactive cells.
 - Status uses icon, text, and accessible description.
-- Charts include tables.
+- Charts and gauges include a table or an accessible text equivalent.
 - Critical numbers and permissions have mobile parity.
+- Decorative layers are `aria-hidden`; duplicated ticker content is read once.
 
-## 14. Design acceptance
+## 13. Design acceptance
 
 - A first-time judge identifies owner versus Guardian debt authority in under 10 seconds.
+- A first-time visitor can name what Custos may do, and what it may never do, without scrolling.
 - Wallet assets clearly show keep, borrow, earn, and unsupported intent.
 - Current LTV, policy band, and Morpho LLTV cannot be confused.
 - Morpho collateral APY displays as zero.
@@ -429,3 +408,4 @@ High-risk owner actions—raising debt/strategy caps, lowering floors, changing 
 - Projected net carry and realized debt repayment cannot be confused.
 - Every intervention shows exact receipt and debt before/after.
 - Live, forked, simulated, cached, projected, and illustrative states are unmistakable.
+- The page holds its layout with JavaScript disabled and with reduced motion enabled.
