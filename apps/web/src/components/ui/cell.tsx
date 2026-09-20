@@ -5,35 +5,44 @@ import { cn } from "@/lib/cn";
 /**
  * Technical cell: the numbered, ruled container used across the poster
  * layout. Optional index tab in the top-left corner, optional meta label in
- * the top-right. The cell frame is always 1px ink on paper or 1px paper on
- * blue; no shadows, no gradients.
+ * the top-right.
+ *
+ * `headerTone` picks the rule and text color for the header strip so a cell
+ * sitting on a blue or flame plate keeps a legible header: "ink" for paper
+ * cells (default) and "paper" for cells on dark fields.
  */
-
 export function Cell({
   index,
   meta,
+  headerTone = "ink",
   className,
   children,
   ...props
 }: ComponentProps<"section"> & {
   index?: string;
   meta?: ReactNode;
+  headerTone?: "ink" | "paper";
 }) {
+  const showHeader = index !== undefined || meta !== undefined;
   return (
-    <section
-      className={cn("relative rounded-card border border-ink bg-paper", className)}
-      {...props}
-    >
-      {(index ?? meta) !== undefined && (
-        <div className="flex items-stretch justify-between border-b border-ink">
-          <span
-            className="type-display flex min-h-11 items-center px-4 text-poster-sm"
-            aria-hidden={index === undefined}
-          >
+    <section className={cn("relative rounded-card border", className)} {...props}>
+      {showHeader && (
+        <div
+          className={cn(
+            "flex items-stretch justify-between border-b",
+            headerTone === "ink" ? "border-ink" : "border-paper",
+          )}
+        >
+          <span className="type-display flex min-h-11 items-center px-4 text-poster-sm">
             {index}
           </span>
           {meta !== undefined && (
-            <span className="flex items-center border-l border-ink px-4 text-poster-sm">
+            <span
+              className={cn(
+                "type-display flex items-center border-l px-4 text-poster-sm uppercase",
+                headerTone === "ink" ? "border-ink" : "border-paper",
+              )}
+            >
               {meta}
             </span>
           )}
@@ -46,7 +55,6 @@ export function Cell({
 
 /**
  * Section label chip: uppercase kicker that titles a poster region.
- * Rendered as an h2 by default; pass `as` to demote.
  */
 export function CellLabel({
   className,

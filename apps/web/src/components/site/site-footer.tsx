@@ -1,7 +1,15 @@
 import { ButtonLink } from "@/components/ui/button";
 import { Cell, CellLabel } from "@/components/ui/cell";
+import { Marquee } from "@/components/site/marquee";
 import { Logo } from "@/components/ui/logo";
 import { routeFacts } from "@/lib/content";
+
+const CLOSING_FACTS = [
+  "Verified at a block",
+  "Not a projection",
+  "Not a promise",
+  "A receipt",
+] as const;
 
 /**
  * Footer: colophon-style close. Restates the route identity, links the
@@ -10,10 +18,12 @@ import { routeFacts } from "@/lib/content";
  */
 export function SiteFooter() {
   return (
-    <footer className="paper-grid border-t border-ink bg-paper px-5 py-16 sm:px-10">
+    <>
+      <Marquee tone="ink" facts={CLOSING_FACTS} label="Closing ticker" />
+      <footer className="paper-grid border-t border-ink bg-paper px-5 py-16 sm:px-10">
       <div className="grid gap-10 lg:grid-cols-[1fr_auto]">
         <div>
-          <Logo height={32} />
+          <Logo variant="color" height={64} className="h-14 sm:h-16" />
           <p className="mt-4 max-w-md text-poster-sm text-ink-soft">
             Crest is a policy-controlled borrowing product. One account, one
             verified market, one loan token, one vault. Projected numbers are
@@ -54,6 +64,7 @@ export function SiteFooter() {
           custody, and protocol risk.
         </p>
       </div>
-    </footer>
+      </footer>
+    </>
   );
 }
