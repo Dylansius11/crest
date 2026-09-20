@@ -3,6 +3,7 @@ import { CarrySection } from "@/components/site/carry-section";
 import { Hero } from "@/components/site/hero";
 import { HowItWorksSection } from "@/components/site/how-it-works";
 import { PolicyBandSection } from "@/components/site/policy-band-section";
+import { QuestionsSection } from "@/components/site/questions-section";
 import { RevealProvider } from "@/components/site/reveal-provider";
 import { RouteSection } from "@/components/site/route-section";
 import { SiteFooter } from "@/components/site/site-footer";
@@ -28,6 +29,7 @@ export default function Home() {
         <PolicyBandSection />
         <CarrySection />
         <TimelineSection />
+        <QuestionsSection />
       </main>
       <SiteFooter />
     </RevealProvider>

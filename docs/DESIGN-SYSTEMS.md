@@ -94,7 +94,10 @@ Blue never means safe. Green is reserved for a verified outcome. Color always ha
 ### Color usage budget
 
 - One blue field and one paper field per screen length; never alternate them section by section without a purpose.
-- Flame is budgeted: primary CTA, the Guardian-cannot plate, the closing headline line. At most three flame surfaces per screen, and never two of them adjacent.
+- The text-bearing blue field is `crest-600`, not the logo plate `crest-500`: 13 to 16px paper text measures 4.27:1 on the lighter plate and fails AA, while the deeper plate measures 5.6:1. `crest-500` stays for large display type, decorative fills, and the logo, where the 3:1 large-text rule applies.
+- Text on a blue field never uses an opacity modifier (`text-paper/80` and friends). Reduced-opacity paper sinks below AA on blue; use full `text-paper` and separate ideas with rules instead.
+- Flame is budgeted: primary CTA, the Guardian-cannot plate, the closing headline line. At most three flame surfaces per screen, and never two of them adjacent. Ink on flame is the only legible pairing (5.2:1); paper on flame is 3.0:1 and is prohibited at any size below the large-text threshold.
+- Secondary actions on a blue field use the paper pill (`bg-paper text-ink`), not a paper outline with paper text.
 - Hard offset shadows (`shadow-[Npx_Npx_0_0_...]`) are reserved for objects that represent authority or money movement. Everything else is flat.
 
 ## 4. Typography
@@ -112,6 +115,7 @@ Rules:
 - Display type never sets numbers. Numbers use the mono face with tabular figures (`.tnum`).
 - Every percentage includes metric and basis: `Current LTV`, `Target LTV`, `Morpho LLTV`, `Borrow APY`, `Vault APY`.
 - Body copy measures cap at roughly `65ch`.
+- The scale is registered as a font-size group for `tailwind-merge` in `apps/web/src/lib/cn.ts`. Without that entry the merge helper files `text-poster-*` under text color and silently drops a real color class from the same `cn()` call, so any new size token must be added there too.
 
 ## 5. Layout
 
@@ -148,7 +152,8 @@ Landing-page order (marketing surface, same rules, different emphasis):
 4. authority: owner, Guardian selectors, and the Guardian-cannot list;
 5. the band: LTV band against Morpho LLTV;
 6. the carry: both APY sides and the net spread;
-7. the watch: one intervention, bento.
+7. the watch: one intervention, bento;
+8. questions: the objections that precede trust, answered with the caps that make each answer true.
 
 Never place “Borrow more” above the risk/liquidity summary. It is always an owner-approval card.
 
@@ -319,7 +324,17 @@ Use `Verified at block …`, not an unqualified checkmark. A rotating stamp may 
 
 Onchain oracle, Morpho state, vault state, rate sources, and Robinhood lifecycle data are separate rows. Each shows source, generated/fetched time, block where applicable, freshness, use, and non-use.
 
-### 7.12 Marquee ticker
+### 7.12 Disclosure list (questions)
+
+The objections that precede trust, as ruled rows: a two-digit index, the question in display type, and a square plus that becomes a cross.
+
+- Single-open by default; a second row opening closes the first.
+- The trigger is a real `<button>` with `aria-expanded`; the panel is a `region` labelled by its question.
+- Height animates between `0` and `auto` with Motion, and the indicator rotates on a spring. Under reduced motion both transitions are zero-duration, so the row simply appears.
+- The answer text is complete in the DOM whether or not the panel is expanded, so a reader without JavaScript sees every answer.
+- Answers are static product copy. Never generate one per visitor, and never soften a cap or a failure path to make an answer shorter.
+
+### 7.13 Marquee ticker
 
 A ticker may carry route facts and nothing else: counts, selectors, observed block, finality. It never carries a rate, a balance, or an outcome, because scrolling text cannot show a source or a timestamp. It pauses and duplicates with `aria-hidden` on the copy so assistive technology reads the facts once.
 

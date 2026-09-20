@@ -25,6 +25,12 @@ Rules for this file:
 
 ---
 
+## 2026-09-20 — tailwind-merge silently dropped colour classes next to a custom type scale (Technical)
+
+- `bg-flame text-ink` rendered as paper text on the hero CTA. The class list reaching the DOM had no `text-ink`: `tailwind-merge` classifies an unknown `text-<token>` as a text colour, so `text-ink` and the poster size token `text-poster-base` collided, and the later class won.
+- Measured result before the fix: 15 AA contrast failures across the page, including paper on flame at 3.0:1 and brand blue display text on the brand blue field at 1.4:1. After registering `poster-sm` through `poster-3xl` as a `font-size` group in `apps/web/src/lib/cn.ts`: zero failures, and size overrides still resolve correctly (`text-poster-md text-poster-lg` keeps the larger one).
+- Rule: when a custom type scale lives under Tailwind's `text-` prefix, register those tokens with `extendTailwindMerge`, and treat any missing colour in the DOM as a merge conflict before hunting the component.
+
 ## 2026-09-20 — The reference site's mechanics transfer, its pixels do not (Workflow)
 
 - The landing page was re-skinned from a marketing reference (`reference/crest-ref.mp4`): one saturated blue field, one paper field, huge condensed uppercase display, hard 1px rules, offset ink shadows, and one orange reserved for owner actions.
