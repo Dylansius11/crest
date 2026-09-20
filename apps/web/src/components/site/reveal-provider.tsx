@@ -70,6 +70,11 @@ export function RevealProvider({ children }: { children: ReactNode }) {
             duration: 0.7,
             ease: "power3.out",
             stagger: 0.09,
+            // immediateRender false: the start state is applied when the
+            // trigger fires, never at creation. A trigger that misses its
+            // evaluation (a background tab, a restored scroll position) then
+            // leaves readable content instead of a hidden section.
+            immediateRender: false,
             scrollTrigger: { trigger: el, start: "top 80%", once: true },
           });
         });
@@ -81,6 +86,7 @@ export function RevealProvider({ children }: { children: ReactNode }) {
             autoAlpha: 0,
             duration: 0.45,
             ease: "power2.out",
+            immediateRender: false,
             scrollTrigger: { trigger: el, start: "top 88%", once: true },
           });
         });
@@ -103,7 +109,9 @@ export function RevealProvider({ children }: { children: ReactNode }) {
           );
         });
 
-        // Cells: one batched wave, never re-triggered.
+        // Cells: one batched wave, never re-triggered. immediateRender is
+        // false for the same reason as the line reveals: nothing on the page
+        // is hidden by JavaScript that might not run.
         ScrollTrigger.batch("[data-reveal='cell']", {
           start: "top 85%",
           once: true,
@@ -114,9 +122,25 @@ export function RevealProvider({ children }: { children: ReactNode }) {
               duration: 0.55,
               ease: "power2.out",
               stagger: 0.08,
+              immediateRender: false,
               overwrite: true,
             }),
         });
+
+        // A tab throttles animation frames while it is in the background, so
+        // a trigger can be created without ever being evaluated. Re-evaluate
+        // every trigger when the tab becomes visible again and when the window
+        // finishes loading, so a restored session never lands on a section
+        // that is still waiting for its first scroll event.
+        const refresh = () => {
+          if (!document.hidden) ScrollTrigger.refresh();
+        };
+        document.addEventListener("visibilitychange", refresh);
+        window.addEventListener("load", refresh);
+        return () => {
+          document.removeEventListener("visibilitychange", refresh);
+          window.removeEventListener("load", refresh);
+        };
       });
     },
     { scope },
