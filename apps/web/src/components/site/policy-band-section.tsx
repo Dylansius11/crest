@@ -27,7 +27,7 @@ export function PolicyBandSection() {
       >
         <div className="mb-10 flex flex-wrap items-end justify-between gap-6">
           <div>
-            <CellLabel>03 · The band</CellLabel>
+            <CellLabel>04 · The band</CellLabel>
             <h2 className="type-display mt-4 max-w-3xl text-poster-lg text-ink sm:text-poster-xl">
               Debt is watched against a band, not a cliff.
             </h2>

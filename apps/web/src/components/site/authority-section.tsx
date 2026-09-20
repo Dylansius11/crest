@@ -12,33 +12,34 @@ export function AuthoritySection() {
   return (
     <section id="authority" className="relative bg-crest-950 px-5 py-24 sm:px-10">
       <div className="mb-10">
-        <CellLabel className="bg-paper text-ink">02 · Authority</CellLabel>
+        <CellLabel className="bg-paper text-ink">03 · Authority</CellLabel>
         <h2 className="type-display mt-4 max-w-3xl text-poster-lg text-paper sm:text-poster-xl">
-          The Guardian can shrink your debt. It cannot do anything else.
+          Custos can shrink your debt. It cannot do anything else.
         </h2>
         <p className="mt-4 max-w-2xl text-poster-base text-paper/80">
-          Authority is enforced by the account contract, not by a promise. The
-          Guardian holds three selectors and every one of them can only move
-          this account's own debt down.
+          Authority is enforced by the account contract, not by a promise.
+          Custos holds three selectors and every one of them can only move this
+          account's own debt down.
         </p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Cell
-          className="flex flex-col border-paper bg-transparent"
+          className="flex flex-col border-ink bg-paper"
           index="O"
           meta="You"
-          headerTone="paper"
           data-reveal="cell"
         >
           <div className="flex-1 p-6">
-            <h3 className="type-display text-poster-md text-paper">Owner</h3>
-            <p className="mt-1 text-poster-sm text-paper/70">The only key that creates debt.</p>
-            <ul className="mt-4 border-t border-paper/40">
+            <h3 className="type-display text-poster-md text-ink">Owner</h3>
+            <p className="mt-1 text-poster-sm text-ink-soft">
+              The only key that creates debt.
+            </p>
+            <ul className="mt-4 border-t border-ink/30">
               {authority.owner.map((item) => (
                 <li
                   key={item}
-                  className="type-display border-b border-paper/40 py-3 text-poster-sm text-paper uppercase"
+                  className="type-display border-b border-ink/30 py-3 text-poster-sm text-ink uppercase"
                 >
                   {item}
                 </li>

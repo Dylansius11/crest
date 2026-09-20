@@ -1,6 +1,7 @@
 import { AuthoritySection } from "@/components/site/authority-section";
 import { CarrySection } from "@/components/site/carry-section";
 import { Hero } from "@/components/site/hero";
+import { HowItWorksSection } from "@/components/site/how-it-works";
 import { PolicyBandSection } from "@/components/site/policy-band-section";
 import { RevealProvider } from "@/components/site/reveal-provider";
 import { RouteSection } from "@/components/site/route-section";
@@ -21,6 +22,7 @@ export default function Home() {
       <SiteHeader />
       <main>
         <Hero />
+        <HowItWorksSection />
         <RouteSection />
         <AuthoritySection />
         <PolicyBandSection />

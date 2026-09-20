@@ -17,7 +17,7 @@ export function CarrySection() {
     <section className="paper-grid bg-paper px-5 py-24 sm:px-10" aria-label="Carry">
       <div className="mb-10 flex flex-wrap items-end justify-between gap-6">
         <div>
-          <CellLabel>04 · The carry</CellLabel>
+          <CellLabel>05 · The carry</CellLabel>
           <h2 className="type-display mt-4 max-w-3xl text-poster-lg text-ink sm:text-poster-xl">
             Yield is a spread, so we print both sides.
           </h2>

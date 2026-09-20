@@ -2,101 +2,143 @@ import { CellLabel } from "@/components/ui/cell";
 import { evidenceDate, forkProof } from "@/lib/content";
 
 /**
- * Timeline: how the Guardian behaves, as a fixed illustrative walkthrough
- * clearly labeled as such. Crest never animates debt down before a canonical
- * postcondition, so this sequence is presented as documentation, not a live
- * feed. Each step reveals once as it enters the viewport via the shared
- * data-reveal hooks.
+ * The watch: one intervention as a bento spread. Each tile is one beat of
+ * the same illustrative sequence, sized by weight rather than order, with the
+ * verified outcome given the largest tile.
+ *
+ * Crest never animates debt down before a canonical postcondition, so the
+ * green tile prints a fixed before/after and the failure path stays visible.
  */
-const steps = [
-  {
-    time: "12:00:28",
-    title: "Upper guard crossed",
-    body: "LTV hit 42.4% against a 42.0% guard. The trigger fired from fresh onchain reads, not a cached estimate.",
-    tone: "text-signal-warn",
-  },
-  {
-    time: "12:00:31",
-    title: "Borrowing frozen",
-    body: "freezeBorrowing() landed first. No new debt can exist while the account is under review.",
-    tone: "text-paper",
-  },
-  {
-    time: "12:00:34",
-    title: "Liquidity refreshed",
-    body: "Vault maxWithdraw read fresh at the current block. Quoted assets are not withdrawable assets; only the real number counts.",
-    tone: "text-paper",
-  },
-  {
-    time: "12:00:36",
-    title: "Strategy repayment submitted",
-    body: "repayFromStrategy(250 USDG) simulated, then submitted. The Guardian chose nothing: the route is fixed and the cap is policy.",
-    tone: "text-paper",
-  },
-  {
-    time: "12:00:40",
-    title: "Debt reduced, verified",
-    body: "Debt 2,000.81 to 1,750.79 USDG at block 66,386,239. The card only turns green here, on the canonical post-state.",
-    tone: "text-crest-300",
-  },
-  {
-    time: "12:00:42",
-    title: "Policy LTV restored",
-    body: "Position back to 35.1%, inside the target band. If repayment had failed, the account would stay frozen and say so.",
-    tone: "text-signal-verified",
-  },
-] as const;
-
 export function TimelineSection() {
   return (
-    <section className="relative bg-crest-950 px-5 py-24 sm:px-10" aria-label="Guardian walkthrough">
-      <div className="mb-10">
-        <CellLabel className="bg-paper text-ink">05 · The watch</CellLabel>
-        <h2
-          data-reveal="lines"
-          className="type-display mt-4 max-w-3xl text-poster-lg text-paper sm:text-poster-xl"
-        >
-          <span data-line className="block">
-            Twelve seconds,
-          </span>
-          <span data-line className="block">
-            start to finish.
-          </span>
-        </h2>
-        <p className="mt-4 max-w-2xl text-poster-base text-paper/80">
-          A walkthrough of one intervention, from crossing to verified repay.
-          Illustrative sequence; real receipts post with exact blocks. Evidence
-          below is from the pinned-fork proof run of {evidenceDate}.
+    <section className="bg-crest-950 px-5 py-24 sm:px-10" aria-label="Guardian walkthrough">
+      <div className="mb-10 flex flex-wrap items-end justify-between gap-6">
+        <div>
+          <CellLabel className="bg-paper text-ink">06 · The watch</CellLabel>
+          <h2 className="type-display mt-4 max-w-3xl text-poster-lg text-paper sm:text-poster-xl">
+            Twelve seconds, start to finish.
+          </h2>
+        </div>
+        <p className="max-w-md text-poster-sm text-paper/75">
+          One intervention, from crossing the guard to a verified repayment.
+          Illustrative sequence with fixed timestamps; live receipts post with
+          their own block. Fork evidence dated {evidenceDate}.
         </p>
       </div>
 
-      <ol className="relative border-t border-paper/30">
-        {steps.map((step, i) => (
-          <li
-            key={step.time}
-            data-reveal="cell"
-            className="relative grid gap-2 border-b border-paper/30 py-6 md:grid-cols-[120px_80px_1fr] md:gap-6"
-          >
-            <span className="tnum font-mono text-poster-sm text-paper/60">{step.time}</span>
-            <span className="relative z-10 -mt-1 flex">
-              <span
-                className={`type-display flex size-12 items-center justify-center rounded-full border border-paper/40 bg-crest-950 text-poster-base ${step.tone}`}
-              >
-                {String(i + 1).padStart(2, "0")}
-              </span>
-            </span>
-            <div>
-              <h3 className="type-display text-poster-base text-paper uppercase">{step.title}</h3>
-              <p className="mt-1 max-w-2xl text-poster-sm text-paper/75">{step.body}</p>
-            </div>
-          </li>
-        ))}
-      </ol>
+      <div className="grid grid-cols-1 gap-px border border-paper/25 bg-paper/25 md:grid-cols-6">
+        <article
+          data-reveal="cell"
+          className="flex flex-col justify-between bg-crest-950 p-6 md:col-span-3"
+        >
+          <span className="tnum font-mono text-poster-sm text-paper/60">12:00:28</span>
+          <div className="mt-6">
+            <h3 className="type-display text-poster-md text-flame uppercase">
+              Upper guard crossed
+            </h3>
+            <p className="mt-2 text-poster-sm text-paper/75">
+              LTV printed 42.4% against a 42.0% guard on a fresh onchain read,
+              not a cached estimate.
+            </p>
+          </div>
+        </article>
 
-      <p className="type-display mt-8 text-poster-sm text-paper/60 uppercase">
-        Fork proof · morpho {forkProof.morphoLifecycle} · vault {forkProof.vaultLifecycle} · block{" "}
-        {forkProof.block}
-      </p>
+        <article
+          data-reveal="cell"
+          className="flex flex-col justify-between bg-crest-950 p-6 md:col-span-3"
+        >
+          <span className="tnum font-mono text-poster-sm text-paper/60">12:00:31</span>
+          <div className="mt-6">
+            <h3 className="type-display text-poster-md text-paper uppercase">Borrowing frozen</h3>
+            <p className="mt-2 text-poster-sm text-paper/75">
+              freezeBorrowing() landed first, so the account cannot add debt
+              while it is under review.
+            </p>
+          </div>
+        </article>
+
+        <article data-reveal="cell" className="bg-crest-950 p-6 md:col-span-2">
+          <span className="tnum font-mono text-poster-sm text-paper/60">12:00:34</span>
+          <h3 className="type-display mt-4 text-poster-base text-paper uppercase">
+            Liquidity refreshed
+          </h3>
+          <p className="mt-2 text-poster-sm text-paper/75">
+            Vault maxWithdraw read again at the current block. Quoted assets are
+            not withdrawable assets, and only the second one sizes a repayment.
+          </p>
+        </article>
+
+        <article data-reveal="cell" className="bg-crest-950 p-6 md:col-span-2">
+          <span className="tnum font-mono text-poster-sm text-paper/60">12:00:36</span>
+          <h3 className="type-display mt-4 text-poster-base text-paper uppercase">
+            Repayment submitted
+          </h3>
+          <p className="mt-2 font-mono text-[0.7rem] break-all text-crest-300">
+            repayFromStrategy(250_000_000)
+          </p>
+          <p className="mt-2 text-poster-sm text-paper/75">
+            Custos chose nothing. The route is fixed and the amount is bounded
+            by the policy cap.
+          </p>
+        </article>
+
+        <article data-reveal="cell" className="bg-crest-950 p-6 md:col-span-2">
+          <span className="tnum font-mono text-poster-sm text-paper/60">12:00:42</span>
+          <h3 className="type-display mt-4 text-poster-base text-paper uppercase">
+            Policy LTV restored
+          </h3>
+          <p className="mt-2 text-poster-sm text-paper/75">
+            Position back at 35.1%, inside the target band, with the account
+            still under owner control.
+          </p>
+        </article>
+
+        <article
+          data-reveal="cell"
+          className="flex flex-col justify-between gap-6 bg-paper p-6 md:col-span-4"
+        >
+          <div>
+            <span className="tnum font-mono text-poster-sm text-ink-soft">12:00:40</span>
+            <h3 className="type-display mt-3 text-poster-md text-ink uppercase">
+              Debt reduced, verified
+            </h3>
+            <p className="mt-2 max-w-md text-poster-sm text-ink-soft">
+              Only the canonical post-state turns this tile green. If the
+              receipt succeeds and debt does not fall, the tile says postcondition
+              failed and the frozen state stays.
+            </p>
+          </div>
+          <div className="grid grid-cols-3 gap-px border border-ink bg-ink">
+            <div className="bg-paper px-4 py-3">
+              <p className="type-display text-poster-sm text-ink-soft uppercase">before</p>
+              <p className="tnum font-mono text-poster-base text-ink">2,000.81</p>
+            </div>
+            <div className="bg-paper px-4 py-3">
+              <p className="type-display text-poster-sm text-ink-soft uppercase">after</p>
+              <p className="tnum font-mono text-poster-base text-signal-verified">1,750.79</p>
+            </div>
+            <div className="bg-paper px-4 py-3">
+              <p className="type-display text-poster-sm text-ink-soft uppercase">reduced</p>
+              <p className="tnum font-mono text-poster-base text-ink">250.02</p>
+            </div>
+          </div>
+        </article>
+
+        <article
+          data-reveal="cell"
+          className="flex flex-col justify-center gap-3 bg-flame p-6 text-ink md:col-span-2"
+        >
+          <h3 className="type-display text-poster-base uppercase">If it fails</h3>
+          <p className="text-poster-sm">
+            A reverted repayment keeps the account frozen, publishes the reason,
+            and waits for a fresh assessment. Risk never improves on paper.
+          </p>
+          <p className="type-display text-poster-sm uppercase">
+            Fork proof · morpho {forkProof.morphoLifecycle} · vault{" "}
+            {forkProof.vaultLifecycle}
+          </p>
+        </article>
+      </div>
     </section>
   );
 }

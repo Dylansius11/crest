@@ -144,6 +144,15 @@ body {
   background-size: 22px 22px;
 }
 
+/* Diagonal hatch band: printed-paper texture without competing with content. */
+.hatch {
+  background-image: repeating-linear-gradient(
+    45deg,
+    color-mix(in srgb, var(--color-ink) 30%, transparent) 0 1px,
+    transparent 1px 10px
+  );
+}
+
 /* One-pulse attention sweep for a state change, then static. */
 @keyframes crest-pulse {
   0% {

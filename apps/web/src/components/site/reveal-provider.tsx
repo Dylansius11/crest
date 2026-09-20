@@ -12,9 +12,9 @@ gsap.registerPlugin(useGSAP, ScrollTrigger);
  * prefers-reduced-motion: under reduce, no tween is created and content
  * simply renders.
  *
- * Hero entrance plays immediately on load (mask-wipe lines, chip drop,
- * backdrop rise). Scroll sections reveal once on entry. Nothing numeric
- * animates; no effect repeats on scroll-back.
+ * The hero runs one load timeline keyed on data-hero-item hooks (seal,
+ * console, chip, lines, lead, CTAs, stats). Sections below reveal once on
+ * entry through data-reveal hooks. Nothing numeric animates.
  */
 export function RevealProvider({ children }: { children: ReactNode }) {
   const scope = useRef<HTMLDivElement>(null);
@@ -24,44 +24,46 @@ export function RevealProvider({ children }: { children: ReactNode }) {
       const mm = gsap.matchMedia();
 
       mm.add("(prefers-reduced-motion: no-preference)", () => {
-        // Hero: playwright-style load-in. Backdrop settles, chip drops,
-        // lines wipe up behind masks, buttons and stats follow.
-        const heroCopy = document.querySelector("[data-hero-copy]");
-        if (heroCopy) {
-          const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
-          tl.from("[data-hero-mark]", { yPercent: 8, autoAlpha: 0, duration: 0.9 }, 0)
+        const hero = document.querySelector("[data-hero-copy]");
+        if (hero) {
+          gsap
+            .timeline({ defaults: { ease: "power3.out" } })
+            .from("[data-hero-item='seal']", {
+              scale: 0.55,
+              autoAlpha: 0,
+              duration: 0.9,
+              ease: "back.out(1.5)",
+            })
             .from(
-              "[data-hero-copy] [data-reveal='chip']",
+              "[data-hero-item='chip']",
               { y: -18, autoAlpha: 0, duration: 0.5 },
+              0.05,
+            )
+            .from(
+              "[data-hero-item='line']",
+              { yPercent: 115, duration: 0.8, stagger: 0.1 },
               0.15,
             )
+            .from("[data-hero-item='lead']", { y: 22, autoAlpha: 0, duration: 0.5 }, 0.5)
             .from(
-              "[data-hero-copy] [data-line]",
-              { yPercent: 112, duration: 0.75, stagger: 0.1 },
-              0.2,
+              "[data-hero-item='console']",
+              { x: 36, autoAlpha: 0, duration: 0.7 },
+              0.55,
             )
             .from(
-              "[data-hero-copy] p:not([data-reveal])",
-              { y: 20, autoAlpha: 0, duration: 0.5 },
-              0.5,
-            )
-            .from(
-              "[data-hero-copy] a",
+              "[data-hero-item='cta']",
               { y: 16, autoAlpha: 0, duration: 0.45, stagger: 0.08 },
-              0.6,
+              0.7,
             )
             .from(
-              "[data-hero-copy] dl > div",
+              "[data-hero-item='stat']",
               { y: 24, autoAlpha: 0, duration: 0.5, stagger: 0.06 },
-              0.7,
+              0.8,
             );
         }
 
-        // Scroll-triggered headline lines for later sections.
+        // Section headline lines.
         gsap.utils.toArray<HTMLElement>("[data-reveal='lines']").forEach((el) => {
-          if (el.closest("[data-hero-copy]")) {
-            return;
-          }
           const lines = el.querySelectorAll("[data-line]");
           gsap.from(lines, {
             yPercent: 110,
@@ -72,11 +74,8 @@ export function RevealProvider({ children }: { children: ReactNode }) {
           });
         });
 
-        // Kicker chips: small settle.
+        // Kicker chips.
         gsap.utils.toArray<HTMLElement>("[data-reveal='chip']").forEach((el) => {
-          if (el.closest("[data-hero-copy]")) {
-            return;
-          }
           gsap.from(el, {
             y: 14,
             autoAlpha: 0,
@@ -86,7 +85,25 @@ export function RevealProvider({ children }: { children: ReactNode }) {
           });
         });
 
-        // Cells: batch entrance, one wave, never re-triggered.
+        // How it works: the rail draws left to right as the section scrolls.
+        gsap.utils.toArray<HTMLElement>("[data-hiw-line]").forEach((el) => {
+          gsap.fromTo(
+            el,
+            { scaleX: 0 },
+            {
+              scaleX: 1,
+              ease: "none",
+              scrollTrigger: {
+                trigger: el.parentElement ?? el,
+                start: "top 85%",
+                end: "bottom 60%",
+                scrub: 0.4,
+              },
+            },
+          );
+        });
+
+        // Cells: one batched wave, never re-triggered.
         ScrollTrigger.batch("[data-reveal='cell']", {
           start: "top 85%",
           once: true,
