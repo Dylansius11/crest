@@ -25,6 +25,13 @@ Rules for this file:
 
 ---
 
+## 2026-09-20 — Reveal motion must never be the only thing that makes content visible (Technical)
+
+- A cross-breakpoint audit reported 18 of 18 reveal cells at `opacity: 0` and threw impossible contrast ratios on text that had already passed. The cause was the audit environment, not the page: the relay tab was occluded, so `requestAnimationFrame` was throttled and GSAP's `from` tweens, which apply their start state at creation (`immediateRender` defaults to true), never advanced.
+- The same throttle can hit a real reader who loads the page in a background tab and returns to it, because a `once` batch only re-evaluates on a scroll, resize, or refresh event, and restoring a tab fires none of them.
+- Fix in `apps/web/src/components/site/reveal-provider.tsx`: `immediateRender: false` on every scroll-triggered tween so a trigger that never fires leaves readable content instead of a hidden section, plus a `ScrollTrigger.refresh()` on `visibilitychange` and `load` so missed triggers are re-evaluated when the reader actually looks at the page.
+- Rule: never let JavaScript be the only thing standing between a reader and readable text. Reveals animate from a hidden start state only once their trigger has fired, and any trigger that depends on a scroll event gets a refresh path for a restored tab.
+
 ## 2026-09-20 — tailwind-merge silently dropped colour classes next to a custom type scale (Technical)
 
 - `bg-flame text-ink` rendered as paper text on the hero CTA. The class list reaching the DOM had no `text-ink`: `tailwind-merge` classifies an unknown `text-<token>` as a text colour, so `text-ink` and the poster size token `text-poster-base` collided, and the later class won.
