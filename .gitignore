@@ -17,3 +17,5 @@ contracts/cache/
 contracts/broadcast/
 
 reference/*.tsbuildinfo
+
+*.tsbuildinfo
