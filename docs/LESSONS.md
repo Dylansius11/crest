@@ -25,6 +25,32 @@ Rules for this file:
 
 ---
 
+## 2026-09-20 — Reveal motion must never be the only thing that makes content visible (Technical)
+
+- A cross-breakpoint audit reported 18 of 18 reveal cells at `opacity: 0` and threw impossible contrast ratios on text that had already passed. The cause was the audit environment, not the page: the relay tab was occluded, so `requestAnimationFrame` was throttled and GSAP's `from` tweens, which apply their start state at creation (`immediateRender` defaults to true), never advanced.
+- The same throttle can hit a real reader who loads the page in a background tab and returns to it, because a `once` batch only re-evaluates on a scroll, resize, or refresh event, and restoring a tab fires none of them.
+- Fix in `apps/web/src/components/site/reveal-provider.tsx`: `immediateRender: false` on every scroll-triggered tween so a trigger that never fires leaves readable content instead of a hidden section, plus a `ScrollTrigger.refresh()` on `visibilitychange` and `load` so missed triggers are re-evaluated when the reader actually looks at the page.
+- Rule: never let JavaScript be the only thing standing between a reader and readable text. Reveals animate from a hidden start state only once their trigger has fired, and any trigger that depends on a scroll event gets a refresh path for a restored tab.
+
+## 2026-09-20 — tailwind-merge silently dropped colour classes next to a custom type scale (Technical)
+
+- `bg-flame text-ink` rendered as paper text on the hero CTA. The class list reaching the DOM had no `text-ink`: `tailwind-merge` classifies an unknown `text-<token>` as a text colour, so `text-ink` and the poster size token `text-poster-base` collided, and the later class won.
+- Measured result before the fix: 15 AA contrast failures across the page, including paper on flame at 3.0:1 and brand blue display text on the brand blue field at 1.4:1. After registering `poster-sm` through `poster-3xl` as a `font-size` group in `apps/web/src/lib/cn.ts`: zero failures, and size overrides still resolve correctly (`text-poster-md text-poster-lg` keeps the larger one).
+- Rule: when a custom type scale lives under Tailwind's `text-` prefix, register those tokens with `extendTailwindMerge`, and treat any missing colour in the DOM as a merge conflict before hunting the component.
+
+## 2026-09-20 — The reference site's mechanics transfer, its pixels do not (Workflow)
+
+- The landing page was re-skinned from a marketing reference (`reference/crest-ref.mp4`): one saturated blue field, one paper field, huge condensed uppercase display, hard 1px rules, offset ink shadows, and one orange reserved for owner actions.
+- Sampling tokens from the supplied artwork instead of matching the reference by eye kept the palette defensible: the brand blue is the logo plate `#006AFC`, so the theme ramp is a tint/shade scale of that single value.
+- What did not transfer: the reference's illustration style and constant motion assume a consumer product. A borrowing console must keep exact amounts, sources, and blocked states visible, so texture, marquee, and reveal motion were budgeted to decoration only.
+- Rule: take layout mechanics, type scale, and motion grammar from a reference; derive colors from the product's own artwork; keep every normative honesty rule in `docs/DESIGN-SYSTEMS.md` intact.
+
+## 2026-09-20 — Name the Guardian without widening it (Workflow)
+
+- `Custos` is now the display name for the Crest Guardian across the landing page, while the three selectors in `contracts/src/CrestAccount.sol` are unchanged.
+- A character name makes automation easier to explain and easier to over-trust; a name that reads as an advisor invites the claim that it decides.
+- Rule: any Guardian naming must appear beside the exact callable surface and the cannot-do list, and no MVP screen may attribute Post-MVP automation to that name.
+
 ## 2026-09-19 — Node-only code must not sit on a package's default import path (Technical)
 
 - `next build` traced the whole repository into the server bundle because `@crest/contracts` reached `readFileSync` (Foundry artifact) and a dynamic `readFile`/`resolve` (manifest loader) through its main entry.

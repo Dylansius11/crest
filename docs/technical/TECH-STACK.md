@@ -71,6 +71,8 @@ Use the newest stable **compatible** release, not every newest tag independently
 | Tailwind CSS / PostCSS adapter | `4.3.3` / `4.3.3` | Stable UI build path |
 | Radix UI (via shadcn/ui) | `1.6.7` | Accessible primitives; installed per component by the shadcn CLI, never as a blanket dependency |
 | Motion / GSAP | `13.4.0` / `3.15.0` | Motion for React component transitions; GSAP for timeline/scroll sequences. Both obey `prefers-reduced-motion` |
+| @gsap/react | `2.1.2` | `useGSAP()` hook for React GSAP setup/cleanup; registered with gsap 3.15.0 |
+| Fonts (self-hosted) | `@fontsource-variable/archivo 5.3.0` / `@fontsource-variable/inter 5.3.0` / `@fontsource/ibm-plex-mono 5.3.0` | Display, body, and mono faces without third-party font requests |
 | lucide-react / class-variance-authority / tailwind-merge / clsx | `1.47.0` / `0.7.1` / `3.7.0` / `2.1.1` | shadcn/ui component dependencies |
 | Turborepo | `2.10.12` | Workspace task graph |
 | viem / wagmi | `2.56.8` / `3.7.7` | EVM reads, simulation, wallet state |
