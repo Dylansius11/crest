@@ -1,0 +1,87 @@
+{
+  "recordedFrom": "https://api.robinhood.com/rhj/corporate-actions",
+  "recordedAt": "2026-09-23T03:58:54Z",
+  "status": 200,
+  "body": {
+    "corpActions": [
+      {
+        "id": "0x00000000000000000000000000000000eefd305f8fd04bdb882b158b0b30d776",
+        "type": "CORPORATE_ACTION_TYPE_CASH_DIVIDEND",
+        "status": "CORPORATE_ACTION_STATUS_IN_PROGRESS",
+        "processDate": {
+          "year": 2026,
+          "month": 9,
+          "day": 25
+        },
+        "tokenSymbol": "SPMO",
+        "deployments": [
+          {
+            "contractAddress": "0xAd622320e520de39e72d41EF07438C3Fd3354875",
+            "chainId": 4663,
+            "networkName": "Robinhood Chain",
+            "itnEnabled": false,
+            "atomicEnabled": false
+          }
+        ],
+        "details": {
+          "cashDividend": {
+            "underlyingSymbol": "SPMO",
+            "rate": "0.24322"
+          }
+        }
+      },
+      {
+        "id": "0x000000000000000000000000000000005cca09f06be14aea89a8ea6265026644",
+        "type": "CORPORATE_ACTION_TYPE_CASH_DIVIDEND",
+        "status": "CORPORATE_ACTION_STATUS_IN_PROGRESS",
+        "processDate": {
+          "year": 2026,
+          "month": 9,
+          "day": 25
+        },
+        "tokenSymbol": "LMT",
+        "deployments": [
+          {
+            "contractAddress": "0x329fcACEb9AD6F9580DD5F643fed0646900D043c",
+            "chainId": 4663,
+            "networkName": "Robinhood Chain",
+            "itnEnabled": false,
+            "atomicEnabled": false
+          }
+        ],
+        "details": {
+          "cashDividend": {
+            "underlyingSymbol": "LMT",
+            "rate": "3.45"
+          }
+        }
+      },
+      {
+        "id": "0x0000000000000000000000000000000052b1bd2848fd4837baefc662660c6b28",
+        "type": "CORPORATE_ACTION_TYPE_CASH_DIVIDEND",
+        "status": "CORPORATE_ACTION_STATUS_IN_PROGRESS",
+        "processDate": {
+          "year": 2026,
+          "month": 10,
+          "day": 21
+        },
+        "tokenSymbol": "CSCO",
+        "deployments": [
+          {
+            "contractAddress": "0xF543967EEBB6f1917992eF0E68De63ab07a5a0dA",
+            "chainId": 4663,
+            "networkName": "Robinhood Chain",
+            "itnEnabled": false,
+            "atomicEnabled": false
+          }
+        ],
+        "details": {
+          "cashDividend": {
+            "underlyingSymbol": "CSCO",
+            "rate": "0.42"
+          }
+        }
+      }
+    ]
+  }
+}

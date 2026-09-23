@@ -346,6 +346,21 @@ importers:
         specifier: 4.6.4
         version: 4.6.4
 
+  packages/robinhood:
+    dependencies:
+      '@crest/chain':
+        specifier: workspace:*
+        version: link:../chain
+      '@crest/domain':
+        specifier: workspace:*
+        version: link:../domain
+      viem:
+        specifier: 2.56.8
+        version: 2.56.8(typescript@7.0.2)(zod@4.6.4)
+      zod:
+        specifier: 4.6.4
+        version: 4.6.4
+
   packages/vault:
     dependencies:
       '@crest/chain':

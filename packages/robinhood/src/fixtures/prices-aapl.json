@@ -1,0 +1,31 @@
+{
+  "recordedFrom": "https://api.robinhood.com/rhj/prices/AAPL",
+  "recordedAt": "2026-09-23T03:58:54Z",
+  "status": 200,
+  "body": {
+    "quotes": [
+      {
+        "tokenSymbol": "AAPL",
+        "deployments": [
+          {
+            "contractAddress": "0xaF3D76f1834A1d425780943C99Ea8A608f8a93f9",
+            "chainId": 4663,
+            "networkName": "Robinhood Chain",
+            "itnEnabled": false,
+            "atomicEnabled": false
+          }
+        ],
+        "bid": "340.5",
+        "ask": "340.55",
+        "currency": "USD",
+        "dailyTradingVolume": "40711698",
+        "isTradingHalt": false,
+        "generatedAt": "2026-09-23T03:58:51.013367223Z",
+        "dailyHigh": "340.64",
+        "dailyLow": "339.5",
+        "mintBurnTokenVolume": "1692.19034479",
+        "mintBurnUsdVolume": "576233.11715961475"
+      }
+    ]
+  }
+}
