@@ -328,6 +328,24 @@ importers:
         specifier: 2.56.8
         version: 2.56.8(typescript@7.0.2)(zod@4.6.4)
 
+  packages/vault:
+    dependencies:
+      '@crest/chain':
+        specifier: workspace:*
+        version: link:../chain
+      '@crest/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@crest/domain':
+        specifier: workspace:*
+        version: link:../domain
+      '@crest/morpho':
+        specifier: workspace:*
+        version: link:../morpho
+      viem:
+        specifier: 2.56.8
+        version: 2.56.8(typescript@7.0.2)(zod@4.6.4)
+
 packages:
 
   '@adraffy/ens-normalize@1.11.1':
