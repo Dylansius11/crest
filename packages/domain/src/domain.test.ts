@@ -8,6 +8,8 @@ import {
   hashSchema,
   marketIdSchema,
   policyV2Schema,
+  observe,
+  parseDecimalUnits,
   projectedOrRealizedSchema,
   rateSchema,
   vaultIdSchema,
@@ -15,6 +17,48 @@ import {
 
 const address = (digit: string) => `0x${digit.repeat(40)}`;
 const hash = (digit: string) => `0x${digit.repeat(64)}`;
+
+describe("observation status", () => {
+  const provenance = {
+    kind: "onchain",
+    chainId: 4663,
+    block: { number: 1n, hash: `0x${"1".repeat(64)}`, timestamp: 1n },
+  } as const;
+
+  test("a reason can never leave a value labelled normal", () => {
+    expect(observe(5n, provenance).status).toBe("normal");
+    expect(observe(5n, provenance, ["stale"]).status).toBe("degraded");
+  });
+
+  test("a missing value is unknown and always names why", () => {
+    expect(observe(null, provenance)).toMatchObject({ status: "unknown", reasons: ["unreadable"] });
+    expect(observe(null, provenance, ["invalid_response"]).reasons).toEqual(["invalid_response"]);
+  });
+
+  test("duplicate reasons collapse without losing order", () => {
+    expect(observe(1n, provenance, ["stale", "conflict", "stale"]).reasons).toEqual(["stale", "conflict"]);
+  });
+});
+
+describe("parseDecimalUnits", () => {
+  test("keeps every provider digit up to the target scale", () => {
+    expect(parseDecimalUnits("1.000566080061092436", 18)).toBe(1_000_566_080_061_092_436n);
+    expect(parseDecimalUnits("0.07925257197505986", 18)).toBe(79_252_571_975_059_860n);
+    expect(parseDecimalUnits("340.55", 8)).toBe(34_055_000_000n);
+  });
+
+  test("reads a JSON float's exponent form and truncates toward zero", () => {
+    expect(parseDecimalUnits("2.4215353906509307e-6", 18)).toBe(2_421_535_390_650n);
+    expect(parseDecimalUnits("-1.5e-18", 18)).toBe(-1n);
+    expect(parseDecimalUnits("1e2", 0)).toBe(100n);
+  });
+
+  test("refuses anything that is not a finite decimal", () => {
+    for (const bad of ["", "NaN", "Infinity", "1.", ".5", "1e", "0x10", "1,5"]) {
+      expect(() => parseDecimalUnits(bad, 18)).toThrow(/not a finite decimal/);
+    }
+  });
+});
 
 const validPolicy = {
   schemaVersion: 2,

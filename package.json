@@ -20,14 +20,22 @@
     "fork:record": "node scripts/record-fork-lifecycle.ts",
     "manifest:verify": "node scripts/verify-deployment-manifest.ts",
     "manifest:test": "node scripts/verify-deployment-manifest.test.ts",
+    "smoke:adapters": "node scripts/smoke-adapters.ts",
     "verify": "pnpm generate && pnpm typecheck && pnpm test"
   },
   "devDependencies": {
+    "@crest/chain": "workspace:*",
     "@crest/contracts": "workspace:*",
+    "@crest/domain": "workspace:*",
+    "@crest/morpho": "workspace:*",
+    "@crest/rates": "workspace:*",
+    "@crest/robinhood": "workspace:*",
+    "@crest/vault": "workspace:*",
     "@types/node": "24.10.0",
     "supabase": "2.117.0",
     "turbo": "2.10.12",
     "typescript": "7.0.2",
+    "viem": "2.56.8",
     "vitest": "5.0.0"
   }
 }

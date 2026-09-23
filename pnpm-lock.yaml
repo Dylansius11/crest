@@ -166,9 +166,27 @@ importers:
 
   .:
     devDependencies:
+      '@crest/chain':
+        specifier: workspace:*
+        version: link:packages/chain
       '@crest/contracts':
         specifier: workspace:*
         version: link:packages/contracts
+      '@crest/domain':
+        specifier: workspace:*
+        version: link:packages/domain
+      '@crest/morpho':
+        specifier: workspace:*
+        version: link:packages/morpho
+      '@crest/rates':
+        specifier: workspace:*
+        version: link:packages/rates
+      '@crest/robinhood':
+        specifier: workspace:*
+        version: link:packages/robinhood
+      '@crest/vault':
+        specifier: workspace:*
+        version: link:packages/vault
       '@types/node':
         specifier: 24.10.0
         version: 24.10.0
@@ -181,6 +199,9 @@ importers:
       typescript:
         specifier: 7.0.2
         version: 7.0.2
+      viem:
+        specifier: 2.56.8
+        version: 2.56.8(typescript@7.0.2)(zod@4.6.4)
       vitest:
         specifier: 5.0.0
         version: 5.0.0(@types/node@24.10.0)(vite@8.3.0(@types/node@24.10.0)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.13))
@@ -235,6 +256,18 @@ importers:
       '@crest/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@fontsource-variable/archivo':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/inter':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/ibm-plex-mono':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@gsap/react':
+        specifier: 2.1.2
+        version: 2.1.2(gsap@3.15.0)(react@19.3.0)
       class-variance-authority:
         specifier: 0.7.1
         version: 0.7.1
@@ -276,6 +309,15 @@ importers:
         specifier: 4.3.3
         version: 4.3.3
 
+  packages/chain:
+    dependencies:
+      '@crest/domain':
+        specifier: workspace:*
+        version: link:../domain
+      viem:
+        specifier: 2.56.8
+        version: 2.56.8(typescript@7.0.2)(zod@4.6.4)
+
   packages/contracts:
     dependencies:
       '@crest/domain':
@@ -303,6 +345,72 @@ importers:
       zod:
         specifier: 4.6.4
         version: 4.6.4
+
+  packages/morpho:
+    dependencies:
+      '@crest/chain':
+        specifier: workspace:*
+        version: link:../chain
+      '@crest/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@crest/domain':
+        specifier: workspace:*
+        version: link:../domain
+      viem:
+        specifier: 2.56.8
+        version: 2.56.8(typescript@7.0.2)(zod@4.6.4)
+
+  packages/rates:
+    dependencies:
+      '@crest/domain':
+        specifier: workspace:*
+        version: link:../domain
+      '@crest/morpho':
+        specifier: workspace:*
+        version: link:../morpho
+      '@crest/vault':
+        specifier: workspace:*
+        version: link:../vault
+      viem:
+        specifier: 2.56.8
+        version: 2.56.8(typescript@7.0.2)(zod@4.6.4)
+      zod:
+        specifier: 4.6.4
+        version: 4.6.4
+
+  packages/robinhood:
+    dependencies:
+      '@crest/chain':
+        specifier: workspace:*
+        version: link:../chain
+      '@crest/domain':
+        specifier: workspace:*
+        version: link:../domain
+      viem:
+        specifier: 2.56.8
+        version: 2.56.8(typescript@7.0.2)(zod@4.6.4)
+      zod:
+        specifier: 4.6.4
+        version: 4.6.4
+
+  packages/vault:
+    dependencies:
+      '@crest/chain':
+        specifier: workspace:*
+        version: link:../chain
+      '@crest/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@crest/domain':
+        specifier: workspace:*
+        version: link:../domain
+      '@crest/morpho':
+        specifier: workspace:*
+        version: link:../morpho
+      viem:
+        specifier: 2.56.8
+        version: 2.56.8(typescript@7.0.2)(zod@4.6.4)
 
 packages:
 
@@ -776,6 +884,21 @@ packages:
     engines: {node: '>=18'}
     cpu: [x64]
     os: [win32]
+
+  '@fontsource-variable/archivo@5.3.0':
+    resolution: {integrity: sha512-HogK8FJelrD1o7TlZlkIVtHgc20bO5PZRWE7mUeUTdMN055alznQV6/00J00IBeu8FQAH4s3zW9UJNvKExXf+g==}
+
+  '@fontsource-variable/inter@5.3.0':
+    resolution: {integrity: sha512-OupL48va4JNofb97w6NYeF9S7W/kHNKM0Er8Dem5nqi4jeOLrVJDoE8tZEpnMJmtkvNbB1EIPPwHcdkF6b1oUA==}
+
+  '@fontsource/ibm-plex-mono@5.3.0':
+    resolution: {integrity: sha512-eTgnZjZEGk1QtD3ZstF+Vclo2HLAni8YMy34/DxllwZvyz1lR/1RF/xTiAquOBO7MvqBx8D2Ig2WCPMVfdZu7Q==}
+
+  '@gsap/react@2.1.2':
+    resolution: {integrity: sha512-JqliybO1837UcgH2hVOM4VO+38APk3ECNrsuSM4MuXp+rbf+/2IG2K1YJiqfTcXQHH7XlA0m3ykniFYstfq0Iw==}
+    peerDependencies:
+      gsap: ^3.12.5
+      react: '>=17'
 
   '@hono/node-server@2.1.1':
     resolution: {integrity: sha512-ELuehkj5VCBdgEw9zs+ivkKwyzzUCSQuE96YmiPvn1ECBoZCczbFXJLeEGMTYjphP6gydh4pHMqEYPVMYUVgQg==}
@@ -2401,6 +2524,17 @@ snapshots:
 
   '@esbuild/win32-x64@0.28.2':
     optional: true
+
+  '@fontsource-variable/archivo@5.3.0': {}
+
+  '@fontsource-variable/inter@5.3.0': {}
+
+  '@fontsource/ibm-plex-mono@5.3.0': {}
+
+  '@gsap/react@2.1.2(gsap@3.15.0)(react@19.3.0)':
+    dependencies:
+      gsap: 3.15.0
+      react: 19.3.0
 
   '@hono/node-server@2.1.1(hono@4.13.8)':
     dependencies:

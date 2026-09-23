@@ -1,0 +1,19 @@
+{
+  "name": "@crest/robinhood",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@crest/chain": "workspace:*",
+    "@crest/domain": "workspace:*",
+    "viem": "2.56.8",
+    "zod": "4.6.4"
+  }
+}

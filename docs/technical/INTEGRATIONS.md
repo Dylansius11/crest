@@ -81,6 +81,17 @@ missing lifecycle response  -> unknown/degraded
 
 Unsigned REST data never reaches the smart contract as a price or authority claim.
 
+### Live contract, verified 2026-09-23
+
+`@crest/robinhood` validates these responses. Live payloads differ from the reference page, so the schemas are strict only on consumed fields:
+
+- `/assets` returns 195 active assets; entries add `isin`, `tokenDecimals`, and deployment `networkName`/`itnEnabled`/`atomicEnabled`, and `tradingCapabilities` is shaped `{ market, extended, overnight } × { whole, fractional }`, not the documented three flat fields. Crest reads none of `tradingCapabilities`.
+- `id` is `0x` plus 64 hex characters (a `bytes32`), equal to the token's onchain `uid()`; AAPL is `0x…c2425be3658540dd8e2424cbf3c5c649`.
+- `currentMultiplier` for AAPL (`1.000566080061092436`) equals onchain `uiMultiplier()` exactly; a mismatch is `conflict` and the onchain value wins.
+- `/prices/{symbol}` adds `dailyHigh`, `dailyLow`, and mint/burn volumes; `generatedAt` carries nanosecond precision. Cache windows are documented only for `/prices` (15 s) and `/corporate-actions` (1 h); `/assets` documents none, so its freshness budget is Crest policy.
+- `/corporate-actions` returns the 50 most recent rows with no pagination token. An empty list for a token means no action in that window, not no history.
+- An unknown symbol returns `404 {"code":5,"message":"no whitelisted asset…"}`; an unknown query field returns `400`.
+
 ## 4. Stock Token contract and oracle semantics
 
 Current official documentation describes UI multiplier and pause-related reads. The selected token/feed behavior must be verified against its deployed code and official source.
@@ -95,6 +106,25 @@ The Stock Token onchain price feed may already include the UI multiplier. Theref
 - store token, feed, multiplier, and WAD scales explicitly.
 
 `oraclePaused()` is advisory. `false` does not replace feed freshness/round/sequencer checks; `true` means degraded, not price zero.
+
+### Verified market-oracle composition (2026-09-23)
+
+The reviewed market's oracle (`StaticOracle` `0xD625…E097`, `SCALE_FACTOR` `1e24`) exposes no feed getters, so its composition was established from exact reads at Robinhood block `70212238`:
+
+```text
+price()                        339917537895501582692865356
+AAPL/USD feed answer (8 dp)    33974221248
+USDG/USD feed answer (8 dp)    100005000
+AAPL uiMultiplier()            1000566080061092436
+1e24 × a / q                   339725226218689065546722663   (feed only)
+1e24 × a × m / (1e18 × q)      339917537895501582693298136   (feed × multiplier, agrees to 1.3e-21)
+```
+
+Robinhood and Chainlink both document that the AAPL/USD feed already includes the multiplier. This market oracle multiplies it by `uiMultiplier()` again, so Morpho currently values AAPL collateral about 0.057% above the Chainlink total-return price, and the gap grows with every dividend or split. Crest cannot change this: the market oracle stays Morpho's liquidation authority and Crest uses it for protocol health. Crest's own valuation (`stockTokenValues`) never applies the multiplier to the feed, and `classifyMarketOracle` reports the composition on every smoke so a policy can bound capacity by the lower of the two values (Task 6). The live smoke at block `70226651` reproduced `feed_times_multiplier`.
+
+### Sequencer liveness
+
+Chainlink publishes no L2 Sequencer Uptime Feed for Robinhood Chain and has stopped adding networks (Chainlink L2 Sequencer Uptime Feeds page, 2026-09-23). `@crest/chain` therefore judges liveness by head freshness: `pinBlock` marks every observation `head_lag` when the head timestamp trails the wall clock beyond budget. Feed staleness is judged against the pinned block timestamp and the Chainlink directory heartbeat (`86400` s for both `Robinhood AAPL / USD` and `USDG / USD`, 0.5% deviation). Tokenized-equity feeds do not publish off-hours, so weekend reads are correctly stale.
 
 ## 5. Morpho Blue
 
@@ -198,13 +228,19 @@ Every candidate assessment records deployment source, chain/address/code hash, u
 
 ### Withdrawal truth
 
+Vault V2 returns zero from all four ERC-4626 max functions by design, so `maxWithdraw` is never read. `@crest/vault` reproduces `VaultV2Liquidity.sol` exactly:
+
 ```text
-quoted strategy assets = convertToAssets(accountShares)
-currently withdrawable = min(quoted strategy assets, maxWithdraw(account))
-actionable repayment    = min(currently withdrawable, successful simulation, policy bounds)
+vault capacity       = idle loan-token balance
+                     + min(adapter expectedSupplyAssets, market supply − borrow, Morpho loan balance)
+                       (adapter term is zero if any of the three accounting allocations is zero,
+                        or if the liquidity adapter or liquidity data drifted from the reviewed route)
+quoted strategy      = convertToAssets(accountShares)
+available            = 0 if a gate refuses the account, else min(quoted strategy, vault capacity)
+actionable repayment = min(available, successful simulation, policy bounds)
 ```
 
-Vault TVL, displayed APY, or `previewRedeem` alone is not actionable liquidity.
+Vault TVL, displayed APY, or `previewRedeem` alone is not actionable liquidity. At block `70226651` the vault held 497.6M USDG but only 33.75M was withdrawable through the normal path.
 
 ## 7. APY and net-carry sources
 
@@ -234,6 +270,18 @@ realized debt repayment
 A displayed negative effective borrow APY is not a primitive. It is a derived ratio and can become extreme when current debt is tiny. The UI must lead with absolute stablecoin amounts.
 
 Rate degradation blocks new owner-borrow recommendation. It does not block an otherwise freshly simulated debt-reducing repayment.
+
+### Verified sources (2026-09-23)
+
+| Fact | Source | Convention and window | Freshness signal |
+|---|---|---|---|
+| Market borrow APY | `GET /v0/blue/markets/{chain}:{id}/apy-averages` | `apy-compounded`; `24h`, `7d`, `30d`, `90d`, `1y` (null until computed) | `last_indexed_block` vs pinned head |
+| Vault native APY | `GET /v1/vaults-v2/{chain}:{vault}/apy-averages?lookback=` | `apy-compounded`; `one_hour` … `one_year`, `inception`; **defaults to `six_hours` when omitted** | `last_indexed_block` vs pinned head |
+| Current borrow rate | IRM `borrowRateView` with zero elapsed time | `apr-simple`, `instant`, onchain | pinned block |
+| Vault fees | Vault V2 `performanceFee()`, `managementFee()` | fraction and per-second WAD; the REST vault endpoint returns `null` for both, so onchain is authoritative | pinned block |
+| Incentives | GraphQL `vaultV2ByAddress.rewards`, `marketById.state.rewards` | `apr-simple` per token and side; both empty on this route | none exposed |
+
+`comparability()` refuses to net two rates whose convention or window differs. The manifest's recorded vault rate uses the default six-hour window while the borrow rate uses one day; netting them is a `window_mismatch`. A carry figure must use `lookback=one_day` against `24h`.
 
 ## 8. Market-and-vault route gate
 

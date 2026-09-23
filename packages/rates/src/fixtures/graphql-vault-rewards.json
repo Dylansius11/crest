@@ -1,0 +1,17 @@
+{
+  "recordedFrom": "https://api.morpho.org/graphql",
+  "recordedAt": "2026-09-23T04:06:13Z",
+  "status": 200,
+  "body": {
+    "data": {
+      "vaultV2ByAddress": {
+        "address": "0xBeEff033F34C046626B8D0A041844C5d1A5409dd",
+        "rewards": []
+      }
+    },
+    "extensions": {
+      "complexity": 570,
+      "maximumComplexity": 1000000
+    }
+  }
+}

@@ -43,6 +43,11 @@ export interface DeploymentManifest {
     asset: string;
     generation: string;
     maxFunctions: Record<string, string>;
+    governance: { liquidityAdapter: string };
+    /** Share price at the evidence block, RAY-scaled across share and asset decimals: the vault-loss baseline. */
+    state: { sharePriceRay: string };
+    /** Exactly one entry has `liquidityRole: "default"`: the market the liquidity adapter exits through. */
+    downstreamAllocations: Array<{ adapter: string; marketId: string; liquidityRole: "default" | "allocated" }>;
     withdrawableAssets: string;
     plannedWithdrawalAssets: string;
   };
@@ -137,6 +142,18 @@ export function validateDeploymentManifest(value: unknown): string[] {
   requirePattern(errors, at(value, "vault", "codeHash"), HASH, "vault.codeHash");
   for (const key of ["withdrawableAssets", "plannedWithdrawalAssets"] as const) {
     requirePattern(errors, at(value, "vault", key), UINT, `vault.${key}`);
+  }
+  requirePattern(errors, at(value, "vault", "governance", "liquidityAdapter"), ADDRESS, "vault.governance.liquidityAdapter");
+  requirePattern(errors, at(value, "vault", "state", "sharePriceRay"), UINT, "vault.state.sharePriceRay");
+  const allocations = at(value, "vault", "downstreamAllocations");
+  const defaults = Array.isArray(allocations) ? allocations.filter((entry: unknown) => at(entry, "liquidityRole") === "default") : [];
+  const [liquidityMarket] = defaults;
+  if (
+    defaults.length !== 1
+    || !sameAddress(at(liquidityMarket, "adapter"), at(value, "vault", "governance", "liquidityAdapter"))
+    || !HASH.test(String(at(liquidityMarket, "marketId")))
+  ) {
+    errors.push("vault must name exactly one default liquidity market on its liquidity adapter");
   }
 
   if (at(value, "market", "id") !== at(value, "market", "derivedId")) errors.push("market.id does not match derivedId");

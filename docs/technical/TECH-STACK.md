@@ -8,7 +8,7 @@
 | Web | Next.js App Router + React + TypeScript | Read dashboard plus wallet transaction boundaries |
 | UI | Tailwind CSS + Radix primitives | Fast accessible implementation |
 | EVM client | viem + wagmi | Typed reads, simulation, events, wallet state |
-| Morpho | Official SDK plus verified core ABI | Market identity/state/action construction |
+| Morpho | Verified core ABI + exact `MorphoBalancesLib`/`SharesMathLib` port for reads | Market identity/state and accrued debt match protocol rounding; Crest writes go through `CrestAccount`, never hand-built Morpho calls |
 | Vault | ERC-4626 interface plus one fixed adapter only if required | Standard shares/assets/withdrawal semantics |
 | Contracts | Solidity + Foundry + OpenZeppelin | Narrow account and invariant/fork proof |
 | API | Hono on Node | Bounded typed HTTP surface |
@@ -33,14 +33,14 @@ crest/
 │  ├─ monitor/               route-drift observation; market/vault/rate assessment
 │  └─ automation/            isolated Crest Guardian operator CLI
 ├─ packages/
-│  ├─ domain/                IDs, units, states, reason codes, schemas
+│  ├─ domain/                IDs, units, states, reason codes, schemas, Observation envelope, exact decimals
 │  ├─ risk/                  LTV, health, carry, capacity, action planning
 │  ├─ policy/                schema, compiler, calldata diff
-│  ├─ morpho/                exact market/position/actions
-│  ├─ vault/                 exact vault/shares/withdrawal adapter
-│  ├─ robinhood/             validated lifecycle adapter
-│  ├─ rates/                 typed APY/APR observations and conventions
-│  ├─ chain/                 RPC/oracle/token/account reads
+│  ├─ morpho/                exact market/position/accrued-debt reads
+│  ├─ vault/                 Vault V2 identity/shares/capacity reads and withdrawal simulation
+│  ├─ robinhood/             validated lifecycle adapter and Stock Token valuation
+│  ├─ rates/                 typed APY/APR/incentive/fee observations and comparability
+│  ├─ chain/                 block horizon, head freshness, feeds, code identity, call simulation
 │  ├─ contracts/             generated ABI and reviewed manifest
 │  └─ db/                    Drizzle schema/migrations/repositories/jobs
 ├─ contracts/
@@ -71,6 +71,8 @@ Use the newest stable **compatible** release, not every newest tag independently
 | Tailwind CSS / PostCSS adapter | `4.3.3` / `4.3.3` | Stable UI build path |
 | Radix UI (via shadcn/ui) | `1.6.7` | Accessible primitives; installed per component by the shadcn CLI, never as a blanket dependency |
 | Motion / GSAP | `13.4.0` / `3.15.0` | Motion for React component transitions; GSAP for timeline/scroll sequences. Both obey `prefers-reduced-motion` |
+| @gsap/react | `2.1.2` | `useGSAP()` hook for React GSAP setup/cleanup; registered with gsap 3.15.0 |
+| Fonts (self-hosted) | `@fontsource-variable/archivo 5.3.0` / `@fontsource-variable/inter 5.3.0` / `@fontsource/ibm-plex-mono 5.3.0` | Display, body, and mono faces without third-party font requests |
 | lucide-react / class-variance-authority / tailwind-merge / clsx | `1.47.0` / `0.7.1` / `3.7.0` / `2.1.1` | shadcn/ui component dependencies |
 | Turborepo | `2.10.12` | Workspace task graph |
 | viem / wagmi | `2.56.8` / `3.7.7` | EVM reads, simulation, wallet state |

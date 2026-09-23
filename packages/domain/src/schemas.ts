@@ -3,6 +3,7 @@ import { assetIntentSchema } from "./asset-intent.ts";
 import { projectedOrRealizedSchema } from "./carry.ts";
 import { guardianActionSchema, guardianStateSchema } from "./guardian.ts";
 import { addressSchema, hashSchema, marketIdSchema, vaultIdSchema } from "./identity.ts";
+import { reasonCodeSchema } from "./observation.ts";
 import { policyV2Schema, verifiedRouteSchema } from "./policy.ts";
 import { healthSchema } from "./risk.ts";
 import { rateSchema } from "./units.ts";
@@ -20,4 +21,5 @@ export const domainSchemas = {
   GuardianAction: guardianActionSchema,
   ProjectedOrRealized: projectedOrRealizedSchema,
   Health: healthSchema,
+  ReasonCode: reasonCodeSchema,
 } satisfies Record<string, ZodType>;

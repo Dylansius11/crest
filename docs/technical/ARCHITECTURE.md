@@ -149,14 +149,16 @@ The Crest Account owns the Morpho position and fixed-vault shares. Wallet assets
 - Crest Account configuration, frozen state, and policy nonce;
 - configured token balances and vault share balance;
 - Morpho `MarketParams`, market totals, position shares/collateral, and accrued debt;
-- exact market-oracle value/freshness inputs;
+- exact market-oracle value/freshness inputs, and the oracle's composition relative to its feeds and `uiMultiplier`;
 - Stock Token multiplier and `oraclePaused()` where applicable;
-- vault `asset`, share conversion, `maxWithdraw`/`maxRedeem`, caps, and pause state;
+- vault `asset`, bytecode, liquidity adapter and data, share conversion, accounting allocations and caps, gates, and fees (Vault V2 has no pause switch and returns zero from every `max*` function, so neither is read);
 - borrow/vault rates with source and timestamp;
-- sequencer state required by official oracle guidance;
+- chain head freshness, the only sequencer liveness signal available (Robinhood Chain has no Chainlink uptime feed);
 - current market and strategy liquidity.
 
 Where reads cannot be made at one block, record every block and downgrade the assessment if skew exceeds the configured budget.
+
+Every adapter in `packages/{chain,morpho,vault,rates,robinhood}` returns an `Observation<T>` (`@crest/domain`): the value, its provenance (onchain block number/hash/timestamp, or HTTP URL with fetch, provider generation, documented cache expiry, and indexed block), and reason codes. Status is derived: no value is `unknown`, any reason is `degraded`, only a reason-free value is `normal`. Downstream code reads status and reasons; it never re-labels them.
 
 ### 7.2 Robinhood observation
 
@@ -326,7 +328,7 @@ The planner never uses wallet assets outside the exact market, never treats quot
 | Rate source stale/conflicts | No new borrow recommendation; preserve debt-reducing actions |
 | RPC stale/disagrees | Stop preparation; allow only freshly simulated freeze/repay |
 | Oracle paused/stale | Capacity zero; freeze; no REST price substitute |
-| Sequencer degraded | Apply official guard; freeze and alert |
+| Sequencer degraded | No uptime feed exists on Robinhood Chain; a head older than budget is `head_lag`; freeze and alert |
 | Morpho loan liquidity disappears | No new borrow; monitor current debt |
 | Vault APY falls below floor | Freeze new debt; exit yield toward reserve/debt when safe |
 | Vault withdrawal constrained | Count only current withdrawable amount; partial repay then alert |
