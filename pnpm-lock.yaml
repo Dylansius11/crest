@@ -166,9 +166,27 @@ importers:
 
   .:
     devDependencies:
+      '@crest/chain':
+        specifier: workspace:*
+        version: link:packages/chain
       '@crest/contracts':
         specifier: workspace:*
         version: link:packages/contracts
+      '@crest/domain':
+        specifier: workspace:*
+        version: link:packages/domain
+      '@crest/morpho':
+        specifier: workspace:*
+        version: link:packages/morpho
+      '@crest/rates':
+        specifier: workspace:*
+        version: link:packages/rates
+      '@crest/robinhood':
+        specifier: workspace:*
+        version: link:packages/robinhood
+      '@crest/vault':
+        specifier: workspace:*
+        version: link:packages/vault
       '@types/node':
         specifier: 24.10.0
         version: 24.10.0
@@ -181,6 +199,9 @@ importers:
       typescript:
         specifier: 7.0.2
         version: 7.0.2
+      viem:
+        specifier: 2.56.8
+        version: 2.56.8(typescript@7.0.2)(zod@4.6.4)
       vitest:
         specifier: 5.0.0
         version: 5.0.0(@types/node@24.10.0)(vite@8.3.0(@types/node@24.10.0)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.13))
