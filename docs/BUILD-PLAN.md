@@ -156,19 +156,25 @@ Pinned fork completes supply → owner borrow-and-deploy → Guardian freeze →
 
 **Steps**
 
-- [ ] Validate all external responses.
-- [ ] Preserve provider source, generation/fetch time, expiry, block/hash, and reason codes.
-- [ ] Implement exact market/position/accrued-debt/liquidity reads.
-- [ ] Implement exact vault identity, share/assets, generation-appropriate withdrawal liquidity, and pause/cap reads (`maxWithdraw` is deliberately zero for Vault V2).
-- [ ] Implement withdrawal simulation.
-- [ ] Normalize borrow APY, vault APY, incentives, fees, and conventions without merging them.
-- [ ] Implement Stock Token identity, multiplier, halt, and corporate-action observations.
-- [ ] Add tests for stale/unknown/conflicting inputs, multiplier double-adjustment, vault loss, withdrawal constraint, and rate-convention mismatch.
-- [ ] Run read-only smoke against manifest at a recorded block/time.
+- [x] Validate all external responses.
+- [x] Preserve provider source, generation/fetch time, expiry, block/hash, and reason codes.
+- [x] Implement exact market/position/accrued-debt/liquidity reads.
+- [x] Implement exact vault identity, share/assets, generation-appropriate withdrawal liquidity, and pause/cap reads (`maxWithdraw` is deliberately zero for Vault V2).
+- [x] Implement withdrawal simulation.
+- [x] Normalize borrow APY, vault APY, incentives, fees, and conventions without merging them.
+- [x] Implement Stock Token identity, multiplier, halt, and corporate-action observations.
+- [x] Add tests for stale/unknown/conflicting inputs, multiplier double-adjustment, vault loss, withdrawal constraint, and rate-convention mismatch.
+- [x] Run read-only smoke against manifest at a recorded block/time.
 
 **Acceptance**
 
 Every adapter output is independently attributable. Degraded inputs cannot appear normal or increase capacity.
+
+**Evidence (2026-09-23)**
+
+- Every adapter returns `Observation<T>` from `@crest/domain`: value, onchain block (number/hash/timestamp) or HTTP URL/fetch/generation/expiry/indexed block, and reason codes. Status is derived from those facts and cannot be set by a caller.
+- `pnpm smoke:adapters` (LIVE, read-only) at Robinhood block `70226651` (`0xa3d972e8…e7eb839`, 2026-09-23T04:26:29Z): all nine manifest code hashes matched; market, borrower position, oracle, both feeds, vault, holder liquidity, 1 USDG withdrawal simulation (preview equals simulated shares), rates, incentives, Stock Token state, and Robinhood lifecycle all `normal`.
+- The same run classified the market oracle as `feed_times_multiplier`; see [LESSONS](./LESSONS.md) and [INTEGRATIONS §4](./technical/INTEGRATIONS.md#4-stock-token-contract-and-oracle-semantics).
 
 ## Task 6: Implement policy, risk, carry, and action planning
 
@@ -214,7 +220,8 @@ The pure module returns one deterministic Guardian state/action and one separate
 
 - [ ] Index Crest, Morpho, and vault events with block hashes/cursors.
 - [ ] Activate policy mirror only after canonical event.
-- [ ] Poll coherent market/account/vault state and timestamped advisory sources.
+- [ ] Poll coherent market/account/vault state and timestamped advisory sources through the Task 5 adapters.
+- [ ] Read Crest Account configuration, frozen state, and policy nonce through `@crest/chain` at the same block horizon.
 - [ ] Persist immutable assessment inputs and carry estimate.
 - [ ] Create idempotent freeze/reserve-repay/strategy-repay triggers transactionally.
 - [ ] Create owner additional-borrow recommendation without a Guardian trigger.

@@ -343,6 +343,7 @@ pnpm db:migrate
 pnpm generate
 pnpm verify
 pnpm manifest:verify
+pnpm smoke:adapters --borrower <address> --vault-holder <address> [--rpc <url>] [--doh]
 forge fmt --check
 forge build
 forge test
@@ -351,6 +352,13 @@ forge test --match-contract CrestAccountInvariantTest
 
 `@crest/monitor` and `@crest/automation` require `ROBINHOOD_CHAIN_RPC_URL`; the Guardian CLI additionally
 requires `GUARDIAN_EXPECTED_ADDRESS` and `GUARDIAN_ALLOWED_ACCOUNT`. Each refuses to start without them.
+
+`pnpm smoke:adapters` runs every Task 5 adapter once, read-only, at a freshly pinned block and writes all
+observations to `.tmp/adapter-smoke.json`; it exits 1 on any identity or route failure. The two accounts are
+real holders discovered off-chain (the 2026-09-23 run used borrower `0x74d09665900A5f29BaC25BEfd30C73a5962d44e7`
+and vault holder `0x6460D3441574e740E05d298ac2B24dE17B5bADc8`); their positions are verified onchain, never
+assumed. `--doh` resolves HTTPS hosts over Cloudflare DNS-over-HTTPS for networks that hijack
+`*.robinhood.com`; like the fork proxy it is dev-only transport.
 
 Guardian defaults off. Starting it requires an explicit command and allowlisted account.
 

@@ -25,6 +25,34 @@ Rules for this file:
 
 ---
 
+## 2026-09-23 — The reviewed market's oracle applies the Stock Token multiplier twice (Technical)
+
+- At Robinhood block `70212238` the market oracle `price()` was `339917537895501582692865356`. With `SCALE_FACTOR` `1e24`, AAPL/USD `33974221248`, USDG/USD `100005000`, and `uiMultiplier()` `1000566080061092436`, feed-only gives `…065546722663` while feed times multiplier gives `…693298136`, matching to 1.3e-21. The live smoke at block `70226651` reproduced it.
+- Robinhood and Chainlink both document that the AAPL/USD feed already includes the multiplier, so Morpho values this collateral about 0.057% above the total-return price today, and the gap grows with each dividend or split. The oracle is a custom `StaticOracle` with no feed getters, so only exact arithmetic reveals its composition.
+- Rule: the market oracle stays Morpho's liquidation authority and is used only for protocol health; Crest's own valuation never multiplies a feed price, and `classifyMarketOracle` must run on every assessment so policy can bound capacity by the lower value.
+
+## 2026-09-23 — Robinhood Chain has no sequencer uptime feed; head freshness is the substitute (Technical)
+
+- Robinhood's oracle guide says to check a sequencer uptime feed, but Chainlink's L2 Sequencer Uptime Feeds page lists no Robinhood Chain feed and states it is no longer adding networks.
+- A liveness check that looks for a nonexistent feed would either always fail or silently pass. `pinBlock` instead marks every observation `head_lag` when the head timestamp trails the wall clock beyond budget, and feed freshness is judged against the pinned block timestamp and the Chainlink heartbeat (`86400` s).
+- Rule: never cite a guard that cannot exist on the chain; replace it with the strongest observable signal and name the substitution in evidence.
+
+## 2026-09-23 — Provider docs and live payloads disagree; validate the fields you consume (Technical)
+
+- Robinhood `/assets` returns `tradingCapabilities` as `{ market, extended, overnight } × { whole, fractional }`, not the three documented flat fields, and adds `isin`, `tokenDecimals`, and deployment flags. Morpho's vault `apy-averages` defaults to a `six_hours` lookback when none is given, and its REST vault endpoint reports fees as `null` while onchain fees are `0`.
+- A strict schema on the whole payload would break on harmless additions; a loose one would accept a missing multiplier. The manifest's vault rate came from the default six-hour window, and the landing page nets it against a one-day borrow average.
+- Rule: schemas are strict on consumed fields and ignore the rest; request every window explicitly and record the window the provider says it computed; prefer onchain values where an API returns `null`.
+
+## 2026-09-23 — A caching dev proxy must never cache head-relative answers (Technical)
+
+- `cast block-number` through the fork proxy returned `66369501` while the live head was `70211548`: `eth_blockNumber` carries no block tag, so the "no mutable tag" rule treated it as immutable.
+- Rule: cache only reads pinned to an explicit block; methods whose answer moves with the head (`eth_blockNumber`, gas, nonce, receipts, filters) are never cacheable even without a tag.
+
+## 2026-09-23 — viem rejects a mis-cased address; bind manifest addresses through `getAddress` (Technical)
+
+- The manifest stored Morpho as `0x9D53…CbfA6…`, a mixed-case string with an invalid EIP-55 checksum. Hex comparison in the verifier accepted it; viem rejected it inside the first read.
+- Rule: route binders (`morphoRouteOf`, `vaultRouteOf`) pass every manifest address through `getAddress`, so a bad checksum fails at binding with a clear error instead of inside an adapter.
+
 ## 2026-09-19 — Node-only code must not sit on a package's default import path (Technical)
 
 - `next build` traced the whole repository into the server bundle because `@crest/contracts` reached `readFileSync` (Foundry artifact) and a dynamic `readFile`/`resolve` (manifest loader) through its main entry.
