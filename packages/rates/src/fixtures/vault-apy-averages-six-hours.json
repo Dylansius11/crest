@@ -1,0 +1,14 @@
+{
+  "recordedFrom": "https://api.morpho.org/v1/vaults-v2/4663:0xBeEff033F34C046626B8D0A041844C5d1A5409dd/apy-averages?lookback=six_hours",
+  "recordedAt": "2026-09-23T04:21:29Z",
+  "status": 200,
+  "body": {
+    "data": {
+      "chain_id": 4663,
+      "vault_address": "0xBeEff033F34C046626B8D0A041844C5d1A5409dd",
+      "last_indexed_block": "70223643",
+      "lookback": "six_hours",
+      "apy": 0.040494764240493364
+    }
+  }
+}

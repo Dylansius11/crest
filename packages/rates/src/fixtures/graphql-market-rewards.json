@@ -1,0 +1,19 @@
+{
+  "recordedFrom": "https://api.morpho.org/graphql",
+  "recordedAt": "2026-09-23T04:06:16Z",
+  "status": 200,
+  "body": {
+    "data": {
+      "marketById": {
+        "marketId": "0xdeb4782d012d5fd3b24962538c2f6559049d70bda4dabd2e4212dacb96c28d45",
+        "state": {
+          "rewards": []
+        }
+      }
+    },
+    "extensions": {
+      "complexity": 100,
+      "maximumComplexity": 1000000
+    }
+  }
+}

@@ -9,6 +9,7 @@ import {
   marketIdSchema,
   policyV2Schema,
   observe,
+  parseDecimalUnits,
   projectedOrRealizedSchema,
   rateSchema,
   vaultIdSchema,
@@ -36,6 +37,26 @@ describe("observation status", () => {
 
   test("duplicate reasons collapse without losing order", () => {
     expect(observe(1n, provenance, ["stale", "conflict", "stale"]).reasons).toEqual(["stale", "conflict"]);
+  });
+});
+
+describe("parseDecimalUnits", () => {
+  test("keeps every provider digit up to the target scale", () => {
+    expect(parseDecimalUnits("1.000566080061092436", 18)).toBe(1_000_566_080_061_092_436n);
+    expect(parseDecimalUnits("0.07925257197505986", 18)).toBe(79_252_571_975_059_860n);
+    expect(parseDecimalUnits("340.55", 8)).toBe(34_055_000_000n);
+  });
+
+  test("reads a JSON float's exponent form and truncates toward zero", () => {
+    expect(parseDecimalUnits("2.4215353906509307e-6", 18)).toBe(2_421_535_390_650n);
+    expect(parseDecimalUnits("-1.5e-18", 18)).toBe(-1n);
+    expect(parseDecimalUnits("1e2", 0)).toBe(100n);
+  });
+
+  test("refuses anything that is not a finite decimal", () => {
+    for (const bad of ["", "NaN", "Infinity", "1.", ".5", "1e", "0x10", "1,5"]) {
+      expect(() => parseDecimalUnits(bad, 18)).toThrow(/not a finite decimal/);
+    }
   });
 });
 
