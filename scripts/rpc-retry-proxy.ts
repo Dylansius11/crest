@@ -28,7 +28,9 @@ const CACHE_PATH = process.env.CREST_PROXY_CACHE ?? ".tmp/rpc-cache.json";
 const cache = new Map<string, string>(
   existsSync(CACHE_PATH) ? (Object.entries(JSON.parse(readFileSync(CACHE_PATH, "utf8")) as Record<string, string>)) : [],
 );
-const MUTABLE = /"(latest|pending|safe|finalized)"/;
+// Head-relative tags, and methods whose answer moves with the head even without a tag, are never immutable.
+const MUTABLE =
+  /"(latest|pending|safe|finalized)"|"method":\s*"eth_(blockNumber|gasPrice|maxPriorityFeePerGas|feeHistory|estimateGas|getTransactionCount|getTransactionReceipt|sendRawTransaction|newFilter|getFilterChanges|syncing)"/;
 let unsaved = 0;
 let retried = 0;
 let served = 0;
