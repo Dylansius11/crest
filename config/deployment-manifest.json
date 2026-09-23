@@ -97,7 +97,7 @@
   ],
   "contracts": {
     "morpho": {
-      "address": "0x9D53d5E3bd5E8d4CbfA6DB1ca238AEA02E651010",
+      "address": "0x9D53d5E3bd5E8d4Cbfa6DB1ca238AEA02E651010",
       "codeHash": "0x753b54fdb48c87c9c1ba1dcc3a330faac1a401a3bd23b43104b7b92409ecb424",
       "source": "https://robinhoodchain.blockscout.com/api/v2/smart-contracts/0x9D53d5E3bd5E8d4CbfA6DB1ca238AEA02E651010",
       "contractName": "Morpho",
@@ -368,6 +368,6 @@
   },
   "integrity": {
     "algorithm": "sha256",
-    "digest": "sha256:5d387888704be52462c436951a326fd8e52ad62f6ecf0c7b714df84050857a66"
+    "digest": "sha256:423407d4e4f77417d412dfad0a7f364ed1c163a6fad52178ab9b07b1bab869c7"
   }
 }
