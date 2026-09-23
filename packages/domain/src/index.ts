@@ -2,6 +2,7 @@ export * from "./asset-intent.ts";
 export * from "./carry.ts";
 export * from "./guardian.ts";
 export * from "./identity.ts";
+export * from "./observation.ts";
 export * from "./policy.ts";
 export * from "./risk.ts";
 export * from "./schemas.ts";

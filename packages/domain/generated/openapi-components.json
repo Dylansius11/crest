@@ -514,6 +514,31 @@
             "additionalProperties": false
           }
         ]
+      },
+      "ReasonCode": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "string",
+        "enum": [
+          "unreadable",
+          "invalid_response",
+          "stale",
+          "conflict",
+          "identity_mismatch",
+          "route_drift",
+          "oracle_invalid",
+          "oracle_paused",
+          "head_lag",
+          "trading_halt",
+          "multiplier_pending",
+          "corporate_action_in_progress",
+          "asset_inactive",
+          "convention_mismatch",
+          "window_mismatch",
+          "vault_loss",
+          "withdrawal_gated",
+          "withdrawal_constrained",
+          "simulation_reverted"
+        ]
       }
     }
   }

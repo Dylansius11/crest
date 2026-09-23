@@ -8,6 +8,7 @@ import {
   hashSchema,
   marketIdSchema,
   policyV2Schema,
+  observe,
   projectedOrRealizedSchema,
   rateSchema,
   vaultIdSchema,
@@ -15,6 +16,28 @@ import {
 
 const address = (digit: string) => `0x${digit.repeat(40)}`;
 const hash = (digit: string) => `0x${digit.repeat(64)}`;
+
+describe("observation status", () => {
+  const provenance = {
+    kind: "onchain",
+    chainId: 4663,
+    block: { number: 1n, hash: `0x${"1".repeat(64)}`, timestamp: 1n },
+  } as const;
+
+  test("a reason can never leave a value labelled normal", () => {
+    expect(observe(5n, provenance).status).toBe("normal");
+    expect(observe(5n, provenance, ["stale"]).status).toBe("degraded");
+  });
+
+  test("a missing value is unknown and always names why", () => {
+    expect(observe(null, provenance)).toMatchObject({ status: "unknown", reasons: ["unreadable"] });
+    expect(observe(null, provenance, ["invalid_response"]).reasons).toEqual(["invalid_response"]);
+  });
+
+  test("duplicate reasons collapse without losing order", () => {
+    expect(observe(1n, provenance, ["stale", "conflict", "stale"]).reasons).toEqual(["stale", "conflict"]);
+  });
+});
 
 const validPolicy = {
   schemaVersion: 2,
