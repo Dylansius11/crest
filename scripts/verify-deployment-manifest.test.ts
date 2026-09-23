@@ -42,6 +42,12 @@ function fixture() {
       asset: address("2"),
       generation: "Morpho Vault V2",
       maxFunctions: { maxDeposit: "0", maxMint: "0", maxWithdraw: "0", maxRedeem: "0" },
+      governance: { liquidityAdapter: address("7") },
+      state: { sharePriceRay: "1007219646915321488459496036" },
+      downstreamAllocations: [
+        { adapter: address("7"), marketId: hash("c1"), liquidityRole: "default" },
+        { adapter: address("7"), marketId: hash("c2"), liquidityRole: "allocated" },
+      ],
       withdrawableAssets: "31766601863450",
       plannedWithdrawalAssets: "1000000000",
     },
@@ -58,6 +64,18 @@ function fixture() {
 
 test("accepts coherent verified route evidence", () => {
   assert.deepEqual(validateDeploymentManifest(fixture()), []);
+});
+
+test("rejects a vault route without exactly one default liquidity market on the reviewed adapter", () => {
+  const none = structuredClone(fixture());
+  none.vault.downstreamAllocations = none.vault.downstreamAllocations.map((entry) => ({ ...entry, liquidityRole: "allocated" }));
+  none.integrity.digest = computeManifestIntegrity(none);
+  assert.deepEqual(validateDeploymentManifest(none), ["vault must name exactly one default liquidity market on its liquidity adapter"]);
+
+  const foreign = structuredClone(fixture());
+  foreign.vault.governance.liquidityAdapter = address("8");
+  foreign.integrity.digest = computeManifestIntegrity(foreign);
+  assert.deepEqual(validateDeploymentManifest(foreign), ["vault must name exactly one default liquidity market on its liquidity adapter"]);
 });
 
 test("accepts reserve-only evidence when the market passes and vault liquidity fails", () => {
