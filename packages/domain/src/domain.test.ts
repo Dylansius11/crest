@@ -3,6 +3,7 @@ import {
   addressSchema,
   assetIntentSchema,
   baseUnitsSchema,
+  canonicalJson,
   guardianActionSchema,
   guardianStateSchema,
   hashSchema,
@@ -67,6 +68,8 @@ const validPolicy = {
     marketId: hash("1"),
     collateralToken: address("a"),
     loanToken: address("b"),
+    oracle: address("5"),
+    irm: address("6"),
     vault: address("c"),
     vaultAsset: address("b"),
     marketLltvWad: "625000000000000000",
@@ -82,6 +85,17 @@ const validPolicy = {
   upperLtvWad: "420000000000000000",
   criticalLtvWad: "500000000000000000",
   minimumNetSpreadBps: "100",
+  maxOracleDivergenceBps: "100",
+  harvestThresholdAssets: "10000000",
+  freshness: {
+    maxHeadLagSeconds: "120",
+    maxFeedAgeSeconds: "86400",
+    maxQuoteAgeSeconds: "60",
+    maxAssetAgeSeconds: "3600",
+    maxCorporateActionsAgeSeconds: "7200",
+    maxIndexLagBlocks: "1200",
+  },
+  triggers: { freezeOnOracleDegraded: true, freezeOnVaultDegraded: true, freezeOnLifecycleDegraded: true },
   guardian: address("d"),
 } as const;
 
@@ -157,6 +171,44 @@ describe("policy boundaries", () => {
   test("rejects invalid LTV ordering and a critical threshold at the Morpho LLTV", () => {
     expect(policyV2Schema.safeParse({ ...validPolicy, targetLtvWad: validPolicy.lowerLtvWad }).success).toBe(false);
     expect(policyV2Schema.safeParse({ ...validPolicy, criticalLtvWad: validPolicy.route.marketLltvWad }).success).toBe(false);
+  });
+
+  test("an oracle divergence bound is a fraction of one, never negative or above 100%", () => {
+    expect(policyV2Schema.safeParse({ ...validPolicy, maxOracleDivergenceBps: "-1" }).success).toBe(false);
+    expect(policyV2Schema.safeParse({ ...validPolicy, maxOracleDivergenceBps: "10001" }).success).toBe(false);
+    expect(policyV2Schema.parse({ ...validPolicy, maxOracleDivergenceBps: "0" }).maxOracleDivergenceBps).toBe(0n);
+  });
+
+  test("a zero freshness budget would mark every read stale and is rejected", () => {
+    expect(policyV2Schema.safeParse({ ...validPolicy, freshness: { ...validPolicy.freshness, maxHeadLagSeconds: "0" } }).success).toBe(false);
+  });
+
+  test("the policy route names the full Morpho market parameters, not just its tokens", () => {
+    const { oracle: _oracle, ...withoutOracle } = validPolicy.route;
+    expect(policyV2Schema.safeParse({ ...validPolicy, route: withoutOracle }).success).toBe(false);
+  });
+});
+
+describe("canonicalJson", () => {
+  test("orders keys so equal content serializes identically", () => {
+    expect(canonicalJson({ b: 1, a: { d: true, c: null } })).toBe(canonicalJson({ a: { c: null, d: true }, b: 1 }));
+    expect(canonicalJson({ b: 1, a: 2 })).toBe('{"a":2,"b":1}');
+  });
+
+  test("keeps bigint exact and distinct from a number or string of the same digits", () => {
+    expect(canonicalJson({ v: 2n ** 200n })).toBe(`{"v":{"$bigint":"${(2n ** 200n).toString()}"}}`);
+    expect(canonicalJson(1n)).not.toBe(canonicalJson(1));
+    expect(canonicalJson(1n)).not.toBe(canonicalJson("1"));
+  });
+
+  test("preserves array order", () => {
+    expect(canonicalJson([2, 1])).not.toBe(canonicalJson([1, 2]));
+  });
+
+  test("refuses values that JSON would silently drop or distort", () => {
+    expect(() => canonicalJson({ a: undefined })).toThrow();
+    expect(() => canonicalJson(Number.NaN)).toThrow();
+    expect(() => canonicalJson(() => 1)).toThrow();
   });
 });
 

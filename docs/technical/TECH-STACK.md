@@ -158,15 +158,20 @@ This module owns LTV, health, target debt, borrow capacity, repay capacity, spre
 ### `@crest/policy`
 
 ```ts
-export const policyV2Schema: z.ZodType<PolicyV2>;
+export function routeContextOf(
+  manifest: DeploymentManifest,
+  deployment: { account: Address; owner: Address },
+): VerifiedRouteContext;
 export function compilePolicy(
-  draft: PolicyDraft,
+  draft: unknown,
   route: VerifiedRouteContext,
-): CompiledPolicy;
+): { ok: true; policy: CompiledPolicy } | { ok: false; issues: string[] };
 export function toConfigurationCall(
   policy: CompiledPolicy,
 ): PreparedOwnerTransaction;
 ```
+
+The route (exact `MarketParams`, vault, token decimals, feeds) comes only from a `full_route` manifest; a draft that supplies one is rejected. A draft carries owner limits and asset intents: exactly one `PROTECT_AND_BORROW` on the verified market and one `EARN_STABLE` on the verified vault. The domain `policyV2Schema` is strict, so unknown fields (for example a Guardian borrowing limit) fail compilation. Freshness budgets default to `DEFAULT_FRESHNESS` and may be tightened. `CompiledPolicy.policyHash` is `keccak256(abi.encode(PolicyConfig))`, the value `PolicyConfigured.policyHash` carries; `contentHash` is keccak256 of the canonical typed policy and intents. A test pins the `configure` selector and calldata to the generated contract ABI. No LLM path exists; natural language may only ever draft input to `compilePolicy`.
 
 ### `@crest/morpho`
 

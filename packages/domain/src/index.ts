@@ -1,4 +1,5 @@
 export * from "./asset-intent.ts";
+export * from "./canonical.ts";
 export * from "./carry.ts";
 export * from "./decimal.ts";
 export * from "./guardian.ts";

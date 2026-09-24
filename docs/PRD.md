@@ -168,37 +168,30 @@ flowchart TD
 
 Natural-language example:
 
-> “Use only the verified NVDA/USDG market and the verified USDG vault. Target 35% LTV, start protection at 42%, and treat 50% as critical while remaining below Morpho LLTV. Never exceed 5,000 USDG debt. Keep 500 USDG idle reserve. Require at least 150 bps estimated net spread for new owner borrowing. Guardian may repay at most 1,000 USDG per action and may never borrow.”
+> “Use only the verified AAPL/USDG market and the verified USDG vault. Target 35% LTV, start protection at 42%, and treat 50% as critical while remaining below Morpho LLTV. Never exceed 1,500 USDG debt. Keep 50 USDG idle reserve. Require at least 100 bps estimated net spread for new owner borrowing. Stop new borrowing if Morpho's oracle and Crest's feed-only price differ by more than 1%. Guardian may repay at most 500 USDG per action and may never borrow.”
 
-Validated typed shape:
+Validated typed draft (`@crest/policy` `compilePolicy` input; amounts in base units, ratios in WAD):
 
 ```json
 {
-  "version": 2,
-  "account": "0x1111111111111111111111111111111111111111",
-  "market": {
-    "id": "0x...",
-    "collateralToken": "0x...",
-    "loanToken": "0x...",
-    "maxCollateralAssets": "3000000000000000000000",
-    "debtCeilingAssets": "5000000000"
-  },
-  "strategy": {
-    "vault": "0x...",
-    "asset": "0x...",
-    "maxStrategyAssets": "5000000000",
-    "minNetSpreadBps": 150
-  },
-  "reserve": {
-    "floorAssets": "500000000",
-    "maxRepayPerActionAssets": "1000000000"
-  },
-  "ltv": {
-    "lowerWad": "300000000000000000",
-    "targetWad": "350000000000000000",
-    "upperWad": "420000000000000000",
-    "criticalWad": "500000000000000000"
-  },
+  "schemaVersion": 2,
+  "intents": [
+    { "asset": "<collateral token>", "intent": { "kind": "PROTECT_AND_BORROW", "marketId": "<verified market id>" } },
+    { "asset": "<loan token>", "intent": { "kind": "EARN_STABLE", "vaultId": "4663:<verified vault>" } }
+  ],
+  "maxCollateralAssets": "10000000000000000000",
+  "debtCeilingAssets": "1500000000",
+  "maxStrategyAssets": "1500000000",
+  "reserveFloorAssets": "50000000",
+  "strategyFloorAssets": "0",
+  "maxRepayPerActionAssets": "500000000",
+  "lowerLtvWad": "300000000000000000",
+  "targetLtvWad": "350000000000000000",
+  "upperLtvWad": "420000000000000000",
+  "criticalLtvWad": "500000000000000000",
+  "minimumNetSpreadBps": "100",
+  "maxOracleDivergenceBps": "100",
+  "harvestThresholdAssets": "10000000",
   "triggers": {
     "freezeOnOracleDegraded": true,
     "freezeOnVaultDegraded": true,
@@ -208,7 +201,7 @@ Validated typed shape:
 }
 ```
 
-Addresses and amounts are schema examples, not deployment claims.
+Amounts are illustrative, not deployment claims. The market, oracle, IRM, LLTV, vault, token decimals, and feeds are never part of a draft: they come from the verified manifest. Freshness budgets use documented defaults unless the owner tightens them.
 
 ### Enforced onchain
 
