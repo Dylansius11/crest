@@ -25,11 +25,11 @@ Rules for this file:
 
 ---
 
-## 2026-09-24 — Share rounding makes exact-to-the-unit bounds revert onchain (Technical)
+## 2026-09-24 — Share rounding can overshoot a bound by one share's value (Technical)
 
-- An independent review reproduced two off-by-one reverts in a plan that looked exact. Morpho `borrow(x)` mints `toSharesUp` shares and debt reads back through `toAssetsUp`, so on a market with `961519924` borrow assets and `30047497625000` shares a borrow of the full room left debt one unit above target. Vault V2 `withdraw` burns shares rounded up and `CrestAccount` re-checks the strategy floor on the rounded-down quote, so withdrawing exactly `quoted - floor` can revert `StrategyFloorViolation`.
-- With virtual shares one share is worth far less than one asset unit, so each rounding step costs at most one base unit: `debtAfter <= debtBefore + x + 1`, and `quotedAfter >= quotedBefore - x - 1`.
-- Rule: every owner-borrow debt room holds back one base unit, a nonzero strategy floor is guarded by one extra unit, and every planned transaction is still simulated before signature.
+- An independent review reproduced reverts in plans that looked exact. Morpho `borrow(x)` mints `toSharesUp` shares and debt reads back through `toAssetsUp`, so a borrow of the full room overshot target by one unit on a market at about 1e-6 assets per share, and by six units on a market at 6.9 assets per share (`1364023701` assets over `196242494` shares). Vault V2 `withdraw` burns shares rounded up and `CrestAccount` re-checks the strategy floor on the rounded-down quote, so withdrawing exactly `quoted - floor` can revert `StrategyFloorViolation`.
+- The loss is bounded by one share's value rounded up: `debtAfter <= debtBefore + x + ceil((A + 1) / (S + 1e6))` on Morpho, and `quotedAfter >= quotedBefore - x - ceil((A + 1) / (S + 1))` on the vault. A fixed one-unit buffer only holds while shares are worth less than one base unit.
+- Rule: every owner-borrow debt room holds back `toAssetsUp(1, totalBorrowAssets, totalBorrowShares)`, a nonzero strategy floor is guarded by one vault share's value rounded up, and every planned transaction is still simulated before signature.
 
 ## 2026-09-24 — Owner-borrow capacity uses Morpho's oracle value behind a divergence gate (Workflow)
 

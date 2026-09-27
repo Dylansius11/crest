@@ -128,6 +128,16 @@ describe("owner-borrow capacity", () => {
     expect(ownerRecommendation).toEqual({ kind: "owner_borrow", assets: 450n * USDG - 1n });
   });
 
+  test("the borrow rounding reserve is one borrow share's value, however expensive shares become", () => {
+    // The review's market: 1,364,023,701 assets over 196,242,494 shares is about 6.9 assets per share, so a borrow
+    // can overshoot by up to 7 units. The reserve is ceil((A + 1) / (S + 1e6)) = 7.
+    const input = fixture({ debtAssets: 600n * USDG });
+    const market = input.market.value!;
+    const accrued = { ...market.accrued, totalBorrowAssets: 1_364_023_701n, totalBorrowShares: 196_242_494n };
+    const assessment = assessPosition({ ...input, market: observe({ ...market, accrued }, at) });
+    expect(assessment.ownerBorrow.limits).toMatchObject({ debtCeilingAssets: 900n * USDG - 7n, targetLtvAssets: 450n * USDG - 7n });
+  });
+
   test("is zero while the strategy cannot currently exit what it already holds", () => {
     const assessment = assess({ debtAssets: 600n * USDG, strategyAvailableAssets: 0n });
     expect(assessment.ownerBorrow).toMatchObject({ capacityAssets: 0n, blockers: ["degraded_input"] });
@@ -191,10 +201,17 @@ describe("Guardian repayment bounds", () => {
     expect(planGuardianAction(assessment)).toMatchObject({ kind: "repay_strategy", requestedAssets: 120n * USDG });
   });
 
-  test("the strategy floor is never withdrawn, with one unit kept for share rounding", () => {
-    // The vault burns shares rounded up and the contract re-checks the floor on the rounded-down quote afterwards.
-    const assessment = assess({ policy: policyWith({ strategyFloorAssets: "900000000" }), debtAssets: 1_300n * USDG, frozen: true });
+  test("the strategy floor is never withdrawn, with one share's value kept for rounding", () => {
+    // The vault burns shares rounded up and the contract re-checks the floor on the rounded-down quote afterwards,
+    // so the quote can fall by the withdrawal plus one share's value. On the reviewed vault one share is under a unit.
+    const policy = policyWith({ strategyFloorAssets: "900000000" });
+    const assessment = assess({ policy, debtAssets: 1_300n * USDG, frozen: true });
     expect(planGuardianAction(assessment)).toMatchObject({ kind: "repay_strategy", requestedAssets: 100n * USDG - 1n });
+
+    // At about 5 assets per share the guard grows to ceil((5e9 + 1) / 1e9) = 6 units.
+    const input = fixture({ policy, debtAssets: 1_300n * USDG, frozen: true });
+    const pricey = observe({ ...input.vault.value!, totalAssets: 5_000_000_000n, totalSupply: 999_999_999n }, at);
+    expect(assessPosition({ ...input, vault: pricey }).repayment.strategyCapacityAssets).toBe(100n * USDG - 6n);
   });
 
   test("idle reserve above its floor is used when it covers more", () => {
@@ -268,13 +285,17 @@ describe("degraded input", () => {
     expect(assessment.state).toBe("DEGRADED");
   });
 
-  test("a repayment source read at another block is not counted, so no request rests on it", () => {
-    const input = fixture({ debtAssets: 1_300n * USDG, frozen: true, idleReserveAssets: 50n * USDG });
+  test("a repayment source that is skewed, stale, or drifted is not counted, so no request rests on it", () => {
+    const input = fixture({ debtAssets: 1_300n * USDG, frozen: true, idleReserveAssets: 50n * USDG, strategyAvailableAssets: 120n * USDG });
     const elsewhere = observe(input.strategy.value, { kind: "onchain", chainId: 4663, block: { ...BLOCK, number: BLOCK.number - 1n, hash: `0x${"cd".repeat(32)}` } });
-    const assessment = assessPosition({ ...input, strategy: elsewhere });
-    expect(assessment.state).toBe("PROTECT");
-    expect(assessment.repayment.strategyCapacityAssets).toBe(0n);
-    expect(planGuardianAction(assessment)).toBeNull();
+    for (const strategy of [elsewhere, withReasons(input.strategy, ["stale"]), withReasons(input.strategy, ["route_drift"])]) {
+      const assessment = assessPosition({ ...input, strategy });
+      expect(assessment.state).toBe("PROTECT");
+      expect(assessment.repayment.strategyCapacityAssets).toBe(0n);
+      expect(planGuardianAction(assessment)).toBeNull();
+    }
+    // Realized loss and constrained liquidity are facts about the source, not doubts about it: those still count.
+    expect(assessPosition({ ...input, strategy: withReasons(input.strategy, ["vault_loss"]) }).repayment.strategyCapacityAssets).toBe(120n * USDG);
   });
 
   test("a position read for another account is not this account's risk", () => {

@@ -3,6 +3,7 @@ import type { Hex } from "viem";
 
 import { canonicalJson, observe } from "@crest/domain";
 import type { BlockRef, DegradedTriggers, GuardianState, Observation, ReasonCode } from "@crest/domain";
+import { toAssetsUp } from "@crest/morpho";
 import type { RateValue } from "@crest/rates";
 import type { AllocationCap, VaultSnapshot } from "@crest/vault";
 
@@ -129,6 +130,9 @@ const FREEZE_TRIGGER: Record<SourceName, keyof DegradedTriggers | null> = {
 /** Reasons a human must look at: the Guardian cannot resolve them by freezing or repaying. */
 const REVIEW_REASONS: readonly ReasonCode[] = ["withdrawal_constrained", "vault_loss", "withdrawal_gated", "identity_mismatch", "route_drift"];
 
+/** Vault and strategy reasons that describe the source rather than doubt it; a repayment may still rest on it. */
+const STRATEGY_FACTS: readonly ReasonCode[] = ["vault_loss", "withdrawal_constrained"];
+
 /** Scales an amount by an adverse scenario shock. Shocks are -10000 to 0 bps, so this only ever lowers it. */
 function shocked(value: bigint, bps: bigint | undefined): bigint {
   return bps === undefined ? value : (value * (BPS + bps)) / BPS;
@@ -223,9 +227,11 @@ function evaluate(screened: Screened, degraded: boolean, shocks: ScenarioShocks)
   const illiquid = strategy !== null && strategyAvailableAssets < strategy.quotedAssets;
   const unreliable = degraded || illiquid;
 
-  // Morpho mints borrow shares rounded up, so borrowing x can raise debt by x + 1. One unit is held back from each
-  // debt-denominated room, which keeps the contract's post-borrow ceiling check from reverting on rounding.
-  const debtAfterRounding = debtAssets + 1n;
+  // Morpho mints borrow shares rounded up and reads debt back rounded up, so borrowing x can raise debt by x plus one
+  // borrow share's value, rounded up. That much is held back from each debt room, so the contract's post-borrow
+  // ceiling check cannot revert on rounding. On the reviewed market one share is worth far less than one unit.
+  const market = input.market.value;
+  const debtAfterRounding = debtAssets + (market === null ? 1n : toAssetsUp(1n, market.accrued.totalBorrowAssets, market.accrued.totalBorrowShares));
   const limits: BorrowLimits | null = position === null
     ? null
     : {
@@ -244,15 +250,20 @@ function evaluate(screened: Screened, degraded: boolean, shocks: ScenarioShocks)
     ? 0n
     : minOf(limits.debtCeilingAssets, limits.targetLtvAssets, limits.marketLiquidityAssets, limits.strategyCapAssets, limits.vaultDepositAssets);
 
-  // A repayment request must rest on this account's own reads at the pinned block, under the policy the contract
-  // holds now. Otherwise its floors and caps may no longer apply, and only a freeze is safe to plan.
-  const coherent = (reasons: readonly ReasonCode[]) => !reasons.includes("identity_mismatch") && !reasons.includes("block_skew");
-  const repayable = account !== null && account.policyNonce === input.policy.nonce && coherent(input.account.reasons) && coherent(input.position.reasons);
+  // A repayment request must rest on this account's own trusted reads at the pinned block, under the policy the
+  // contract holds now. Any doubt about a source (stale, skewed, foreign, drifted, conflicting) removes it; only a
+  // freeze is safe to plan without it. Realized loss and constrained liquidity are facts, not doubts, so they stay.
+  const trusted = (reasons: readonly ReasonCode[], facts: readonly ReasonCode[] = []) => reasons.every((reason) => facts.includes(reason));
+  const repayable = account !== null && account.policyNonce === input.policy.nonce && trusted(input.account.reasons) && trusted(input.position.reasons);
   const perAction = policy.maxRepayPerActionAssets;
   const reserveCapacityAssets = repayable ? minOf(remaining(account.idleReserveAssets, policy.reserveFloorAssets), perAction, debtAssets) : 0n;
-  // The contract re-checks the floor on the quote after the vault burns shares rounded up, so one unit stays behind.
-  const strategyFloorGuard = policy.strategyFloorAssets === 0n ? 0n : policy.strategyFloorAssets + 1n;
-  const strategyCapacityAssets = repayable && strategy !== null && coherent(input.strategy.reasons) && coherent(input.vault.reasons)
+  // The contract re-checks the floor on the quote after the vault burns shares rounded up, so the quote can fall by
+  // the withdrawal plus one share's value, rounded up. `(A + 1) / (S + 1)` bounds that for any virtual-share offset.
+  const vault = input.vault.value;
+  const strategyFloorGuard = policy.strategyFloorAssets === 0n || vault === null
+    ? policy.strategyFloorAssets
+    : policy.strategyFloorAssets + ceilDiv(vault.totalAssets + 1n, vault.totalSupply + 1n);
+  const strategyCapacityAssets = repayable && strategy !== null && trusted(input.strategy.reasons, STRATEGY_FACTS) && trusted(input.vault.reasons, STRATEGY_FACTS)
     ? minOf(strategyAvailableAssets, remaining(strategy.quotedAssets, strategyFloorGuard), perAction, debtAssets)
     : 0n;
   const realizedSurplusAssets = strategy === null || input.strategyCostBasisAssets === null ? null : remaining(strategy.quotedAssets, input.strategyCostBasisAssets);

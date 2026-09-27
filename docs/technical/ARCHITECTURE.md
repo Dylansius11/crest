@@ -313,7 +313,7 @@ MVP owner-borrow capacity is the minimum of:
 - remaining fixed-vault deposit room under every absolute and relative cap on the liquidity adapter's ids (Vault V2 `maxDeposit` always returns zero, and a configured deposit gate counts as no room);
 - zero when borrowing is frozen, net spread is below policy floor, rates cannot be netted, or any required source is degraded, including `oracle_divergence`, `block_skew`, and a policy-nonce `conflict`.
 
-Repayment capacity is separately bounded by current debt, per-action cap, idle reserve above floor, and currently withdrawable strategy assets above the strategy floor plus one unit of share rounding. A repayment is planned only from the account's own reads at the pinned block under the policy nonce the contract holds; a skewed, foreign, or superseded input leaves only a freeze. Both owner-borrow debt rooms hold back one unit for Morpho's borrow-share rounding, and a strategy that cannot currently withdraw what it holds is degraded input.
+Repayment capacity is separately bounded by current debt, per-action cap, idle reserve above floor, and currently withdrawable strategy assets above the strategy floor plus one vault share's value of rounding. A repayment is planned only from the account's own reads at the pinned block under the policy nonce the contract holds; a stale, skewed, foreign, drifted, or superseded source leaves only a freeze. Both owner-borrow debt rooms hold back one Morpho borrow share's value for share rounding, and a strategy that cannot currently withdraw what it holds is degraded input.
 
 The planner never uses wallet assets outside the exact market, never treats quoted vault TVL as withdrawable, and never sends additional-borrow output to Guardian in MVP.
 
