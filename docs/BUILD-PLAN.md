@@ -212,8 +212,8 @@ The pure module returns one deterministic Guardian state/action and one separate
 **Evidence (2026-09-24)**
 
 - `@crest/policy` (18 tests) compiles a strict typed draft against the `full_route` manifest into the exact `configure` calldata; the selector and `policyHash = keccak256(abi.encode(PolicyConfig))` are pinned to the generated ABI. No LLM path exists.
-- `@crest/risk` (57 tests) runs with exact bigint arithmetic on manifest-bound fixtures: every LTV band edge at one base unit, Morpho health at the LLTV, the recorded `feed_times_multiplier` oracle (divergence exactly `uiMultiplier - 1`), degraded, skewed, foreign, and nonce-conflicting input, reserve versus strategy selection, floors, the per-action cap, withdrawable-only liquidity, exit yield, realized-only harvest, determinism, and all four scenarios in `config/scenarios.v2.json` (`illustrative`).
-- A mutation spot-check (divergence gate, state precedence, source tie-break, strategy floor, feed age) failed the suite each time.
+- `@crest/risk` (61 tests) runs with exact bigint arithmetic on manifest-bound fixtures: every LTV band edge at one base unit, Morpho health at the LLTV, the recorded `feed_times_multiplier` oracle (divergence exactly `uiMultiplier - 1`), degraded, skewed, foreign, illiquid, and nonce-conflicting input, reserve versus strategy selection, floors with share-rounding guards, the per-action cap, withdrawable-only liquidity, exit yield on stale rates, realized-only harvest, determinism, and all four scenarios in `config/scenarios.v2.json` (`illustrative`).
+- A mutation spot-check (divergence gate, state precedence, source tie-break, strategy floor, feed age) failed the suite each time. An independent review then reproduced five defects (repayment on skewed or superseded input, two one-unit rounding reverts, illiquid strategy not degrading, stale negative spread hiding the exit); each now has a failing-first regression test.
 - Owner-borrow capacity follows the owner's oracle decision in [LESSONS](./LESSONS.md): Morpho's value, gated by Crest's feed-only divergence.
 
 ## Task 7: Persist observations and run monitor

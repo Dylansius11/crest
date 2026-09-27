@@ -218,34 +218,48 @@ function evaluate(screened: Screened, degraded: boolean, shocks: ScenarioShocks)
       marketIncentives: input.rates.marketIncentives,
     });
 
+  const strategyAvailableAssets = strategy === null ? 0n : shocked(strategy.availableAssets, shocks.vaultLiquidityBps);
+  // A strategy that cannot exit what it holds is illiquid input. Screening flags the observed case; this catches a shock.
+  const illiquid = strategy !== null && strategyAvailableAssets < strategy.quotedAssets;
+  const unreliable = degraded || illiquid;
+
+  // Morpho mints borrow shares rounded up, so borrowing x can raise debt by x + 1. One unit is held back from each
+  // debt-denominated room, which keeps the contract's post-borrow ceiling check from reverting on rounding.
+  const debtAfterRounding = debtAssets + 1n;
   const limits: BorrowLimits | null = position === null
     ? null
     : {
-      debtCeilingAssets: remaining(policy.debtCeilingAssets, debtAssets),
-      targetLtvAssets: remaining(position.targetDebtAssets, debtAssets),
+      debtCeilingAssets: remaining(policy.debtCeilingAssets, debtAfterRounding),
+      targetLtvAssets: remaining(position.targetDebtAssets, debtAfterRounding),
       marketLiquidityAssets: input.market.value?.liquidityAssets ?? 0n,
       strategyCapAssets: strategy === null ? 0n : remaining(policy.maxStrategyAssets, strategy.quotedAssets),
       vaultDepositAssets: vaultDepositRoom(input.vault.value),
     };
   const blockers: BorrowBlocker[] = [];
   if (account?.borrowingFrozen === true) blockers.push("borrowing_frozen");
-  if (degraded || limits === null) blockers.push("degraded_input");
+  if (unreliable || limits === null) blockers.push("degraded_input");
   if (carry !== null && (carry.status !== "normal" || carry.marginalSpreadBps === null)) blockers.push("rates_unavailable");
   else if (carry?.marginalSpreadBps != null && carry.marginalSpreadBps < policy.minimumNetSpreadBps) blockers.push("spread_below_minimum");
   const capacityAssets = limits === null || blockers.length > 0
     ? 0n
     : minOf(limits.debtCeilingAssets, limits.targetLtvAssets, limits.marketLiquidityAssets, limits.strategyCapAssets, limits.vaultDepositAssets);
 
+  // A repayment request must rest on this account's own reads at the pinned block, under the policy the contract
+  // holds now. Otherwise its floors and caps may no longer apply, and only a freeze is safe to plan.
+  const coherent = (reasons: readonly ReasonCode[]) => !reasons.includes("identity_mismatch") && !reasons.includes("block_skew");
+  const repayable = account !== null && account.policyNonce === input.policy.nonce && coherent(input.account.reasons) && coherent(input.position.reasons);
   const perAction = policy.maxRepayPerActionAssets;
-  const strategyAvailableAssets = strategy === null ? 0n : shocked(strategy.availableAssets, shocks.vaultLiquidityBps);
-  const reserveCapacityAssets = account === null ? 0n : minOf(remaining(account.idleReserveAssets, policy.reserveFloorAssets), perAction, debtAssets);
-  const strategyCapacityAssets = strategy === null
-    ? 0n
-    : minOf(strategyAvailableAssets, remaining(strategy.quotedAssets, policy.strategyFloorAssets), perAction, debtAssets);
+  const reserveCapacityAssets = repayable ? minOf(remaining(account.idleReserveAssets, policy.reserveFloorAssets), perAction, debtAssets) : 0n;
+  // The contract re-checks the floor on the quote after the vault burns shares rounded up, so one unit stays behind.
+  const strategyFloorGuard = policy.strategyFloorAssets === 0n ? 0n : policy.strategyFloorAssets + 1n;
+  const strategyCapacityAssets = repayable && strategy !== null && coherent(input.strategy.reasons) && coherent(input.vault.reasons)
+    ? minOf(strategyAvailableAssets, remaining(strategy.quotedAssets, strategyFloorGuard), perAction, debtAssets)
+    : 0n;
   const realizedSurplusAssets = strategy === null || input.strategyCostBasisAssets === null ? null : remaining(strategy.quotedAssets, input.strategyCostBasisAssets);
 
   const vaultLoss = input.vault.reasons.includes("vault_loss") || input.strategy.reasons.includes("vault_loss");
-  const negativeCarry = carry?.status === "normal" && carry.marginalSpreadBps !== null && carry.marginalSpreadBps < 0n;
+  // Stale but comparable rates still count here: exiting only reduces debt, so degraded evidence may tighten.
+  const negativeCarry = carry?.marginalSpreadBps != null && carry.marginalSpreadBps < 0n;
   const exitYield = debtAssets > 0n && (strategy?.quotedAssets ?? 0n) > 0n && (vaultLoss || negativeCarry);
   const harvestable = debtAssets > 0n && realizedSurplusAssets !== null && minOf(realizedSurplusAssets, strategyCapacityAssets) >= policy.harvestThresholdAssets;
   const state: GuardianState = position === null
@@ -256,7 +270,7 @@ function evaluate(screened: Screened, degraded: boolean, shocks: ScenarioShocks)
         ? "PROTECT"
         : exitYield
           ? "EXIT_YIELD"
-          : degraded
+          : unreliable
             ? "DEGRADED"
             : harvestable ? "HARVESTABLE" : position.band === "below" && capacityAssets > 0n ? "UPSIZE_AVAILABLE" : "NORMAL";
 
@@ -269,11 +283,11 @@ function evaluate(screened: Screened, degraded: boolean, shocks: ScenarioShocks)
 
   // Debt reduction the sources cannot cover in one capped action is a normal bounded outcome, surfaced for review.
   const covered = selectRepayment(repayment)?.assets ?? 0n;
-  const constrained = (purpose === "protect" || purpose === "exit_yield") && covered < minOf(needAssets, perAction);
+  const constrained = repayable && (purpose === "protect" || purpose === "exit_yield") && covered < minOf(needAssets, perAction);
   const reasons = [
     ...SOURCE_NAMES.flatMap((name) => screened.sources[name]),
     ...(carry?.reasons ?? []),
-    ...(constrained ? (["withdrawal_constrained"] as const) : []),
+    ...(constrained || illiquid ? (["withdrawal_constrained"] as const) : []),
   ].filter((reason, index, all) => all.indexOf(reason) === index);
 
   return { state, reasons, position, carry, ownerBorrow: { capacityAssets, limits, blockers }, repayment };

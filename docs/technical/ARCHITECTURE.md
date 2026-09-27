@@ -313,7 +313,7 @@ MVP owner-borrow capacity is the minimum of:
 - remaining fixed-vault deposit room under every absolute and relative cap on the liquidity adapter's ids (Vault V2 `maxDeposit` always returns zero, and a configured deposit gate counts as no room);
 - zero when borrowing is frozen, net spread is below policy floor, rates cannot be netted, or any required source is degraded, including `oracle_divergence`, `block_skew`, and a policy-nonce `conflict`.
 
-Repayment capacity is separately bounded by current debt, per-action cap, idle reserve above floor, and currently withdrawable strategy assets above policy constraints.
+Repayment capacity is separately bounded by current debt, per-action cap, idle reserve above floor, and currently withdrawable strategy assets above the strategy floor plus one unit of share rounding. A repayment is planned only from the account's own reads at the pinned block under the policy nonce the contract holds; a skewed, foreign, or superseded input leaves only a freeze. Both owner-borrow debt rooms hold back one unit for Morpho's borrow-share rounding, and a strategy that cannot currently withdraw what it holds is degraded input.
 
 The planner never uses wallet assets outside the exact market, never treats quoted vault TVL as withdrawable, and never sends additional-borrow output to Guardian in MVP.
 
@@ -333,7 +333,7 @@ The planner never uses wallet assets outside the exact market, never treats quot
 | Robinhood API unavailable/stale | Lifecycle degraded; owner-borrow capacity zero; freeze if policy requires |
 | Rate source stale/conflicts | No new borrow recommendation; preserve debt-reducing actions |
 | RPC stale/disagrees | Stop preparation; allow only freshly simulated freeze/repay |
-| Oracle paused/stale | Capacity zero; freeze; no REST price substitute |
+| Oracle paused/stale | Capacity zero; freeze when the policy's oracle trigger is on; no REST price substitute |
 | Sequencer degraded | No uptime feed exists on Robinhood Chain; a head older than budget is `head_lag`; freeze and alert |
 | Morpho loan liquidity disappears | No new borrow; monitor current debt |
 | Vault APY falls below floor | Below the policy spread: no new borrow. Below the borrow rate (negative marginal spread): EXIT_YIELD, freeze, then repay from the strategy |

@@ -158,7 +158,11 @@ export function screenInput(input: RiskInput): Screened {
       loanFeed: at(input.oracle.loanFeed, feedReasons(input.oracle.loanFeed, route.feeds.loan)),
     },
     vault: at(input.vault, vault !== null && (!sameAddress(vault.vault, route.vault) || !sameAddress(vault.asset, route.market.loanToken)) ? ["identity_mismatch"] : []),
-    strategy: at(input.strategy, strategy !== null && !sameAddress(strategy.account, route.account) ? ["identity_mismatch"] : []),
+    // A strategy that cannot exit what it already holds is illiquid input: new debt would deploy into it.
+    strategy: at(input.strategy, [
+      ...(strategy !== null && !sameAddress(strategy.account, route.account) ? (["identity_mismatch"] as const) : []),
+      ...(strategy !== null && strategy.availableAssets < strategy.quotedAssets ? (["withdrawal_constrained"] as const) : []),
+    ]),
     rates: {
       borrow: at(input.rates.borrow),
       vault: at(input.rates.vault),

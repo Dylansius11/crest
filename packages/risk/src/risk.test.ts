@@ -116,15 +116,25 @@ describe("oracle security gate", () => {
 describe("owner-borrow capacity", () => {
   test("is the smallest of debt ceiling, target LTV, Morpho liquidity, strategy cap, and vault deposit room", () => {
     const { ownerBorrow, state, ownerRecommendation } = assess({ debtAssets: 600n * USDG });
+    // Morpho rounds minted borrow shares up, so a borrow of x can raise debt by x + 1: one unit is held back.
     expect(ownerBorrow.limits).toMatchObject({
-      debtCeilingAssets: 900n * USDG,
-      targetLtvAssets: 450n * USDG,
+      debtCeilingAssets: 900n * USDG - 1n,
+      targetLtvAssets: 450n * USDG - 1n,
       marketLiquidityAssets: 238_958_227_292n,
       strategyCapAssets: 500n * USDG,
     });
-    expect(ownerBorrow.capacityAssets).toBe(450n * USDG);
+    expect(ownerBorrow.capacityAssets).toBe(450n * USDG - 1n);
     expect(state).toBe("UPSIZE_AVAILABLE");
-    expect(ownerRecommendation).toEqual({ kind: "owner_borrow", assets: 450n * USDG });
+    expect(ownerRecommendation).toEqual({ kind: "owner_borrow", assets: 450n * USDG - 1n });
+  });
+
+  test("is zero while the strategy cannot currently exit what it already holds", () => {
+    const assessment = assess({ debtAssets: 600n * USDG, strategyAvailableAssets: 0n });
+    expect(assessment.ownerBorrow).toMatchObject({ capacityAssets: 0n, blockers: ["degraded_input"] });
+    expect(assessment.degradedSources).toEqual(["strategy"]);
+    expect(assessment.state).toBe("DEGRADED");
+    expect(assessment.freezeRequired).toBe(true);
+    expect(assessment.ownerRecommendation.kind).toBe("owner_review");
   });
 
   test("is zero while borrowing is frozen, and the position is not advertised as upsizable", () => {
@@ -181,9 +191,10 @@ describe("Guardian repayment bounds", () => {
     expect(planGuardianAction(assessment)).toMatchObject({ kind: "repay_strategy", requestedAssets: 120n * USDG });
   });
 
-  test("the strategy floor is never withdrawn", () => {
+  test("the strategy floor is never withdrawn, with one unit kept for share rounding", () => {
+    // The vault burns shares rounded up and the contract re-checks the floor on the rounded-down quote afterwards.
     const assessment = assess({ policy: policyWith({ strategyFloorAssets: "900000000" }), debtAssets: 1_300n * USDG, frozen: true });
-    expect(planGuardianAction(assessment)).toMatchObject({ kind: "repay_strategy", requestedAssets: 100n * USDG });
+    expect(planGuardianAction(assessment)).toMatchObject({ kind: "repay_strategy", requestedAssets: 100n * USDG - 1n });
   });
 
   test("idle reserve above its floor is used when it covers more", () => {
@@ -257,6 +268,15 @@ describe("degraded input", () => {
     expect(assessment.state).toBe("DEGRADED");
   });
 
+  test("a repayment source read at another block is not counted, so no request rests on it", () => {
+    const input = fixture({ debtAssets: 1_300n * USDG, frozen: true, idleReserveAssets: 50n * USDG });
+    const elsewhere = observe(input.strategy.value, { kind: "onchain", chainId: 4663, block: { ...BLOCK, number: BLOCK.number - 1n, hash: `0x${"cd".repeat(32)}` } });
+    const assessment = assessPosition({ ...input, strategy: elsewhere });
+    expect(assessment.state).toBe("PROTECT");
+    expect(assessment.repayment.strategyCapacityAssets).toBe(0n);
+    expect(planGuardianAction(assessment)).toBeNull();
+  });
+
   test("a position read for another account is not this account's risk", () => {
     const input = fixture({ debtAssets: 1_300n * USDG, frozen: true });
     const foreign = observe({ ...input.position.value!, account: `0x${"e5".repeat(20)}` as const }, at);
@@ -272,6 +292,15 @@ describe("degraded input", () => {
     const assessment = assessPosition({ ...input, policy: { ...input.policy, nonce: 2n } });
     expect(assessment.reasons).toContain("conflict");
     expect(assessment.state).toBe("DEGRADED");
+  });
+
+  test("under a superseded policy nothing is repaid, because its floors and caps may no longer hold", () => {
+    const input = fixture({ debtAssets: 1_300n * USDG, frozen: true });
+    const assessment = assessPosition({ ...input, policy: { ...input.policy, nonce: 2n } });
+    expect(assessment.state).toBe("PROTECT");
+    expect(assessment.repayment).toMatchObject({ reserveCapacityAssets: 0n, strategyCapacityAssets: 0n });
+    expect(planGuardianAction(assessment)).toBeNull();
+    expect(planGuardianAction(assessPosition({ ...fixture({ debtAssets: 1_300n * USDG }), policy: { ...input.policy, nonce: 2n } }))).toEqual({ kind: "freeze", selector: "freezeBorrowing()" });
   });
 });
 
@@ -289,6 +318,14 @@ describe("exit yield and harvest", () => {
     expect(assess(inverted).state).toBe("EXIT_YIELD");
     expect(planGuardianAction(assess(inverted))).toEqual({ kind: "freeze", selector: "freezeBorrowing()" });
     expect(planGuardianAction(assess({ ...inverted, frozen: true }))).toMatchObject({ kind: "repay_strategy", requestedAssets: 500n * USDG });
+  });
+
+  test("a stale rate that still shows a negative spread keeps the exit: degraded evidence can only tighten", () => {
+    const input = fixture({ debtAssets: 1_000n * USDG, borrowApy: "0.07925257197505986" });
+    const assessment = assessPosition({ ...input, rates: { ...input.rates, borrow: withReasons(input.rates.borrow, ["stale"]) } });
+    expect(assessment.state).toBe("EXIT_YIELD");
+    expect(assessment.freezeRequired).toBe(true);
+    expect(assessment.ownerBorrow.blockers).toContain("rates_unavailable");
   });
 
   test("a realized surplus above the threshold is harvested toward debt without freezing", () => {

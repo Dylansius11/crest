@@ -25,6 +25,12 @@ Rules for this file:
 
 ---
 
+## 2026-09-24 — Share rounding makes exact-to-the-unit bounds revert onchain (Technical)
+
+- An independent review reproduced two off-by-one reverts in a plan that looked exact. Morpho `borrow(x)` mints `toSharesUp` shares and debt reads back through `toAssetsUp`, so on a market with `961519924` borrow assets and `30047497625000` shares a borrow of the full room left debt one unit above target. Vault V2 `withdraw` burns shares rounded up and `CrestAccount` re-checks the strategy floor on the rounded-down quote, so withdrawing exactly `quoted - floor` can revert `StrategyFloorViolation`.
+- With virtual shares one share is worth far less than one asset unit, so each rounding step costs at most one base unit: `debtAfter <= debtBefore + x + 1`, and `quotedAfter >= quotedBefore - x - 1`.
+- Rule: every owner-borrow debt room holds back one base unit, a nonzero strategy floor is guarded by one extra unit, and every planned transaction is still simulated before signature.
+
 ## 2026-09-24 — Owner-borrow capacity uses Morpho's oracle value behind a divergence gate (Workflow)
 
 - The owner chose Morpho's market-oracle value for LTV, health, and capacity, with Crest's feed-only value as a security check rather than the capacity basis. On the reviewed market the two differ by exactly `uiMultiplier - 1`: `divergenceWad` `566080061092436`, about 5.7 bps.
