@@ -120,7 +120,7 @@ AAPL uiMultiplier()            1000566080061092436
 1e24 × a × m / (1e18 × q)      339917537895501582693298136   (feed × multiplier, agrees to 1.3e-21)
 ```
 
-Robinhood and Chainlink both document that the AAPL/USD feed already includes the multiplier. This market oracle multiplies it by `uiMultiplier()` again, so Morpho currently values AAPL collateral about 0.057% above the Chainlink total-return price, and the gap grows with every dividend or split. Crest cannot change this: the market oracle stays Morpho's liquidation authority and Crest uses it for protocol health. Crest's own valuation (`stockTokenValues`) never applies the multiplier to the feed, and `classifyMarketOracle` reports the composition on every smoke so a policy can bound capacity by the lower of the two values (Task 6). The live smoke at block `70226651` reproduced `feed_times_multiplier`.
+Robinhood and Chainlink both document that the AAPL/USD feed already includes the multiplier. This market oracle multiplies it by `uiMultiplier()` again, so Morpho currently values AAPL collateral about 0.057% above the Chainlink total-return price, and the gap grows with every dividend or split. Crest cannot change this: the market oracle stays Morpho's liquidation authority and Crest uses it for LTV, health, and owner-borrow capacity. Crest's own valuation (`stockTokenValues`) never applies the multiplier to the feed, and `@crest/risk` classifies the composition on every assessment: an `unexplained` composition, or a feed-only divergence above the policy's `maxOracleDivergenceBps`, is `oracle_divergence`, which zeroes capacity and freezes borrowing when the oracle trigger is on. The live smoke at block `70226651` reproduced `feed_times_multiplier`.
 
 ### Sequencer liveness
 
@@ -354,7 +354,7 @@ No owner private key, seed phrase, or raw signature enters Crest storage. Transa
 ### Pre-submit
 
 - claim idempotency key;
-- refresh policy nonce, freeze, accrued debt, reserve, vault shares/assets, and `maxWithdraw`;
+- refresh policy nonce, freeze, accrued debt, reserve, vault shares/assets, and currently withdrawable vault assets (never `maxWithdraw`, which Vault V2 fixes at zero);
 - confirm trigger remains valid;
 - simulate exact permitted selector from Guardian address;
 - record unsigned calldata hash and expected postconditions.
@@ -397,8 +397,8 @@ Manual typed policy remains complete without an LLM.
 | Oracle paused/stale | Health unreliable | Freeze; no REST price substitute |
 | Multiplier applied twice | Material valuation error | One typed formula owner and test vectors |
 | Debt accrues between reads | Cap/repay drift | Accrue/read fresh in contract/action |
-| Vault APY falls | Spread inversion | Freeze new debt; exit toward reserve/debt |
-| `maxWithdraw` falls | Repayment liquidity lower | Partial bounded repay; alert |
+| Vault APY falls | Spread inversion | Below the policy spread: no new debt. Negative marginal spread: freeze, exit toward debt |
+| Withdrawable vault liquidity falls | Repayment liquidity lower | Partial bounded repay; alert |
 | Vault share loss | Strategy assets impaired | Recalculate; freeze; no profit claim |
 | Guardian compromised | Unauthorized attempts | Contract permits freeze/own-debt repayment only |
 | Duplicate delivery | Duplicate gas/action | Idempotency + fresh state + reconciliation |

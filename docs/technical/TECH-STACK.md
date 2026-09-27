@@ -149,11 +149,19 @@ Rules:
 
 ```ts
 export function assessPosition(input: RiskInput): RiskAssessment;
-export function planGuardianAction(input: ActionInput): GuardianAction;
+export function planGuardianAction(input: ActionInput): GuardianAction | null;
 export function estimateCarry(input: CarryInput): CarryEstimate;
+export function parseScenarioSet(raw: unknown): ScenarioSet;
 ```
 
-This module owns LTV, health, target debt, borrow capacity, repay capacity, spread, and state transition rules. No I/O or LLM.
+This module owns LTV, health, target debt, borrow capacity, repay capacity, spread, stress scenarios, and state rules. No I/O, clock, or LLM: `assessPosition` is deterministic, and `inputHash` is keccak256 of `canonicalJson({ engineVersion, input })` under `RISK_ENGINE_VERSION`.
+
+- **Screening.** Every input is re-checked against the active policy's own freshness budgets (head lag, feed age, index lag, and Robinhood response ages against the pin's wall clock), against the pinned block (`block_skew`), and against the route identities (`identity_mismatch`, and `conflict` when the onchain policy nonce differs). Reasons are only added.
+- **Oracle gate.** Capacity, LTV, and health use Morpho's `price()`. Crest's feed-only price (collateral feed over loan feed, no multiplier) is shown beside it. An `unexplained` composition, or a divergence above `maxOracleDivergenceBps` (rounded up), is `oracle_divergence`: zero capacity, DEGRADED inside the band, and a freeze when the oracle trigger is on.
+- **Owner-borrow capacity** is the minimum of the remaining debt ceiling, room to target LTV, Morpho liquidity, remaining strategy cap, and the vault's deposit room under every Vault V2 cap on the liquidity adapter's ids. It is zero when borrowing is frozen, any source is degraded, the rates cannot be netted, or the marginal spread is below policy.
+- **State precedence.** No valuation is DEGRADED; then CRITICAL, PROTECT, and EXIT_YIELD (vault loss or a negative marginal spread), which stay available on degraded input; then DEGRADED; then HARVESTABLE (a surplus over the reconciled cost basis) and UPSIZE_AVAILABLE.
+- **Planner.** Freeze first when required and not yet frozen; otherwise one repayment from the source covering the most, preferring the reserve on a tie. Exit and harvest use the strategy. Capacities already include floors, the per-action cap, the debt, and currently withdrawable vault assets.
+- **Scenarios** (`config/scenarios.v2.json`, `illustrative`) are adverse by schema and rerun the same pass; stressed capacity is also clamped to the live capacity.
 
 ### `@crest/policy`
 
