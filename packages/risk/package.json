@@ -1,0 +1,25 @@
+{
+  "name": "@crest/risk",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@crest/chain": "workspace:*",
+    "@crest/contracts": "workspace:*",
+    "@crest/domain": "workspace:*",
+    "@crest/morpho": "workspace:*",
+    "@crest/policy": "workspace:*",
+    "@crest/rates": "workspace:*",
+    "@crest/robinhood": "workspace:*",
+    "@crest/vault": "workspace:*",
+    "viem": "2.56.8",
+    "zod": "4.6.4"
+  }
+}

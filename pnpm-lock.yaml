@@ -361,6 +361,24 @@ importers:
         specifier: 2.56.8
         version: 2.56.8(typescript@7.0.2)(zod@4.6.4)
 
+  packages/policy:
+    dependencies:
+      '@crest/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@crest/domain':
+        specifier: workspace:*
+        version: link:../domain
+      '@crest/morpho':
+        specifier: workspace:*
+        version: link:../morpho
+      viem:
+        specifier: 2.56.8
+        version: 2.56.8(typescript@7.0.2)(zod@4.6.4)
+      zod:
+        specifier: 4.6.4
+        version: 4.6.4
+
   packages/rates:
     dependencies:
       '@crest/domain':
@@ -369,6 +387,39 @@ importers:
       '@crest/morpho':
         specifier: workspace:*
         version: link:../morpho
+      '@crest/vault':
+        specifier: workspace:*
+        version: link:../vault
+      viem:
+        specifier: 2.56.8
+        version: 2.56.8(typescript@7.0.2)(zod@4.6.4)
+      zod:
+        specifier: 4.6.4
+        version: 4.6.4
+
+  packages/risk:
+    dependencies:
+      '@crest/chain':
+        specifier: workspace:*
+        version: link:../chain
+      '@crest/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@crest/domain':
+        specifier: workspace:*
+        version: link:../domain
+      '@crest/morpho':
+        specifier: workspace:*
+        version: link:../morpho
+      '@crest/policy':
+        specifier: workspace:*
+        version: link:../policy
+      '@crest/rates':
+        specifier: workspace:*
+        version: link:../rates
+      '@crest/robinhood':
+        specifier: workspace:*
+        version: link:../robinhood
       '@crest/vault':
         specifier: workspace:*
         version: link:../vault

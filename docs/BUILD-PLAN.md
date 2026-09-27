@@ -188,26 +188,33 @@ Every adapter output is independently attributable. Degraded inputs cannot appea
 
 ```ts
 assessPosition(input: RiskInput): RiskAssessment
-planGuardianAction(input: ActionInput): GuardianAction
+planGuardianAction(input: ActionInput): GuardianAction | null
 estimateCarry(input: CarryInput): CarryEstimate
 toConfigurationCall(policy: CompiledPolicy): PreparedOwnerTransaction
 ```
 
 **Steps**
 
-- [ ] Write policy tests for route identity, asset intents, LTV ordering, caps/floors, and forbidden Guardian debt.
-- [ ] Write LTV/health/target-debt tests for no debt and every exact threshold.
-- [ ] Write reserve/strategy repayment tests around generation-appropriate withdrawal liquidity, floors, cap, and debt.
-- [ ] Write carry tests separating borrow APY, vault APY, incentive, fee, estimate, and realized fields.
-- [ ] Prove a small debt denominator cannot hide absolute dollar values in output.
-- [ ] Prove degraded data produces zero owner-borrow capacity but preserves safe debt-reduction planning.
-- [ ] Implement manual typed policy first; optional LLM only drafts.
-- [ ] Add labeled collateral-drop, spread-inversion, and vault-liquidity scenarios.
-- [ ] Ensure same versioned inputs produce the same assessment/action.
+- [x] Write policy tests for route identity, asset intents, LTV ordering, caps/floors, and forbidden Guardian debt.
+- [x] Write LTV/health/target-debt tests for no debt and every exact threshold.
+- [x] Write reserve/strategy repayment tests around generation-appropriate withdrawal liquidity, floors, cap, and debt.
+- [x] Write carry tests separating borrow APY, vault APY, incentive, fee, estimate, and realized fields.
+- [x] Prove a small debt denominator cannot hide absolute dollar values in output.
+- [x] Prove degraded data produces zero owner-borrow capacity but preserves safe debt-reduction planning.
+- [x] Implement manual typed policy first; optional LLM only drafts.
+- [x] Add labeled collateral-drop, spread-inversion, and vault-liquidity scenarios.
+- [x] Ensure same versioned inputs produce the same assessment/action.
 
 **Acceptance**
 
 The pure module returns one deterministic Guardian state/action and one separate owner recommendation. Guardian never receives an additional-borrow action in MVP.
+
+**Evidence (2026-09-24)**
+
+- `@crest/policy` (18 tests) compiles a strict typed draft against the `full_route` manifest into the exact `configure` calldata; the selector and `policyHash = keccak256(abi.encode(PolicyConfig))` are pinned to the generated ABI. No LLM path exists.
+- `@crest/risk` (62 tests) runs with exact bigint arithmetic on manifest-bound fixtures: every LTV band edge at one base unit, Morpho health at the LLTV, the recorded `feed_times_multiplier` oracle (divergence exactly `uiMultiplier - 1`), degraded, skewed, foreign, illiquid, and nonce-conflicting input, reserve versus strategy selection, floors with share-rounding guards, the per-action cap, withdrawable-only liquidity, exit yield on stale rates, realized-only harvest, determinism, and all four scenarios in `config/scenarios.v2.json` (`illustrative`).
+- A mutation spot-check (divergence gate, state precedence, source tie-break, strategy floor, feed age) failed the suite each time. An independent review then reproduced five defects (repayment on stale, skewed, or superseded input, two share-rounding reverts that scale with share price, illiquid strategy not degrading, stale negative spread hiding the exit); each now has a failing-first regression test, and the review re-ran against the fixes.
+- Owner-borrow capacity follows the owner's oracle decision in [LESSONS](./LESSONS.md): Morpho's value, gated by Crest's feed-only divergence.
 
 ## Task 7: Persist observations and run monitor
 
@@ -222,7 +229,8 @@ The pure module returns one deterministic Guardian state/action and one separate
 - [ ] Activate policy mirror only after canonical event.
 - [ ] Poll coherent market/account/vault state and timestamped advisory sources through the Task 5 adapters.
 - [ ] Read Crest Account configuration, frozen state, and policy nonce through `@crest/chain` at the same block horizon.
-- [ ] Persist immutable assessment inputs and carry estimate.
+- [ ] Persist immutable assessment inputs and carry estimate. Unknown carry is null and real carry can be negative, so `estimated_annual_carry_assets` and `estimated_spread_bps` must become nullable, and the domain `projectedCarrySchema` must accept a negative amount, before the first insert.
+- [ ] Reconcile `strategyCostBasisAssets` from canonical strategy deposit and withdrawal events; until it is reconciled the engine passes null and never harvests.
 - [ ] Create idempotent freeze/reserve-repay/strategy-repay triggers transactionally.
 - [ ] Create owner additional-borrow recommendation without a Guardian trigger.
 - [ ] Handle duplicate polls, stale rate/lifecycle, vault constraint/loss, policy change, restart, and reorg.

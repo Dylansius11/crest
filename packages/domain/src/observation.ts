@@ -29,6 +29,10 @@ export const reasonCodeSchema = z.enum([
   "oracle_paused",
   /** The chain head is older than budget. Robinhood Chain has no Chainlink sequencer uptime feed. */
   "head_lag",
+  /** Onchain inputs to one assessment were read at different blocks, so they do not describe one state. */
+  "block_skew",
+  /** Morpho's market oracle and Crest's feed-only price differ beyond policy, or the gap has no known cause. */
+  "oracle_divergence",
   /** Robinhood reports an active trading halt on the underlying equity. */
   "trading_halt",
   /** A multiplier change is scheduled but not yet effective. */

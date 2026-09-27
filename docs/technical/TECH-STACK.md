@@ -149,24 +149,37 @@ Rules:
 
 ```ts
 export function assessPosition(input: RiskInput): RiskAssessment;
-export function planGuardianAction(input: ActionInput): GuardianAction;
+export function planGuardianAction(input: ActionInput): GuardianAction | null;
 export function estimateCarry(input: CarryInput): CarryEstimate;
+export function parseScenarioSet(raw: unknown): ScenarioSet;
 ```
 
-This module owns LTV, health, target debt, borrow capacity, repay capacity, spread, and state transition rules. No I/O or LLM.
+This module owns LTV, health, target debt, borrow capacity, repay capacity, spread, stress scenarios, and state rules. No I/O, clock, or LLM: `assessPosition` is deterministic, and `inputHash` is keccak256 of `canonicalJson({ engineVersion, input })` under `RISK_ENGINE_VERSION`.
+
+- **Screening.** Every input is re-checked against the active policy's own freshness budgets (head lag, feed age, index lag, and Robinhood response ages against the pin's wall clock), against the pinned block (`block_skew`), and against the route identities (`identity_mismatch`, and `conflict` when the onchain policy nonce differs). Reasons are only added.
+- **Oracle gate.** Capacity, LTV, and health use Morpho's `price()`. Crest's feed-only price (collateral feed over loan feed, no multiplier) is shown beside it. An `unexplained` composition, or a divergence above `maxOracleDivergenceBps` (rounded up), is `oracle_divergence`: zero capacity, DEGRADED inside the band, and a freeze when the oracle trigger is on.
+- **Owner-borrow capacity** is the minimum of the remaining debt ceiling, room to target LTV, Morpho liquidity, remaining strategy cap, and the vault's deposit room under every Vault V2 cap on the liquidity adapter's ids. Both debt rooms hold back one borrow share's value rounded up (`toAssetsUp(1, totalBorrowAssets, totalBorrowShares)`), because Morpho rounds minted borrow shares up and reads debt back rounded up. It is zero when borrowing is frozen, any source is degraded (including a strategy that cannot currently withdraw what it holds), the rates cannot be netted, or the marginal spread is below policy.
+- **State precedence.** No valuation is DEGRADED; then CRITICAL, PROTECT, and EXIT_YIELD (vault loss, or a negative marginal spread even on stale but comparable rates), which stay available on degraded input; then DEGRADED; then HARVESTABLE (a surplus over the reconciled cost basis) and UPSIZE_AVAILABLE.
+- **Planner.** Freeze first when required and not yet frozen; otherwise one repayment from the source covering the most, preferring the reserve on a tie. Exit and harvest use the strategy. Capacities already include floors, the per-action cap, the debt, and currently withdrawable vault assets; a nonzero strategy floor is raised by one vault share's value rounded up, because the contract re-checks it on the quote after the vault burns shares rounded up. Repayment sources count only when their reasons are facts (`vault_loss`, `withdrawal_constrained`), never doubts such as `stale`, `block_skew`, or `route_drift`. A repayment is planned only from this account's reads at the pinned block under the policy nonce the contract holds; otherwise only a freeze can be planned.
+- **Scenarios** (`config/scenarios.v2.json`, `illustrative`) are adverse by schema and rerun the same pass; stressed capacity is also clamped to the live capacity.
 
 ### `@crest/policy`
 
 ```ts
-export const policyV2Schema: z.ZodType<PolicyV2>;
+export function routeContextOf(
+  manifest: DeploymentManifest,
+  deployment: { account: Address; owner: Address },
+): VerifiedRouteContext;
 export function compilePolicy(
-  draft: PolicyDraft,
+  draft: unknown,
   route: VerifiedRouteContext,
-): CompiledPolicy;
+): { ok: true; policy: CompiledPolicy } | { ok: false; issues: string[] };
 export function toConfigurationCall(
   policy: CompiledPolicy,
 ): PreparedOwnerTransaction;
 ```
+
+The route (exact `MarketParams`, vault, token decimals, feeds) comes only from a `full_route` manifest; a draft that supplies one is rejected. A draft carries owner limits and asset intents: exactly one `PROTECT_AND_BORROW` on the verified market and one `EARN_STABLE` on the verified vault. The domain `policyV2Schema` is strict, so unknown fields (for example a Guardian borrowing limit) fail compilation. Freshness budgets default to `DEFAULT_FRESHNESS` and may be tightened. `CompiledPolicy.policyHash` is `keccak256(abi.encode(PolicyConfig))`, the value `PolicyConfigured.policyHash` carries; `contentHash` is keccak256 of the canonical typed policy and intents. A test pins the `configure` selector and calldata to the generated contract ABI. No LLM path exists; natural language may only ever draft input to `compilePolicy`.
 
 ### `@crest/morpho`
 

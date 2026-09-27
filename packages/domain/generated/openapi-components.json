@@ -183,6 +183,14 @@
             "type": "string",
             "pattern": "^0x[0-9a-fA-F]{40}$"
           },
+          "oracle": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{40}$"
+          },
+          "irm": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{40}$"
+          },
           "vault": {
             "type": "string",
             "pattern": "^0x[0-9a-fA-F]{40}$"
@@ -201,6 +209,8 @@
           "marketId",
           "collateralToken",
           "loanToken",
+          "oracle",
+          "irm",
           "vault",
           "vaultAsset",
           "marketLltvWad"
@@ -234,6 +244,14 @@
                 "type": "string",
                 "pattern": "^0x[0-9a-fA-F]{40}$"
               },
+              "oracle": {
+                "type": "string",
+                "pattern": "^0x[0-9a-fA-F]{40}$"
+              },
+              "irm": {
+                "type": "string",
+                "pattern": "^0x[0-9a-fA-F]{40}$"
+              },
               "vault": {
                 "type": "string",
                 "pattern": "^0x[0-9a-fA-F]{40}$"
@@ -252,6 +270,8 @@
               "marketId",
               "collateralToken",
               "loanToken",
+              "oracle",
+              "irm",
               "vault",
               "vaultAsset",
               "marketLltvWad"
@@ -302,6 +322,72 @@
             "type": "string",
             "pattern": "^(0|-?[1-9][0-9]*)$"
           },
+          "maxOracleDivergenceBps": {
+            "type": "string",
+            "pattern": "^(0|-?[1-9][0-9]*)$"
+          },
+          "harvestThresholdAssets": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$"
+          },
+          "freshness": {
+            "type": "object",
+            "properties": {
+              "maxHeadLagSeconds": {
+                "type": "string",
+                "pattern": "^[1-9][0-9]*$"
+              },
+              "maxFeedAgeSeconds": {
+                "type": "string",
+                "pattern": "^[1-9][0-9]*$"
+              },
+              "maxQuoteAgeSeconds": {
+                "type": "string",
+                "pattern": "^[1-9][0-9]*$"
+              },
+              "maxAssetAgeSeconds": {
+                "type": "string",
+                "pattern": "^[1-9][0-9]*$"
+              },
+              "maxCorporateActionsAgeSeconds": {
+                "type": "string",
+                "pattern": "^[1-9][0-9]*$"
+              },
+              "maxIndexLagBlocks": {
+                "type": "string",
+                "pattern": "^[1-9][0-9]*$"
+              }
+            },
+            "required": [
+              "maxHeadLagSeconds",
+              "maxFeedAgeSeconds",
+              "maxQuoteAgeSeconds",
+              "maxAssetAgeSeconds",
+              "maxCorporateActionsAgeSeconds",
+              "maxIndexLagBlocks"
+            ],
+            "additionalProperties": false
+          },
+          "triggers": {
+            "type": "object",
+            "properties": {
+              "freezeOnOracleDegraded": {
+                "type": "boolean"
+              },
+              "freezeOnVaultDegraded": {
+                "type": "boolean"
+              },
+              "freezeOnLifecycleDegraded": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "freezeOnOracleDegraded",
+              "freezeOnVaultDegraded",
+              "freezeOnLifecycleDegraded"
+            ],
+            "additionalProperties": false
+          },
           "guardian": {
             "type": "string",
             "pattern": "^0x[0-9a-fA-F]{40}$"
@@ -321,6 +407,10 @@
           "upperLtvWad",
           "criticalLtvWad",
           "minimumNetSpreadBps",
+          "maxOracleDivergenceBps",
+          "harvestThresholdAssets",
+          "freshness",
+          "triggers",
           "guardian"
         ],
         "additionalProperties": false
@@ -528,6 +618,8 @@
           "oracle_invalid",
           "oracle_paused",
           "head_lag",
+          "block_skew",
+          "oracle_divergence",
           "trading_halt",
           "multiplier_pending",
           "corporate_action_in_progress",

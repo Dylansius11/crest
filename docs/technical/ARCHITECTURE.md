@@ -271,18 +271,22 @@ Pure interface:
 
 ```ts
 type RiskInput = {
-  policy: ActivePolicy;
-  account: CrestAccountState;
-  market: MorphoMarketState;
-  position: MorphoPositionState;
-  oracle: OracleState;
-  vault: VaultState;
-  rates: RateState;
-  lifecycle: LifecycleState;
-  scenarios: readonly StressScenario[];
+  policy: { compiled: CompiledPolicy; nonce: bigint };
+  head: Observation<PinnedBlock>;
+  account: Observation<AccountState>;
+  market: Observation<MarketSnapshot>;
+  position: Observation<PositionSnapshot>;
+  oracle: { marketPrice: Observation<bigint>; collateralFeed: Observation<FeedRound>; loanFeed: Observation<FeedRound> };
+  vault: Observation<VaultSnapshot>;
+  strategy: Observation<VaultPosition>;
+  rates: RateInputs;
+  lifecycle: LifecycleAssessment;
+  strategyCostBasisAssets: bigint | null;
+  scenarios: ScenarioSet;
 };
 
-function assessRisk(input: RiskInput): RiskAssessment;
+function assessPosition(input: RiskInput): RiskAssessment;
+function planGuardianAction(input: ActionInput): GuardianAction | null;
 ```
 
 Rules:
@@ -290,24 +294,26 @@ Rules:
 - token amounts, shares, prices, rates, and health use bigint/rational values with explicit scales;
 - no-debt is a tagged state;
 - Morpho collateral yield is always zero;
-- projected carry and realized debt repayment are distinct types;
-- stale/paused/conflicting/illiquid input is `degraded`;
-- degraded input sets owner-borrow capacity to zero and may trigger freeze/exit;
+- projected carry and realized debt repayment are distinct types; only a surplus over the event-reconciled strategy cost basis can become a harvest;
+- stale/paused/conflicting/illiquid input is `degraded`; the engine re-applies the policy's own freshness budgets, requires every onchain input at the pinned block (`block_skew`), and checks account, market, vault, feed, and policy-nonce identity;
+- Morpho's oracle value drives LTV, health, and capacity; Crest's feed-only value is disclosed beside it, and a gap above `maxOracleDivergenceBps` or with no known composition is `oracle_divergence`;
+- degraded input sets owner-borrow capacity to zero and may trigger freeze/exit; each degraded oracle, vault, or lifecycle source freezes only when its policy trigger is on, while head, account, market, and position always do;
 - Guardian repayment uses only current withdrawable/simulated assets;
-- scenarios cannot increase capacity;
-- all outputs cite inputs and stable reason codes.
+- scenarios are adverse by schema and cannot increase capacity;
+- all outputs cite inputs and stable reason codes, and carry the engine version, input hash, policy nonce and hash, and scenario set version.
 
 ## 12. Capacity and action planner
 
 MVP owner-borrow capacity is the minimum of:
 
 - remaining Crest accrued-debt ceiling;
-- capacity to policy target LTV;
+- capacity to policy target LTV, valued with Morpho's oracle;
 - usable Morpho loan-token liquidity;
-- remaining fixed-vault deposit cap;
-- zero when borrowing is frozen, net spread is below policy floor, or any required source is degraded.
+- remaining Crest strategy cap;
+- remaining fixed-vault deposit room under every absolute and relative cap on the liquidity adapter's ids (Vault V2 `maxDeposit` always returns zero, and a configured deposit gate counts as no room);
+- zero when borrowing is frozen, net spread is below policy floor, rates cannot be netted, or any required source is degraded, including `oracle_divergence`, `block_skew`, and a policy-nonce `conflict`.
 
-Repayment capacity is separately bounded by current debt, per-action cap, idle reserve above floor, and currently withdrawable strategy assets above policy constraints.
+Repayment capacity is separately bounded by current debt, per-action cap, idle reserve above floor, and currently withdrawable strategy assets above the strategy floor plus one vault share's value of rounding. A repayment is planned only from the account's own reads at the pinned block under the policy nonce the contract holds; a stale, skewed, foreign, drifted, or superseded source leaves only a freeze. Both owner-borrow debt rooms hold back one Morpho borrow share's value for share rounding, and a strategy that cannot currently withdraw what it holds is degraded input.
 
 The planner never uses wallet assets outside the exact market, never treats quoted vault TVL as withdrawable, and never sends additional-borrow output to Guardian in MVP.
 
@@ -327,10 +333,10 @@ The planner never uses wallet assets outside the exact market, never treats quot
 | Robinhood API unavailable/stale | Lifecycle degraded; owner-borrow capacity zero; freeze if policy requires |
 | Rate source stale/conflicts | No new borrow recommendation; preserve debt-reducing actions |
 | RPC stale/disagrees | Stop preparation; allow only freshly simulated freeze/repay |
-| Oracle paused/stale | Capacity zero; freeze; no REST price substitute |
+| Oracle paused/stale | Capacity zero; freeze when the policy's oracle trigger is on; no REST price substitute |
 | Sequencer degraded | No uptime feed exists on Robinhood Chain; a head older than budget is `head_lag`; freeze and alert |
 | Morpho loan liquidity disappears | No new borrow; monitor current debt |
-| Vault APY falls below floor | Freeze new debt; exit yield toward reserve/debt when safe |
+| Vault APY falls below floor | Below the policy spread: no new borrow. Below the borrow rate (negative marginal spread): EXIT_YIELD, freeze, then repay from the strategy |
 | Vault withdrawal constrained | Count only current withdrawable amount; partial repay then alert |
 | Vault share loss | Recalculate actual assets; no projected-profit claim; freeze/owner review |
 | Guardian key unavailable | Alert owner; onchain caps and owner controls remain |

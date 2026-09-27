@@ -25,11 +25,29 @@ Rules for this file:
 
 ---
 
+## 2026-09-24 — Share rounding can overshoot a bound by one share's value (Technical)
+
+- An independent review reproduced reverts in plans that looked exact. Morpho `borrow(x)` mints `toSharesUp` shares and debt reads back through `toAssetsUp`, so a borrow of the full room overshot target by one unit on a market at about 1e-6 assets per share, and by six units on a market at 6.9 assets per share (`1364023701` assets over `196242494` shares). Vault V2 `withdraw` burns shares rounded up and `CrestAccount` re-checks the strategy floor on the rounded-down quote, so withdrawing exactly `quoted - floor` can revert `StrategyFloorViolation`.
+- The loss is bounded by one share's value rounded up: `debtAfter <= debtBefore + x + ceil((A + 1) / (S + 1e6))` on Morpho, and `quotedAfter >= quotedBefore - x - ceil((A + 1) / (S + 1))` on the vault. A fixed one-unit buffer only holds while shares are worth less than one base unit.
+- Rule: every owner-borrow debt room holds back `toAssetsUp(1, totalBorrowAssets, totalBorrowShares)`, a nonzero strategy floor is guarded by one vault share's value rounded up, and every planned transaction is still simulated before signature.
+
+## 2026-09-24 — Owner-borrow capacity uses Morpho's oracle value behind a divergence gate (Workflow)
+
+- The owner chose Morpho's market-oracle value for LTV, health, and capacity, with Crest's feed-only value as a security check rather than the capacity basis. On the reviewed market the two differ by exactly `uiMultiplier - 1`: `divergenceWad` `566080061092436`, about 5.7 bps.
+- Morpho liquidates on its own `price()`, so capacity measured on any other price would misstate the real liquidation distance; the feed-only value still catches a split or dividend that inflates a double-applied oracle.
+- Rule: capacity, LTV, and health use Morpho's price; an `unexplained` composition or a divergence above `maxOracleDivergenceBps` (rounded up) is `oracle_divergence`, which zeroes capacity and freezes when the oracle trigger is on. Every surface shows both values with the double-multiplier disclosure.
+
+## 2026-09-24 — Vault V2 deposit room comes from its caps, never `maxDeposit` (Technical)
+
+- Vault V2 returns zero from `maxDeposit` by design. `enter()` checks `canReceiveShares` and `canSendAssets`, then calls `allocateInternal` on the liquidity adapter, which reverts when any returned id's allocation would exceed its absolute cap, or its relative cap measured against `firstTotalAssets` (total assets before the deposit lands).
+- A borrow Crest deploys must fit through that allocation, so a cap-exhausted vault would revert `borrowAndDeploy` even with Morpho liquidity available.
+- Rule: deposit room is the minimum over the adapter, collateral, and market ids of `absoluteCap - allocation` and, below a 100% relative cap, `totalAssets * relativeCap - allocation`. A zero absolute cap or a configured deposit gate counts as no room. The owner transaction is still simulated before signature, because interest accrued since the last allocation can use part of the room.
+
 ## 2026-09-23 — The reviewed market's oracle applies the Stock Token multiplier twice (Technical)
 
 - At Robinhood block `70212238` the market oracle `price()` was `339917537895501582692865356`. With `SCALE_FACTOR` `1e24`, AAPL/USD `33974221248`, USDG/USD `100005000`, and `uiMultiplier()` `1000566080061092436`, feed-only gives `…065546722663` while feed times multiplier gives `…693298136`, matching to 1.3e-21. The live smoke at block `70226651` reproduced it.
 - Robinhood and Chainlink both document that the AAPL/USD feed already includes the multiplier, so Morpho values this collateral about 0.057% above the total-return price today, and the gap grows with each dividend or split. The oracle is a custom `StaticOracle` with no feed getters, so only exact arithmetic reveals its composition.
-- Rule: the market oracle stays Morpho's liquidation authority and is used only for protocol health; Crest's own valuation never multiplies a feed price, and `classifyMarketOracle` must run on every assessment so policy can bound capacity by the lower value.
+- Rule: the market oracle stays Morpho's liquidation authority; Crest's own valuation never multiplies a feed price, and `classifyMarketOracle` must run on every assessment. How capacity uses the two values is the 2026-09-24 divergence-gate decision above.
 
 ## 2026-09-23 — Robinhood Chain has no sequencer uptime feed; head freshness is the substitute (Technical)
 

@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 2,
+  "version": "2026-09-24.1",
+  "status": "illustrative",
+  "provenance": "Hand-picked demo shocks. Not calibrated to AAPL price history, Morpho rate history, or vault withdrawal history.",
+  "scenarios": [
+    {
+      "id": "aapl-price-down-20",
+      "kind": "collateral_drop",
+      "label": "AAPL price falls 20%",
+      "rationale": "A sharp equity sell-off. Morpho's oracle and Crest's feed-only price fall together, so the oracle gap stays the same.",
+      "shocks": { "collateralPriceBps": "-2000" }
+    },
+    {
+      "id": "aapl-price-down-35",
+      "kind": "collateral_drop",
+      "label": "AAPL price falls 35%",
+      "rationale": "A severe drawdown that pushes a position sitting at the target band past the critical threshold.",
+      "shocks": { "collateralPriceBps": "-3500" }
+    },
+    {
+      "id": "borrow-rate-spike",
+      "kind": "spread_inversion",
+      "label": "Borrow APY up 6 points, vault APY down 1 point",
+      "rationale": "Utilization on the AAPL market jumps while vault yield softens. On 2026-09-17 Crest recorded a 24h borrow APY of 7.93% against a six-hour vault APY of 3.91%, so an inverted spread is not hypothetical.",
+      "shocks": { "borrowApyShiftBps": "600", "vaultApyShiftBps": "-100" }
+    },
+    {
+      "id": "vault-exit-dry",
+      "kind": "vault_liquidity",
+      "label": "Vault exit liquidity falls to zero",
+      "rationale": "The vault's liquidity market is fully borrowed, so no strategy assets can be withdrawn to repay debt until it frees up.",
+      "shocks": { "vaultLiquidityBps": "-10000" }
+    }
+  ]
+}
