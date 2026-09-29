@@ -1,4 +1,13 @@
 export { createRobinhoodClient, onchainAt, pinBlock, ROBINHOOD_CHAIN_ID, robinhoodChain } from "./client.ts";
 export type { PinnedBlock, PinOptions } from "./client.ts";
-export { FEED_ABI, MORPHO_ORACLE_ABI, readCodeHash, readFeed, readMarketOraclePrice, simulateCall } from "./reads.ts";
-export type { FeedRound, SimulationResult } from "./reads.ts";
+export {
+  CREST_ACCOUNT_ABI,
+  FEED_ABI,
+  MORPHO_ORACLE_ABI,
+  readCodeHash,
+  readCrestAccount,
+  readFeed,
+  readMarketOraclePrice,
+  simulateCall,
+} from "./reads.ts";
+export type { CrestAccountPolicy, CrestAccountSnapshot, CrestMarketParams, FeedRound, SimulationResult } from "./reads.ts";

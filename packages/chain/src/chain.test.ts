@@ -1,7 +1,8 @@
-import { encodeFunctionData, keccak256, parseAbi } from "viem";
+import { encodeFunctionData, getAddress, keccak256, parseAbi } from "viem";
+import type { PublicClient } from "viem";
 import { describe, expect, test } from "vitest";
 
-import { FEED_ABI, pinBlock, readCodeHash, readFeed, simulateCall } from "./index.ts";
+import { CREST_ACCOUNT_ABI, FEED_ABI, pinBlock, readCodeHash, readCrestAccount, readFeed, simulateCall } from "./index.ts";
 import { fakeChain } from "./testing.ts";
 
 const block = { number: 70_212_238n, hash: `0x${"ab".repeat(32)}`, timestamp: 1_790_136_079n } as const;
@@ -9,6 +10,49 @@ const feed = "0x6B22A786bAa607d76728168703a39Ea9C99f2cD0";
 // Live Robinhood AAPL / USD round read at block 70212238 (answer 8 decimals).
 const liveRound = [18_446_744_073_709_552_274n, 33_974_221_248n, 1_790_106_920n, 1_790_106_932n, 18_446_744_073_709_552_274n] as const;
 const HEARTBEAT = 86_400n;
+
+const account = "0x00000000000000000000000000000000000000a1";
+const loanToken = "0x00000000000000000000000000000000000000b2";
+const vault = "0x00000000000000000000000000000000000000c3";
+const owner = "0x00000000000000000000000000000000000000d4";
+const guardian = "0x00000000000000000000000000000000000000e5";
+const marketId = `0x${"01".repeat(32)}`;
+const policy = {
+  market: {
+    loanToken,
+    collateralToken: "0x00000000000000000000000000000000000000f6",
+    oracle: "0x00000000000000000000000000000000000000a7",
+    irm: "0x00000000000000000000000000000000000000b8",
+    lltv: 860_000_000_000_000_000n,
+  },
+  yieldVault: vault,
+  maxCollateralAssets: 1_000n,
+  debtCeilingAssets: 900n,
+  maxStrategyAssets: 800n,
+  reserveFloorAssets: 70n,
+  strategyFloorAssets: 60n,
+  maxRepayPerActionAssets: 50n,
+  lowerLtvWad: 100_000_000_000_000_000n,
+  targetLtvWad: 200_000_000_000_000_000n,
+  upperLtvWad: 300_000_000_000_000_000n,
+  criticalLtvWad: 400_000_000_000_000_000n,
+  guardian,
+} as const;
+
+function withAccountState(options: { frozen?: boolean; nonce?: bigint } = {}): PublicClient {
+  return fakeChain({
+    block,
+    calls: [
+      { address: account, abi: CREST_ACCOUNT_ABI, functionName: "policy", result: policy },
+      { address: account, abi: CREST_ACCOUNT_ABI, functionName: "policyNonce", result: options.nonce ?? 12n },
+      { address: account, abi: CREST_ACCOUNT_ABI, functionName: "borrowingFrozen", result: options.frozen ?? false },
+      { address: account, abi: CREST_ACCOUNT_ABI, functionName: "owner", result: owner },
+      { address: account, abi: CREST_ACCOUNT_ABI, functionName: "guardian", result: guardian },
+      { address: account, abi: CREST_ACCOUNT_ABI, functionName: "marketId", result: marketId },
+      { address: loanToken, abi: CREST_ACCOUNT_ABI, functionName: "balanceOf", args: [account], result: 42n },
+    ],
+  });
+}
 
 describe("pinBlock", () => {
   test("refuses any chain other than Robinhood Chain", async () => {
@@ -56,9 +100,60 @@ describe("readFeed", () => {
     expect(incomplete.reasons).toContain("oracle_invalid");
   });
 
+
   test("an unreadable feed is unknown", async () => {
     const round = await readFeed(fakeChain({ block }), block, feed, HEARTBEAT);
     expect(round).toMatchObject({ status: "unknown", value: null, reasons: ["unreadable"] });
+  });
+});
+
+describe("readCrestAccount", () => {
+  test("returns unknown rather than fabricating account state when any pinned read fails", async () => {
+    const incomplete = fakeChain({
+      block,
+      calls: [{ address: account, abi: CREST_ACCOUNT_ABI, functionName: "policy", result: policy }],
+    });
+
+    await expect(readCrestAccount(incomplete, block, account, loanToken)).resolves.toMatchObject({
+      status: "unknown",
+      value: null,
+      reasons: ["unreadable"],
+      provenance: { kind: "onchain", chainId: 4663, block },
+    });
+  });
+
+  test("uses the supplied block for every account and reserve read", async () => {
+    const chain = withAccountState();
+    const readContract = chain.readContract.bind(chain);
+    const readBlocks: bigint[] = [];
+    const recordingChain = {
+      ...chain,
+      readContract: async (request: { blockNumber?: bigint }) => {
+        readBlocks.push(request.blockNumber ?? -1n);
+        return readContract(request as never);
+      },
+    } as unknown as PublicClient;
+
+    const snapshot = await readCrestAccount(recordingChain, block, account, loanToken);
+
+    expect(snapshot.status).toBe("normal");
+    expect(readBlocks).toEqual([block.number, block.number, block.number, block.number, block.number, block.number, block.number]);
+  });
+
+  test("observes the exact nonce, frozen state, and reserve balance", async () => {
+    const snapshot = await readCrestAccount(withAccountState({ frozen: true, nonce: 13n }), block, account, loanToken);
+
+    expect(snapshot).toMatchObject({
+      status: "normal",
+      value: {
+        account,
+        borrowingFrozen: true,
+        policyNonce: 13n,
+        idleReserveAssets: 42n,
+        policy: { owner: getAddress(owner), marketId, guardian: getAddress(guardian), yieldVault: getAddress(vault), market: { loanToken } },
+      },
+      provenance: { kind: "onchain", chainId: 4663, block },
+    });
   });
 });
 

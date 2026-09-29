@@ -14,6 +14,115 @@ export const FEED_ABI = parseAbi([
 /** Morpho `IOracle`: collateral price quoted in loan token, scaled by 1e36 adjusted for both token decimals. */
 export const MORPHO_ORACLE_ABI = parseAbi(["function price() view returns (uint256)"]);
 
+/**
+ * Exact read-only Crest Account and ERC-20 selectors used by the canonical monitor snapshot.
+ *
+ * `policy()` is the Solidity `CrestAccount.PolicyConfig` tuple, including its nested Morpho `MarketParams`.
+ */
+export const CREST_ACCOUNT_ABI = parseAbi([
+  "struct MarketParams { address loanToken; address collateralToken; address oracle; address irm; uint256 lltv; }",
+  "struct PolicyConfig { MarketParams market; address yieldVault; uint128 maxCollateralAssets; uint128 debtCeilingAssets; uint128 maxStrategyAssets; uint128 reserveFloorAssets; uint128 strategyFloorAssets; uint128 maxRepayPerActionAssets; uint64 lowerLtvWad; uint64 targetLtvWad; uint64 upperLtvWad; uint64 criticalLtvWad; address guardian; }",
+  "function policy() view returns (PolicyConfig)",
+  "function policyNonce() view returns (uint64)",
+  "function borrowingFrozen() view returns (bool)",
+  "function owner() view returns (address)",
+  "function guardian() view returns (address)",
+  "function marketId() view returns (bytes32)",
+  "function balanceOf(address account) view returns (uint256)",
+]);
+
+export interface CrestMarketParams {
+  loanToken: Address;
+  collateralToken: Address;
+  oracle: Address;
+  irm: Address;
+  lltv: bigint;
+}
+
+/**
+ * Lossless typed form of `CrestAccount.PolicyConfig`, enriched with the separately-read owner and stored market
+ * ID. `guardian` is read both here and through its public getter, then checked for consistency.
+ */
+export interface CrestAccountPolicy {
+  market: CrestMarketParams;
+  yieldVault: Address;
+  maxCollateralAssets: bigint;
+  debtCeilingAssets: bigint;
+  maxStrategyAssets: bigint;
+  reserveFloorAssets: bigint;
+  strategyFloorAssets: bigint;
+  maxRepayPerActionAssets: bigint;
+  lowerLtvWad: bigint;
+  targetLtvWad: bigint;
+  upperLtvWad: bigint;
+  criticalLtvWad: bigint;
+  guardian: Address;
+  owner: Address;
+  marketId: Hex;
+}
+
+/**
+ * Canonical Crest Account facts at one pinned block. The monitor can map the first four fields directly to
+ * `@crest/risk`'s `AccountState`; `policy` retains the exact authority and route facts for persistence.
+ */
+export interface CrestAccountSnapshot {
+  account: Address;
+  borrowingFrozen: boolean;
+  policyNonce: bigint;
+  idleReserveAssets: bigint;
+  policy: CrestAccountPolicy;
+}
+
+/**
+ * Reads Crest Account configuration and its loan-token reserve concurrently, all against `block.number`.
+ *
+ * A failed read returns `observe(null, onchainAt(block))`; a loan-token or Guardian mismatch preserves the
+ * evidence as an `identity_mismatch` rather than appearing normal.
+ */
+export async function readCrestAccount(
+  client: PublicClient,
+  block: BlockRef,
+  account: Address,
+  loanToken: Address,
+): Promise<Observation<CrestAccountSnapshot>> {
+  const provenance = onchainAt(block);
+  try {
+    const [rawPolicy, policyNonce, borrowingFrozen, owner, guardian, marketId, idleReserveAssets] = await Promise.all([
+      client.readContract({ address: account, abi: CREST_ACCOUNT_ABI, functionName: "policy", blockNumber: block.number }),
+      client.readContract({ address: account, abi: CREST_ACCOUNT_ABI, functionName: "policyNonce", blockNumber: block.number }),
+      client.readContract({ address: account, abi: CREST_ACCOUNT_ABI, functionName: "borrowingFrozen", blockNumber: block.number }),
+      client.readContract({ address: account, abi: CREST_ACCOUNT_ABI, functionName: "owner", blockNumber: block.number }),
+      client.readContract({ address: account, abi: CREST_ACCOUNT_ABI, functionName: "guardian", blockNumber: block.number }),
+      client.readContract({ address: account, abi: CREST_ACCOUNT_ABI, functionName: "marketId", blockNumber: block.number }),
+      client.readContract({ address: loanToken, abi: CREST_ACCOUNT_ABI, functionName: "balanceOf", args: [account], blockNumber: block.number }),
+    ]);
+    const policy: CrestAccountPolicy = {
+      market: rawPolicy.market,
+      yieldVault: rawPolicy.yieldVault,
+      maxCollateralAssets: rawPolicy.maxCollateralAssets,
+      debtCeilingAssets: rawPolicy.debtCeilingAssets,
+      maxStrategyAssets: rawPolicy.maxStrategyAssets,
+      reserveFloorAssets: rawPolicy.reserveFloorAssets,
+      strategyFloorAssets: rawPolicy.strategyFloorAssets,
+      maxRepayPerActionAssets: rawPolicy.maxRepayPerActionAssets,
+      lowerLtvWad: rawPolicy.lowerLtvWad,
+      targetLtvWad: rawPolicy.targetLtvWad,
+      upperLtvWad: rawPolicy.upperLtvWad,
+      criticalLtvWad: rawPolicy.criticalLtvWad,
+      guardian: rawPolicy.guardian,
+      owner,
+      marketId,
+    };
+    const reasons: ReasonCode[] = [];
+    if (policy.market.loanToken.toLowerCase() !== loanToken.toLowerCase() || policy.guardian.toLowerCase() !== guardian.toLowerCase()) {
+      reasons.push("identity_mismatch");
+    }
+    return observe({ account, borrowingFrozen, policyNonce, idleReserveAssets, policy }, provenance, reasons);
+  } catch {
+    return observe<CrestAccountSnapshot>(null, provenance);
+  }
+}
+
 export interface FeedRound {
   feed: Address;
   roundId: bigint;
