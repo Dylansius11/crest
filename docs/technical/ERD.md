@@ -40,6 +40,8 @@ erDiagram
   MORPHO_MARKET ||--o{ POSITION_SNAPSHOT : defines
   VAULT_DEPLOYMENT ||--o{ STRATEGY_POSITION_SNAPSHOT : defines
 
+  CREST_ACCOUNT ||--o{ CANONICAL_ACCOUNT_EVENT : emits
+
   CREST_ACCOUNT ||--o{ ASSET_INTENT : declares
   CREST_ACCOUNT ||--o{ POLICY : versions
   POLICY ||--|| MARKET_POLICY : configures
@@ -151,7 +153,7 @@ Every onchain snapshot includes `chain_id`, `block_number`, `block_hash`, `block
 - total supply/borrow assets and shares;
 - available loan liquidity;
 - borrow/supply rate with exact scale/source;
-- oracle raw value, scale, update, and status;
+- oracle raw value, scale, update, and status, with value null when unavailable;
 - sequencer status;
 - route classification and reasons.
 
@@ -165,9 +167,9 @@ UNIQUE `(market_id,block_hash)`.
 | `vault_deployment_id` | `uuid` | FK |
 | `total_assets` | `numeric(78,0)` | Reported vault assets |
 | `total_supply_shares` | `numeric(78,0)` | Share supply |
-| `max_deposit_assets` | `numeric(78,0)` | Current account-context cap when applicable |
-| `max_withdraw_assets` | `numeric(78,0)` | Current Crest Account withdrawal bound |
-| `preview_redeem_assets` | `numeric(78,0)` | Quoted value of observed shares |
+| `max_deposit_assets` | `numeric(78,0)` nullable | Exact cap when observed; null when unavailable |
+| `max_withdraw_assets` | `numeric(78,0)` nullable | Exact withdrawal bound when observed; null when unavailable |
+| `preview_redeem_assets` | `numeric(78,0)` nullable | Quoted value of observed shares; null when unreadable |
 | `pause_status` | `text` | Normal/degraded |
 | `downstream_json` | `jsonb` | Validated allocations/concentration |
 | `reason_codes` | `text[]` | Liquidity/loss/pause reasons |
@@ -189,8 +191,19 @@ Registry: `id`, chain/address UNIQUE, owner, deployment transaction/block, contr
 - repayment cap;
 - lower/target/upper/critical LTV;
 - borrowing freeze and policy nonce;
-- raw loan/collateral token and vault-share balances;
+- raw loan-token balance plus nullable collateral-token and vault-share balances when their reads are unavailable;
 - common block fields.
+
+### `canonical_account_event`
+
+Immutable indexed Crest, Morpho, or vault event:
+
+- Crest Account FK and unconstrained event kind;
+- transaction hash and `log_index`;
+- canonical block number/hash/time, canonical status, observation time, and reorg time;
+- decoded event payload.
+
+UNIQUE `(crest_account_id,transaction_hash,log_index,block_hash)`.
 
 ### `position_snapshot`
 
@@ -202,7 +215,7 @@ Registry: `id`, chain/address UNIQUE, owner, deployment transaction/block, contr
 | `borrow_shares` | `numeric(78,0)` | Raw |
 | `borrow_assets_up` | `numeric(78,0)` | Accrued rounded-up debt |
 | `collateral_assets` | `numeric(78,0)` | Raw units |
-| `collateral_value` | `numeric(78,0)` | Explicit scale |
+| `collateral_value` | `numeric(78,0)` nullable | Explicit scale; null when oracle valuation is unavailable |
 | `ltv_wad` | `numeric(78,0)` | Nullable no debt |
 | `morpho_health_wad` | `numeric(78,0)` | Nullable no debt |
 | common block fields | — | Exact observation |
@@ -254,6 +267,8 @@ Provider action ID, asset, type/status, documented process fields, source/fetch 
 | `status` | `text` | `normal/degraded/unknown` |
 | `reason_codes` | `text[]` | Stable reasons |
 
+Replay identity is `(subject_kind,subject,source_url,fetched_at,period_kind)`, enforced with partial unique indexes for market and vault subjects.
+
 No rate row is called “realized.”
 
 ## 6. Owner, intent, and policy
@@ -282,12 +297,15 @@ Append-only confirmed versions:
 - account and policy nonce;
 - schema version and canonical typed JSON;
 - canonical content hash;
+- separate nullable 32-byte `policy_hash` from canonical `PolicyConfig` ABI encoding; canonical `content_hash` remains the typed policy/intent JSON hash;
 - source `manual/llm_import`;
 - configuration transaction and effective block/hash;
 - status `pending/active/superseded/reorged/rejected`;
 - draft/activation times.
 
 UNIQUE `(crest_account_id,policy_nonce)` and `(crest_account_id,content_hash)`.
+
+Only a registered policy with a verified `policy_hash` may activate, and the canonical `PolicyConfigured.policyHash` must equal it; `content_hash` never authorizes activation.
 
 ### `market_policy`
 
@@ -315,8 +333,9 @@ Lower, target, upper, critical LTV WAD. CHECK:
 
 | Column | Type | Meaning |
 |---|---|---|
-| `id` | `text` | PK sortable ID |
-| account/policy/snapshot refs | FK | Exact inputs |
+| `id` | `text` | PK, deterministic canonical input hash |
+| account/policy/snapshot refs | FK | Exact observation inputs |
+| `input_json` | `jsonb` | Immutable lossless serialized full `RiskInput`, including feed/oracle evidence and provenance |
 | `risk_engine_version` | `text` | Reproducibility |
 | `status` | `text` | Guardian state |
 | `ltv_wad` | `numeric(78,0)` | Nullable no debt |
@@ -324,8 +343,8 @@ Lower, target, upper, critical LTV WAD. CHECK:
 | `policy_health_wad` | `numeric(78,0)` | Nullable |
 | `owner_borrow_capacity_assets` | `numeric(78,0)` | Zero when degraded/frozen |
 | `repay_capacity_assets` | `numeric(78,0)` | Current bounded capacity |
-| `estimated_annual_carry_assets` | `numeric(78,0)` | Signed projected value |
-| `estimated_spread_bps` | `integer` | Signed projected ratio |
+| `estimated_annual_carry_assets` | `numeric(78,0)` nullable | Signed projected value; null when unknown |
+| `estimated_spread_bps` | `numeric(78,0)` nullable | Signed projected ratio; null when unknown |
 | `recommended_action` | `text` | `none/owner_borrow/freeze/repay_reserve/repay_strategy/owner_review` |
 | `reason_codes` | `text[]` | Stable reasons |
 | `canonical_input_hash` | `bytea` | Idempotency |
@@ -337,19 +356,21 @@ Projected fields never update realized-performance rows.
 
 Canonical event-derived accounting:
 
-- Crest Account and transaction;
+- Crest Account, transaction, and `log_index`;
 - kind `deposit/withdraw/repay`;
-- vault shares/assets before and after;
+- vault assets before and after, plus nullable shares before and after only when emitted;
 - accrued debt before and after;
 - `debt_repaid_assets`;
 - attributed fees where measurable;
 - block/hash/time and canonical status.
 
+UNIQUE `(crest_account_id,transaction_hash,log_index,block_hash)`.
+
 A “self-repayment” claim must point to `debt_repaid_assets > 0`.
 
 ### `assessment_input`
 
-Assessment ID, input kind, referenced observation ID, and purpose. Enforce exact reference type.
+Assessment ID, input kind, referenced observation UUID, and purpose. The monitor links typed snapshot references transactionally; the database enforces the assessment FK but not a cross-table FK for the polymorphic observation UUID.
 
 ### `stress_scenario` and `scenario_result`
 
@@ -399,7 +420,7 @@ A run is verified only when every required check passes.
 
 ## 9. Indexing and reorgs
 
-`indexer_cursor(chain_id,stream_key)` stores last canonical block/hash. Events and cursor update atomically. Reorgs mark affected snapshots/receipts/events reorged and invalidate dependent assessments/triggers without deleting audit history.
+`indexer_cursor(chain_id,stream_key)` stores last canonical block/hash. `canonical_account_event` persists each account event by `(crest_account_id,transaction_hash,log_index,block_hash)`. Events and cursor update atomically. Reorgs mark affected snapshots/receipts/events reorged and invalidate dependent assessments/triggers without deleting audit history.
 
 ## 10. Units
 

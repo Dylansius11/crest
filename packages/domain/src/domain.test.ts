@@ -230,6 +230,26 @@ describe("Guardian and evidence boundaries", () => {
     expect(guardianActionSchema.safeParse({ kind: "repay_strategy", selector: "repayFromStrategy(uint256)", requestedAssets: "0" }).success).toBe(false);
   });
 
+  test("accepts signed projected carry while keeping realized debt reduction positive", () => {
+    expect(projectedOrRealizedSchema.parse({
+      kind: "projected",
+      annualCarryAssets: "-38000000",
+      spreadBps: "-250",
+      observedAt: "2026-09-14T09:54:56Z",
+    })).toMatchObject({
+      annualCarryAssets: -38_000_000n,
+      spreadBps: -250n,
+    });
+    expect(projectedOrRealizedSchema.safeParse({
+      kind: "realized",
+      transactionHash: hash("f"),
+      blockNumber: "62692076",
+      debtBeforeAssets: "2000810000",
+      debtAfterAssets: "2250830000",
+      debtRepaidAssets: "-250020000",
+    }).success).toBe(false);
+  });
+
   test("keeps projected carry separate from canonical realized debt reduction", () => {
     expect(projectedOrRealizedSchema.parse({
       kind: "projected",

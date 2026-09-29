@@ -25,6 +25,11 @@ Rules for this file:
 
 ---
 
+## 2026-09-29 — Policy content identity is not the onchain policy hash (Technical)
+
+- `compilePolicy` computes `contentHash` over canonical typed policy and intents, while `CrestAccount.PolicyConfigured` emits `policyHash = keccak256(abi.encode(PolicyConfig))`; the two hash different inputs and cannot be substituted. Task 7 registry tests verify activation against the emitted ABI hash and separately verify the stored typed content hash.
+- Rule: persist both hashes independently. Only a canonical policy event whose nonce, route, and ABI policy hash match may activate a mirrored policy; an existing row with no verified ABI hash remains inactive.
+
 ## 2026-09-24 — Share rounding can overshoot a bound by one share's value (Technical)
 
 - An independent review reproduced reverts in plans that looked exact. Morpho `borrow(x)` mints `toSharesUp` shares and debt reads back through `toAssetsUp`, so a borrow of the full room overshot target by one unit on a market at about 1e-6 assets per share, and by six units on a market at 6.9 assets per share (`1364023701` assets over `196242494` shares). Vault V2 `withdraw` burns shares rounded up and `CrestAccount` re-checks the strategy floor on the rounded-down quote, so withdrawing exactly `quoted - floor` can revert `StrategyFloorViolation`.

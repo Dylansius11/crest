@@ -2,12 +2,17 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import { eq } from "drizzle-orm";
 import { createDatabase } from "./client.ts";
-import { marketPolicies, policies, rateObservations } from "./schema.ts";
+import { marketPolicies, policies, rateObservations, realizedStrategyEvents, riskAssessments } from "./schema.ts";
 
 const databaseUrl = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
 const { client, db } = createDatabase(databaseUrl);
 
-const bytes = (digit: string, length: number) => Buffer.from(digit.repeat(length), "hex");
+const salt = Buffer.from(randomUUID().replaceAll("-", "").slice(0, 8), "hex");
+const bytes = (digit: string, length: number) => {
+  const result = Buffer.from(digit.repeat(length), "hex");
+  salt.copy(result, 0, 0, Math.min(salt.length, result.length));
+  return result;
+};
 const ids = {
   loanAsset: randomUUID(),
   collateralAsset: randomUUID(),
@@ -95,6 +100,24 @@ describe("lossless PostgreSQL boundaries", () => {
     expect(inserted?.rateScale).toBe(rateScale);
   });
 
+  test("rejects replayed market rate observations with the same source timestamp and period", async () => {
+    const fetchedAt = new Date("2026-09-29T00:00:00Z");
+    const rate = {
+      subjectKind: "morpho_borrow",
+      marketId,
+      rateValue: 1n,
+      rateScale: 1n,
+      periodKind: "apr-simple",
+      grossOrNet: "gross",
+      sourceUrl: "https://example.com/replayed-market-rate",
+      fetchedAt,
+      expiresAt: new Date("2026-09-29T00:01:00Z"),
+      status: "normal",
+    };
+    await db.insert(rateObservations).values(rate);
+    await expect(db.insert(rateObservations).values(rate)).rejects.toMatchObject({ cause: { code: "23505" } });
+  });
+
   test("rejects a vault whose asset differs from the market loan token", async () => {
     await expect(client`insert into policies
       (id, crest_account_id, policy_nonce, schema_version, typed_json, content_hash, source, status, market_id, vault_deployment_id, loan_token_id, market_lltv_wad)
@@ -109,25 +132,114 @@ describe("lossless PostgreSQL boundaries", () => {
       .rejects.toMatchObject({ code: "23514" });
   });
 
+  test("rejects a policy hash that is not 32 bytes", async () => {
+    await expect(client`update policies set policy_hash = ${bytes("ff", 31)} where id = ${ids.policy}`)
+      .rejects.toMatchObject({ code: "23514" });
+  });
+
+  test("accepts an exact 32-byte policy hash", async () => {
+    const policyHash = bytes("ee", 32);
+    await client`update policies set policy_hash = ${policyHash} where id = ${ids.policy}`;
+    const [policy] = await db.select().from(policies).where(eq(policies.id, ids.policy));
+    expect(policy?.policyHash).toEqual(policyHash);
+  });
+
   test("rejects projected capacity when an assessment is degraded", async () => {
     await expect(client`insert into risk_assessments
-      (id, crest_account_id, policy_id, risk_engine_version, status, owner_borrow_capacity_assets, repay_capacity_assets, estimated_annual_carry_assets, estimated_spread_bps, recommended_action, canonical_input_hash, created_at)
-      values (${ids.assessment}, ${ids.account}, ${ids.policy}, '1', 'DEGRADED', 1, 0, 0, 0, 'freeze', ${bytes("0b", 32)}, now())`)
+      (id, crest_account_id, policy_id, risk_engine_version, status, owner_borrow_capacity_assets, repay_capacity_assets, estimated_annual_carry_assets, estimated_spread_bps, recommended_action, canonical_input_hash, input_json, created_at)
+      values (${ids.assessment}, ${ids.account}, ${ids.policy}, '1', 'DEGRADED', 1, 0, 0, 0, 'freeze', ${bytes("0b", 32)}, '{}'::jsonb, now())`)
       .rejects.toMatchObject({ code: "23514" });
+  });
+
+  test("roundtrips signed projected carry and immutable input exactly", async () => {
+    const annualCarryAssets = -(10n ** 70n);
+    const inputJson = {
+      carry: {
+        annualCarryAssets: annualCarryAssets.toString(),
+        spreadBps: "-21",
+      },
+    };
+    const [inserted] = await db.insert(riskAssessments).values({
+      id: randomUUID(),
+      crestAccountId: ids.account,
+      policyId: ids.policy,
+      riskEngineVersion: "1",
+      status: "NORMAL",
+      ownerBorrowCapacityAssets: 0n,
+      repayCapacityAssets: 0n,
+      estimatedAnnualCarryAssets: annualCarryAssets,
+      estimatedSpreadBps: -21n,
+      recommendedAction: "none",
+      canonicalInputHash: bytes("0c", 32),
+      inputJson,
+      createdAt: new Date(),
+    }).returning();
+
+    expect(inserted?.estimatedAnnualCarryAssets).toBe(annualCarryAssets);
+    expect(inserted?.estimatedSpreadBps).toBe(-21n);
+    expect(inserted?.inputJson).toEqual(inputJson);
+  });
+
+  test("roundtrips unknown projected carry as null", async () => {
+    const inputJson = { carry: { annualCarryAssets: null, spreadBps: null } };
+    const [inserted] = await db.insert(riskAssessments).values({
+      id: randomUUID(),
+      crestAccountId: ids.account,
+      policyId: ids.policy,
+      riskEngineVersion: "1",
+      status: "DEGRADED",
+      ownerBorrowCapacityAssets: 0n,
+      repayCapacityAssets: 0n,
+      estimatedAnnualCarryAssets: null,
+      estimatedSpreadBps: null,
+      recommendedAction: "freeze",
+      canonicalInputHash: bytes("0d", 32),
+      inputJson,
+      createdAt: new Date(),
+    }).returning();
+
+    expect(inserted?.estimatedAnnualCarryAssets).toBeNull();
+    expect(inserted?.estimatedSpreadBps).toBeNull();
+    expect(inserted?.inputJson).toEqual(inputJson);
+  });
+
+  test("persists a canonical repayment when event shares are unavailable", async () => {
+    const [inserted] = await db.insert(realizedStrategyEvents).values({
+      crestAccountId: ids.account,
+      kind: "repay",
+      transactionHash: bytes("b", 32),
+      logIndex: 0n,
+      sharesBefore: null,
+      sharesAfter: null,
+      assetsBefore: 100n,
+      assetsAfter: 50n,
+      debtBeforeAssets: 100n,
+      debtAfterAssets: 50n,
+      debtRepaidAssets: 50n,
+      blockNumber: 62_692_076n,
+      blockHash: bytes("2", 32),
+      blockTime: new Date(),
+      canonical: true,
+      observedAt: new Date(),
+    }).returning();
+
+    expect(inserted?.sharesBefore).toBeNull();
+    expect(inserted?.sharesAfter).toBeNull();
+    expect(inserted?.debtRepaidAssets).toBe(50n);
   });
 
   test("rejects projected data from realized debt repayment rows", async () => {
     await expect(client`insert into realized_strategy_events
-      (id, crest_account_id, kind, transaction_hash, shares_before, shares_after, assets_before, assets_after, debt_before_assets, debt_after_assets, debt_repaid_assets, block_number, block_hash, block_time, canonical, observed_at)
-      values (${randomUUID()}, ${ids.account}, 'repay', ${bytes("0c", 32)}, 1, 0, 1, 0, 100, 100, 0, 62692076, ${bytes("02", 32)}, now(), true, now())`)
+      (id, crest_account_id, kind, transaction_hash, log_index, shares_before, shares_after, assets_before, assets_after, debt_before_assets, debt_after_assets, debt_repaid_assets, block_number, block_hash, block_time, canonical, observed_at)
+      values (${randomUUID()}, ${ids.account}, 'repay', ${bytes("0c", 32)}, 0, 1, 0, 1, 0, 100, 100, 0, 62692076, ${bytes("02", 32)}, now(), true, now())`)
       .rejects.toMatchObject({ code: "23514" });
   });
 
   test("rejects every Guardian selector outside the three-method boundary", async () => {
     const assessmentId = randomUUID();
     await client`insert into risk_assessments
-      (id, crest_account_id, policy_id, risk_engine_version, status, owner_borrow_capacity_assets, repay_capacity_assets, estimated_annual_carry_assets, estimated_spread_bps, recommended_action, canonical_input_hash, created_at)
-      values (${assessmentId}, ${ids.account}, ${ids.policy}, '1', 'NORMAL', 0, 0, 0, 0, 'none', ${bytes("0d", 32)}, now())`;
+      (id, crest_account_id, policy_id, risk_engine_version, status, owner_borrow_capacity_assets, repay_capacity_assets, estimated_annual_carry_assets, estimated_spread_bps, recommended_action, canonical_input_hash, input_json, created_at)
+      values (${assessmentId}, ${ids.account}, ${ids.policy}, '1', 'NORMAL', 0, 0, 0, 0, 'none', ${bytes("0d", 32)}, '{}'::jsonb, now())`;
     await client`insert into automation_triggers
       (id, idempotency_key, assessment_id, policy_id, action_kind, status, detected_at)
       values (${ids.trigger}, ${bytes("0e", 32)}, ${assessmentId}, ${ids.policy}, 'freeze', 'detected', now())`;
