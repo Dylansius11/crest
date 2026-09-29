@@ -231,7 +231,7 @@ The pure module returns one deterministic Guardian state/action and one separate
 - [x] Read Crest Account configuration, frozen state, and policy nonce through `@crest/chain` at the same block horizon.
 - [ ] Persist immutable assessment inputs and carry estimate. Unknown carry is null and real carry can be negative, so `estimated_annual_carry_assets` and `estimated_spread_bps` must become nullable, and the domain `projectedCarrySchema` must accept a negative amount, before the first insert.
 - [x] Reconcile `strategyCostBasisAssets` from canonical strategy deposit and withdrawal events; until it is reconciled the engine passes null and never harvests.
-- [ ] Create idempotent freeze/reserve-repay/strategy-repay triggers transactionally.
+- [x] Create idempotent freeze/reserve-repay/strategy-repay triggers transactionally.
 - [ ] Create owner additional-borrow recommendation without a Guardian trigger.
 - [ ] Handle duplicate polls, stale rate/lifecycle, vault constraint/loss, policy change, restart, and reorg.
 - [x] Attribute canonical debt reductions to realized strategy events.

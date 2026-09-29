@@ -2,11 +2,15 @@
   "name": "@crest/db",
   "version": "0.0.0",
   "private": true,
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "type": "module",
   "scripts": {
     "db:generate": "drizzle-kit generate --config drizzle.config.ts --prefix supabase",
     "typecheck": "tsc -p tsconfig.json",
-    "test:integration": "vitest run src/schema.integration.test.ts"
+    "test": "vitest run src/event-index.test.ts",
+    "test:integration": "vitest run src/schema.integration.test.ts src/assessments.integration.test.ts"
   },
   "dependencies": {
     "@crest/domain": "workspace:*",
