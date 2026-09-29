@@ -315,6 +315,22 @@ describe("degraded input", () => {
     expect(assessment.state).toBe("DEGRADED");
   });
 
+  test("an onchain owner or policy mismatch cannot authorize repayment under a stale mirror", () => {
+    const input = fixture({ debtAssets: 1_300n * USDG, frozen: true });
+    const policy = {
+      ...input.policy.compiled.config,
+      market: input.policy.compiled.route.market,
+      marketId: input.policy.compiled.route.marketId,
+      yieldVault: input.policy.compiled.route.vault,
+      owner: `0x${"e5".repeat(20)}` as const,
+    };
+    const account = observe({ ...input.account.value!, policy }, at);
+    const assessment = assessPosition({ ...input, account });
+    expect(assessment.reasons).toContain("conflict");
+    expect(assessment.repayment.strategyCapacityAssets).toBe(0n);
+    expect(planGuardianAction(assessment)).toBeNull();
+  });
+
   test("under a superseded policy nothing is repaid, because its floors and caps may no longer hold", () => {
     const input = fixture({ debtAssets: 1_300n * USDG, frozen: true });
     const assessment = assessPosition({ ...input, policy: { ...input.policy, nonce: 2n } });
