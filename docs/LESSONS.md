@@ -25,6 +25,11 @@ Rules for this file:
 
 ---
 
+## 2026-09-29 — Vault withdrawal proceeds are not invested principal (Technical)
+
+- In a regression, 100 deposited assets minted 100 shares; after yield accrual, an 11-asset withdrawal burned only 10 shares. Subtracting all 11 withdrawn assets falsely reported 89 principal instead of 90 for the remaining 90 shares.
+- Rule: reconcile remaining cost basis from the fraction of shares burned, rounding the remaining principal up. Missing or inconsistent share history makes cost basis unknown and disables harvest; only canonical receipt-backed debt reduction counts as realized repayment.
+
 ## 2026-09-29 — Policy content identity is not the onchain policy hash (Technical)
 
 - `compilePolicy` computes `contentHash` over canonical typed policy and intents, while `CrestAccount.PolicyConfigured` emits `policyHash = keccak256(abi.encode(PolicyConfig))`; the two hash different inputs and cannot be substituted. Task 7 registry tests verify activation against the emitted ABI hash and separately verify the stored typed content hash.
