@@ -226,12 +226,30 @@ importers:
 
   apps/automation:
     dependencies:
+      '@crest/chain':
+        specifier: workspace:*
+        version: link:../../packages/chain
       '@crest/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@crest/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       '@crest/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@crest/morpho':
+        specifier: workspace:*
+        version: link:../../packages/morpho
+      '@crest/policy':
+        specifier: workspace:*
+        version: link:../../packages/policy
+      '@crest/vault':
+        specifier: workspace:*
+        version: link:../../packages/vault
+      drizzle-orm:
+        specifier: 0.45.2
+        version: 0.45.2(postgres@3.4.9)
       viem:
         specifier: 2.56.8
         version: 2.56.8(typescript@7.0.2)(zod@4.6.4)

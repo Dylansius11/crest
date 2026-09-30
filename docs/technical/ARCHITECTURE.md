@@ -205,18 +205,21 @@ orphaned observations noncanonical, invalidates affected assessments, and supers
 ```mermaid
 stateDiagram-v2
   [*] --> Detected
-  Detected --> Superseded: newer policy/assessment invalidates
-  Detected --> Claimed: worker lock
-  Claimed --> Simulated
-  Simulated --> Submitted
-  Simulated --> Failed: simulation rejected
-  Submitted --> Confirmed
-  Submitted --> Failed: receipt reverted/dropped timeout
-  Confirmed --> Verified: postcondition holds
-  Confirmed --> Failed: debt/freeze postcondition absent
-  Failed --> Retryable: safe retry classification
-  Retryable --> Claimed
-  Verified --> [*]
+  Detected --> Superseded: canonical input or policy invalidated
+  Detected --> Claimed: atomic trigger and signer claim
+  Claimed --> Failed: pre-sign validation or simulation rejected
+  Claimed --> Signed: transaction hash committed before RPC send
+  Signed --> Broadcast: RPC returned matching hash
+  Signed --> Signed: send outcome unknown; no resend
+  Broadcast --> Broadcast: receipt absent or confirmation pending
+  Signed --> Completed: canonical receipt and checks pass
+  Broadcast --> Completed: canonical receipt and checks pass
+  Signed --> Failed: canonical revert or failed postcondition
+  Completed --> Signed: previously canonical receipt orphaned
+  Failed --> Signed: previously canonical revert orphaned
+  Broadcast --> Failed: canonical revert or failed postcondition
+  Completed --> [*]
+  Failed --> [*]
   Superseded --> [*]
 ```
 
@@ -228,7 +231,20 @@ Idempotency key:
 keccak256(chainId, crestAccount, policyNonce, assessmentId, actionKind)
 ```
 
-Database has one active run per key. Before submission, worker checks onchain state again; a stale trigger may become `superseded` rather than sending.
+Database enforces one run per trigger and one in-flight run per Guardian signer, across all accounts.
+An occupied signer or any unresolved signed reorg conflict leaves a new trigger detected; no lease
+expiry or automatic replay can allocate another nonce. A claimed trigger's assessment, policy, and
+canonical snapshot are rechecked before persisting a signed attempt. A stale policy, wrong
+account/route, invalidated input, or failed simulation closes an **unsigned** claim.
+Once a hash has been computed, uncertain persistence or broadcast is not retried automatically; the
+operator reconciles the same hash keylessly. Every explicit reconciliation rechecks even completed
+receipts: an orphaned block marks old receipt evidence noncanonical, restores the same signed attempt
+to pending, and appends a new receipt only if the same hash is re-mined canonically. Existing checks
+remain attributable to their original block hash, not overwritten. A signer re-lock collision
+remains blocked after the competing run ends until the orphaned hash is reconciled. Post-state is
+checked against the canonical receipt block and original pinned simulation block hash before and
+after reads. A protective freeze reads account authority without Morpho debt or vault liquidity;
+repayment alone requires those values.
 
 ## 9. Automation signer
 
@@ -249,30 +265,31 @@ MVP may use one isolated hot Guardian key because its onchain authority is debt-
 sequenceDiagram
   participant M as Monitor
   participant D as DB
-  participant G as Guardian
+  participant G as Custos
   participant C as Crest Account
   participant V as Fixed vault
   participant B as Morpho
-
-  M->>D: assessment + freeze/repay trigger
-  G->>D: atomically claim trigger
-  G->>C: refresh policy, debt, reserve, vault liquidity
-  G->>C: simulate exact permitted action
-  G->>C: freezeBorrowing
-  C-->>D: canonical freeze receipt
-  alt idle reserve selected
-    G->>C: repayFromReserve(max)
-  else fixed strategy selected
-    G->>C: repayFromStrategy(max)
-    C->>V: withdraw to Crest Account
+  M->>D: canonical assessment and one permitted trigger
+  G->>D: atomically claim trigger and exclusive signer
+  G->>C: pin head; verify bytecode, policy, debt, reserve, vault shares/liquidity
+  G->>C: simulate exact bounded selector from Guardian address
+  G->>D: commit signed hash, selector, calldata and simulation block/hash
+  G->>C: broadcast signed zero-value transaction once
+  G->>C: later fetch canonical receipt and independent pre/post-state
+  alt reserve repayment
+    C->>B: repay own accrued debt
+  else strategy repayment
+    C->>V: withdraw only to Crest Account
+    C->>B: repay own accrued debt
   end
-  C->>B: repay own accrued debt
-  C-->>D: debt/vault/reserve event evidence
-  G->>B: independently read post-state
-  G->>D: verified only if debt decreased and policy constraints held
+  G->>D: persist receipt and debt/floor/receiver/beneficiary checks
 ```
 
-If repayment fails, borrowing remains frozen after a confirmed freeze. Retries require a new assessment and fresh simulation; partial vault liquidity is a normal bounded outcome, not permission to sell collateral.
+Freeze and repayment are distinct triggers. A protective freeze needs neither debt nor vault liquidity;
+unavailable external vault reads cannot disable `freezeBorrowing()`. A confirmed freeze remains effective
+even if a later repayment reverts or stays uncertain. Partial withdrawal liquidity bounds repayment;
+it is never permission to sell collateral or change routes. Unknown signed transactions stay pending
+until explicitly reconciled; there is no dropped-transaction timeout, lease takeover, or automatic resend.
 
 ## 11. Risk engine
 

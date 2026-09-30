@@ -58,6 +58,7 @@ export function verifyGuardianAuthority(
   state: OnchainAccountState,
   expectation: GuardianExpectation,
   chainId: number,
+  proof: { accountCodeHashMatches: boolean; routeQualified: boolean },
 ): AuthorityReport {
   const surface = guardianSurface(abi);
   const expectedSurface = [...GUARDIAN_SELECTORS].sort();
@@ -78,6 +79,8 @@ export function verifyGuardianAuthority(
       state.guardian.toLowerCase() !== state.owner.toLowerCase(),
       `owner ${state.owner}`,
     ),
+    check("deployed account bytecode matches registered code hash", proof.accountCodeHashMatches, proof.accountCodeHashMatches ? "registered bytecode" : "account code mismatch"),
+    check("manifest and onchain route are qualified", proof.routeQualified, proof.routeQualified ? "qualified route" : "route mismatch"),
     check(
       "compiled ABI exposes exactly the three Guardian methods",
       surface.length === expectedSurface.length && surface.every((signature, index) => signature === expectedSurface[index]),

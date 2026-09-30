@@ -1,6 +1,6 @@
 # Crest Installation and Development Enablement
 
-Build stages 1–7 are implemented locally; a live monitor requires a deployed Crest Account, a registered exact route, and a canonically activated owner policy. See [BUILD-PLAN](../BUILD-PLAN.md) for later stages.
+Build stages 1–8 are implemented and proven locally; a live monitor or Guardian requires a deployed Crest Account, a registered exact route, a canonically activated owner policy, and a reviewed runtime RPC. See [BUILD-PLAN](../BUILD-PLAN.md) for later stages.
 
 ## 1. Workflow
 
@@ -157,6 +157,7 @@ CREST_ACCOUNT_ADDRESS=
 MONITOR_INTERVAL_MS=60000
 
 # Guardian process only
+GUARDIAN_EXPECTED_CHAIN_ID=4663
 GUARDIAN_PRIVATE_KEY=
 GUARDIAN_EXPECTED_ADDRESS=
 GUARDIAN_ALLOWED_ACCOUNT=
@@ -341,6 +342,8 @@ pnpm --filter @crest/web dev            # Next.js owner surface on :3000
 pnpm --filter @crest/api start          # read-only route/authority API on :8787
 pnpm --filter @crest/monitor observe:once   # one confirmed-block assessment, no signing
 pnpm --filter @crest/automation doctor  # Guardian authority check; never signs
+pnpm --filter @crest/automation exec node src/main.ts run --once --trigger-id <trigger-id>
+pnpm --filter @crest/automation exec node src/main.ts reconcile --run-id <run-uuid>
 pnpm db:migrate
 pnpm generate
 pnpm verify
@@ -360,8 +363,26 @@ and at most one idempotent Guardian trigger. No account is fabricated or registe
 `pnpm --filter @crest/monitor start` for continuous polling (`MONITOR_INTERVAL_MS`, default 60000 ms); `--once`
 exits on any registry, route, or RPC failure. A read-only monitor must not receive the Guardian key.
 
-`@crest/automation` requires `ROBINHOOD_CHAIN_RPC_URL`; its doctor additionally requires
-`GUARDIAN_EXPECTED_ADDRESS` and `GUARDIAN_ALLOWED_ACCOUNT`. Do not run the Guardian in the monitor process.
+`@crest/automation doctor` requires `ROBINHOOD_CHAIN_RPC_URL`, `DATABASE_URL`, `GUARDIAN_EXPECTED_ADDRESS`,
+and `GUARDIAN_ALLOWED_ACCOUNT`. It checks the active registered account bytecode, exact Morpho/vault/token
+code hashes, vault asset, current policy/route, and qualified manifest at one fresh block; it never loads
+a key or signs. A degraded vault or Morpho read prevents a full-route attestation.
+`run --once` also requires
+`GUARDIAN_EXPECTED_CHAIN_ID=4663`, `GUARDIAN_PRIVATE_KEY`, and an explicit detected trigger ID.
+`reconcile --run-id` requires the same route, chain, account, Guardian, RPC and database settings, but
+**not** the key. Keep the key only in the isolated Guardian process, never in the monitor.
+`run` signs at most one action; `pending` or `uncertain` requires operator inspection of the persisted hash
+and explicit keyless reconciliation. Never rerun a claimed trigger, replace its nonce, or resend uncertain bytes.
+`failed` or `no_pending` exits nonzero. An unseen hash stays pending, not \"dropped\" by elapsed time.
+Keyless reconciliation rechecks already recorded receipts: if a previously canonical block is orphaned,
+the old receipt/check evidence remains, the same signed hash returns to pending, and any new canonical receipt
+is appended. If another in-flight action already owns the signer, the re-lock fails closed; even after that
+action finishes, new claims remain blocked until the orphaned hash is reconciled. Resolve it explicitly
+without deleting history. Compare canonical receipt and original simulation hashes across post-state reads
+before treating evidence as verified. The signer lock permits one in-flight run per Guardian across
+accounts; an occupied signer leaves other triggers detected. On an existing database with conflicting
+in-flight runs, the additive unique-index migration fails rather than deleting runs: reconcile or resolve
+the conflicting signed attempts before migrating.
 
 `pnpm smoke:adapters` runs every Task 5 adapter once, read-only, at a freshly pinned block and writes all
 observations to `.tmp/adapter-smoke.json`; it exits 1 on any identity or route failure. The two accounts are

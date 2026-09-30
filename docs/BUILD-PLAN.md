@@ -249,24 +249,36 @@ Replay creates no duplicate trigger. Projected fields never create realized repa
 
 **Files**
 
-- Create `apps/automation/src/{claim,validate,simulate,submit,reconcile,postconditions}.ts`
-- Create Guardian database repository/tests
+- Implement `apps/automation/src/{main,worker,state,validate,simulate,submit,reconcile,postconditions}.ts`
+- Implement Guardian claim/receipt repository, persistence proofs, and additive PostgreSQL migrations
 
 **Steps**
 
-- [ ] Start only through an explicit command with expected chain/account/Guardian.
-- [ ] Atomically claim by idempotency key.
-- [ ] Refresh policy nonce, freeze, debt, reserve, vault shares/assets, and generation-appropriate withdrawal liquidity.
-- [ ] Permit exactly three contract selectors.
-- [ ] Simulate from Guardian address.
-- [ ] Persist attempt/hash before retry decisions.
-- [ ] Reconcile canonical receipt plus Crest/Morpho/vault post-state.
-- [ ] Require debt decrease and corresponding floors/receiver/beneficiary checks.
-- [ ] Test duplicate delivery, restart, dropped/reverted transaction, changed policy, withdrawal constraint, and no-debt state.
+- [x] Start only through an explicit command with expected chain/account/Guardian.
+- [x] Atomically claim by idempotency key and lock the signer across distinct triggers.
+- [x] Refresh exact policy nonce and freeze state; repayment also requires fresh debt, reserve, vault shares/assets, and generation-appropriate withdrawal liquidity. Protective freeze requires neither Morpho debt nor vault liquidity.
+- [x] Permit exactly three contract selectors.
+- [x] Simulate from Guardian address.
+- [x] Persist signed attempt/hash and pinned simulation block hash before broadcast or retry decisions.
+- [x] Reconcile canonical receipt plus Crest/Morpho/vault post-state, including orphaned and re-mined receipts without replacing evidence.
+- [x] Require debt decrease and corresponding floors/receiver/beneficiary checks.
+- [x] Test duplicate delivery, restart, unseen/reverted transaction, changed policy, withdrawal constraint, no-debt freeze/repay, and signer collision.
 
 **Acceptance**
 
 Compromised API/monitor cannot make Guardian borrow or redirect value; duplicate triggers submit at most once.
+
+**Local evidence (2026-09-30):** The one-shot CLI rejects missing explicit settings before RPC or signing;
+the worker persists the signed hash before broadcast, never resends an uncertain attempt, verifies both
+simulation and receipt block hashes around post-state reads, and isolates debtless/degraded protective
+freezes from Morpho debt and vault liquidity failures. Compromised trigger action/receiver requests cannot
+escape the three compiled Guardian selectors or fixed account. An isolated PostgreSQL database migrated
+through the signer and receipt-ledger migrations and passed 25/25 integration checks, including concurrent
+signer contention, reorg/re-mining, unsigned claim invalidation before attempt persistence, and an orphaned
+receipt that blocks future claims until its signed hash is reconciled. `pnpm verify`: 14/14 workspace
+typechecks and 23/23 workspace tasks passed, including 47/47 automation tests.
+No live Guardian transaction was submitted: no deployed registered account, owner policy, runtime RPC,
+or Guardian key was provided for this local proof. Keep live canary execution in Task 10.
 
 ## Task 9: Expose typed API and web flows
 

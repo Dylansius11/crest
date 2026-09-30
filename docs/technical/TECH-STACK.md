@@ -13,9 +13,9 @@
 | Contracts | Solidity + Foundry + OpenZeppelin | Narrow account and invariant/fork proof |
 | API | Hono on Node | Bounded typed HTTP surface |
 | Validation | Zod + generated JSON Schema | Policy and external trust boundaries |
-| Data | Supabase Postgres + Drizzle | Hosted relational audit state, bigint-safe schema, and job leases |
+| Data | Supabase Postgres + Drizzle | Hosted relational audit state, bigint-safe schema, and signer-exclusive Guardian claims |
 | Monitor | Node worker | Block/rate/lifecycle observations and assessments |
-| Guardian | Isolated Node process with viem wallet client | Three fixed debt-protection selectors |
+| Guardian | Isolated Node process with viem local signing | Three fixed debt-protection selectors; one signed hash persisted before a one-shot RPC send |
 | Math | Native bigint + audited Morpho/vault semantics | Exact units and rounding |
 | Tests | Vitest, Foundry, Playwright | Pure, onchain/fork, and user-flow behavior |
 | Observability | Structured logs + OpenTelemetry-compatible metrics | Route/action provenance |
@@ -89,6 +89,11 @@ Use the newest stable **compatible** release, not every newest tag independently
 | OpenTelemetry API | `1.9.1` | Stable telemetry interface |
 
 Pin JavaScript packages without range prefixes in the lockfile-backed workspace. Pin Foundry by release/commit and Solidity in `foundry.toml`. Before accepting any refresh, run install, typecheck, build, focused tests, ABI diff, and pinned-fork smoke flow together; “latest” is not evidence of compatibility or safety.
+
+`@crest/automation` reuses the pinned `viem 2.56.8`, `drizzle-orm 0.45.2`, and workspace
+`@crest/chain`, `@crest/contracts`, `@crest/db`, `@crest/domain`, `@crest/morpho`, `@crest/policy`,
+and `@crest/vault` packages. Task 8 adds no new external package or version pin. The signer is an
+ephemeral viem `PrivateKeyAccount`, not a generic wallet executor or additional service.
 
 Primary version sources: [Node releases](https://nodejs.org/en/about/previous-releases), [npm registry](https://www.npmjs.com/), [Supabase CLI releases](https://github.com/supabase/cli/releases), [PostgreSQL versioning](https://www.postgresql.org/support/versioning/), [Solidity releases](https://github.com/argotorg/solidity/releases), and [Foundry releases](https://github.com/foundry-rs/foundry/releases).
 
