@@ -25,6 +25,17 @@ Rules for this file:
 
 ---
 
+## 2026-09-30 — A signed Guardian attempt outlives its first receipt (Technical)
+
+- Local PostgreSQL integration verified two independent trigger claims using one signer need a partial in-flight unique index; without it, two workers can sign the same pending nonce. The reorg regression also reproduced a later claim slipping through after a conflicting run finished, while the orphan's signed hash was still unresolved.
+- A canonical receipt can later be orphaned. The original signed hash, simulation block hash, receipt block hash, and postcondition block hash must remain separately attributable; keyless reconciliation can append re-mined evidence but must never auto-resend. A claimed trigger's assessment and snapshot may be invalidated before an attempt is persisted.
+- Rule: claim exclusively per signer, persist the hash before send, reject new claims while any signed reorg conflict remains unresolved, and recheck the claimed evidence immediately before persisting an attempt. Retain orphaned receipt/check rows and never auto-resend.
+
+## 2026-09-30 — Protective freezes cannot depend on vault liquidity (Technical)
+
+- Local regressions reproduced `maxWithdrawableStrategyAssets` and `currentDebtAssets` failures aborting an otherwise valid `freezeBorrowing`; another reproduced a debtless degraded account whose monitor requested freeze but Guardian validation rejected it.
+- Rule: read pinned account identity/policy/frozen state for freeze without probing Morpho debt or the vault; debt, reserve, and vault evidence are nullable until needed for repayment. A zero-debt account may still be frozen, but never repaid.
+
 ## 2026-09-30 — A replayed block hash must not reuse conflicting observations (Technical)
 
 - Same-block polls could silently reuse position and strategy snapshot IDs when a provider returned different borrow shares or withdrawable assets; focused database regressions reproduced both collisions.

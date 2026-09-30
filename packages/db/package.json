@@ -10,7 +10,7 @@
     "db:generate": "drizzle-kit generate --config drizzle.config.ts --prefix supabase",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run src/event-index.test.ts",
-    "test:integration": "vitest run src/schema.integration.test.ts src/assessments.integration.test.ts"
+    "test:integration": "vitest run src/schema.integration.test.ts src/assessments.integration.test.ts src/guardian.integration.test.ts"
   },
   "dependencies": {
     "@crest/domain": "workspace:*",
