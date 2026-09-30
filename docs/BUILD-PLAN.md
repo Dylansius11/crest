@@ -227,18 +227,23 @@ The pure module returns one deterministic Guardian state/action and one separate
 
 - [x] Index Crest, Morpho, and vault events with block hashes/cursors.
 - [x] Activate policy mirror only after canonical event.
-- [ ] Poll coherent market/account/vault state and timestamped advisory sources through the Task 5 adapters.
+- [x] Poll coherent market/account/vault state and timestamped advisory sources through the Task 5 adapters.
 - [x] Read Crest Account configuration, frozen state, and policy nonce through `@crest/chain` at the same block horizon.
-- [ ] Persist immutable assessment inputs and carry estimate. Unknown carry is null and real carry can be negative, so `estimated_annual_carry_assets` and `estimated_spread_bps` must become nullable, and the domain `projectedCarrySchema` must accept a negative amount, before the first insert.
+- [x] Persist immutable assessment inputs and carry estimate. Unknown carry is null and real carry can be negative, so `estimated_annual_carry_assets` and `estimated_spread_bps` must become nullable, and the domain `projectedCarrySchema` must accept a negative amount, before the first insert.
 - [x] Reconcile `strategyCostBasisAssets` from canonical strategy deposit and withdrawal events; until it is reconciled the engine passes null and never harvests.
 - [x] Create idempotent freeze/reserve-repay/strategy-repay triggers transactionally.
-- [ ] Create owner additional-borrow recommendation without a Guardian trigger.
-- [ ] Handle duplicate polls, stale rate/lifecycle, vault constraint/loss, policy change, restart, and reorg.
+- [x] Create owner additional-borrow recommendation without a Guardian trigger.
+- [x] Handle duplicate polls, stale rate/lifecycle, vault constraint/loss, policy change, restart, and reorg.
 - [x] Attribute canonical debt reductions to realized strategy events.
 
 **Acceptance**
 
 Replay creates no duplicate trigger. Projected fields never create realized repayment records.
+
+**Evidence (2026-09-30)**
+
+- `pnpm verify`: 14/14 typechecks and 23/23 workspace tasks passed; monitor 17/17 tests and indexed RPC filtering 6/6 passed. `pnpm --filter @crest/db test:integration`: 16/16 passed against local PostgreSQL.
+- The monitor CLI exits 1 without `ROBINHOOD_CHAIN_RPC_URL`, `DATABASE_URL`, and `CREST_ACCOUNT_ADDRESS`; no live Crest Account was supplied. Database-backed replay, policy activation, immutable snapshots, reorg invalidation, and projected-versus-realized separation are proven locally, not presented as live operation.
 
 ## Task 8: Implement isolated Crest Guardian
 

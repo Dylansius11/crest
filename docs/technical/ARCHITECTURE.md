@@ -191,6 +191,15 @@ flowchart TD
 
 A trigger records the exact assessment and policy version. Recalculation with new data creates a new assessment; it does not mutate the old one.
 
+The monitor first pins a confirmed block, validates the registered account code and one reviewed route, then
+replays canonical Crest, Morpho, and vault events to its block-hash cursor. Only a matching `PolicyConfigured`
+event activates a policy. The account configuration and all onchain facts are read at the same numbered block;
+HTTP rates and Robinhood lifecycle signals retain their own source/fetch/expiry times. Immutable snapshots and
+the canonical risk input are stored separately from projected carry. An assessment and its single Guardian
+trigger are inserted in one database transaction; owner borrowing remains a recommendation without a trigger.
+Receipt-confirmed `RepaidFromStrategy` events alone create realized debt-reduction rows. A cursor fork marks
+orphaned observations noncanonical, invalidates affected assessments, and supersedes unsent triggers.
+
 ## 8. Trigger state machine
 
 ```mermaid

@@ -1,6 +1,6 @@
 # Crest Installation and Development Enablement
 
-This repository currently contains planning artifacts. Install runtime dependencies only when implementation starts from [BUILD-PLAN](../BUILD-PLAN.md).
+Build stages 1–7 are implemented locally; a live monitor requires a deployed Crest Account, a registered exact route, and a canonically activated owner policy. See [BUILD-PLAN](../BUILD-PLAN.md) for later stages.
 
 ## 1. Workflow
 
@@ -153,6 +153,8 @@ DIRECT_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres
 SUPABASE_PROJECT_REF=
 ROBINHOOD_CHAIN_RPC_URL=
 ROBINHOOD_API_BASE_URL=https://api.robinhood.com/rhj
+CREST_ACCOUNT_ADDRESS=
+MONITOR_INTERVAL_MS=60000
 
 # Guardian process only
 GUARDIAN_PRIVATE_KEY=
@@ -337,7 +339,7 @@ Fixtures test adapters. They are never live demo evidence.
 ```bash
 pnpm --filter @crest/web dev            # Next.js owner surface on :3000
 pnpm --filter @crest/api start          # read-only route/authority API on :8787
-pnpm --filter @crest/monitor observe:once   # one route-drift observation, exits 1 on drift
+pnpm --filter @crest/monitor observe:once   # one confirmed-block assessment, no signing
 pnpm --filter @crest/automation doctor  # Guardian authority check; never signs
 pnpm db:migrate
 pnpm generate
@@ -350,8 +352,16 @@ forge test
 forge test --match-contract CrestAccountInvariantTest
 ```
 
-`@crest/monitor` and `@crest/automation` require `ROBINHOOD_CHAIN_RPC_URL`; the Guardian CLI additionally
-requires `GUARDIAN_EXPECTED_ADDRESS` and `GUARDIAN_ALLOWED_ACCOUNT`. Each refuses to start without them.
+`@crest/monitor` requires `ROBINHOOD_CHAIN_RPC_URL`, `DATABASE_URL`, and `CREST_ACCOUNT_ADDRESS`; the address must
+already have an active registry row and a registered owner policy. The indexer activates that policy only when
+its `policy_hash` matches a canonical `PolicyConfigured` event on the reviewed route. The poll indexes events and
+reads the account, market, vault, oracle, rates, and lifecycle, then stores immutable snapshots, an assessment,
+and at most one idempotent Guardian trigger. No account is fabricated or registered by a read-only poll. Use
+`pnpm --filter @crest/monitor start` for continuous polling (`MONITOR_INTERVAL_MS`, default 60000 ms); `--once`
+exits on any registry, route, or RPC failure. A read-only monitor must not receive the Guardian key.
+
+`@crest/automation` requires `ROBINHOOD_CHAIN_RPC_URL`; its doctor additionally requires
+`GUARDIAN_EXPECTED_ADDRESS` and `GUARDIAN_ALLOWED_ACCOUNT`. Do not run the Guardian in the monitor process.
 
 `pnpm smoke:adapters` runs every Task 5 adapter once, read-only, at a freshly pinned block and writes all
 observations to `.tmp/adapter-smoke.json`; it exits 1 on any identity or route failure. The two accounts are

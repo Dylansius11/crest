@@ -25,6 +25,11 @@ Rules for this file:
 
 ---
 
+## 2026-09-30 — A replayed block hash must not reuse conflicting observations (Technical)
+
+- Same-block polls could silently reuse position and strategy snapshot IDs when a provider returned different borrow shares or withdrawable assets; focused database regressions reproduced both collisions.
+- Rule: compare every persisted position and strategy field before reusing an immutable snapshot. A conflicting read fails closed rather than attaching stale evidence to a new assessment.
+
 ## 2026-09-30 — Viem `getLogs` ignores raw `topics` (Technical)
 
 - The Task 7 indexer passed a `topics` property to viem's public `getLogs`, but viem v2.56.8 did not forward it to `eth_getLogs`. An RPC-capturing regression reproduced empty filters, which would scan entire Morpho and vault contracts each poll.

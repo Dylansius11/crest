@@ -11,7 +11,16 @@
   },
   "dependencies": {
     "@crest/contracts": "workspace:*",
+    "@crest/db": "workspace:*",
     "@crest/domain": "workspace:*",
+    "@crest/chain": "workspace:*",
+    "drizzle-orm": "0.45.2",
+    "@crest/morpho": "workspace:*",
+    "@crest/policy": "workspace:*",
+    "@crest/rates": "workspace:*",
+    "@crest/risk": "workspace:*",
+    "@crest/robinhood": "workspace:*",
+    "@crest/vault": "workspace:*",
     "viem": "2.56.8"
   }
 }
