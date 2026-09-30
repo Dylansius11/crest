@@ -1,5 +1,5 @@
 import { sql, type SQL } from "drizzle-orm";
-import { decodeEventLog, toEventSelector, type Address, type Hex, type Log, type PublicClient } from "viem";
+import { decodeEventLog, formatLog, padHex, toEventSelector, toHex as toRpcHex, type Address, type Hex, type Log, type PublicClient } from "viem";
 
 /** The only Crest logs whose assets affect invested principal. */
 type StrategyEventKind = "BorrowedAndDeployed" | "StrategyDeposited" | "StrategyWithdrawn" | "RepaidFromStrategy";
@@ -72,7 +72,7 @@ export interface EventIndexDatabase {
   transaction<T>(callback: (transaction: { execute(query: SQL): Promise<unknown> }) => Promise<T>): Promise<T>;
 }
 
-export type EventIndexPublicClient = Pick<PublicClient, "getBlock" | "getLogs" | "getTransactionReceipt">;
+export type EventIndexPublicClient = Pick<PublicClient, "getBlock" | "getTransactionReceipt" | "request">;
 
 export interface CrestEventIndexInput {
   db: EventIndexDatabase;
@@ -212,10 +212,10 @@ export async function indexCrestEvents(input: CrestEventIndexInput): Promise<{
 
   const [crestLogs, morphoBorrowLogs, morphoRepayLogs, vaultDepositLogs, vaultWithdrawLogs] = await Promise.all([
     getLogsInRanges(input.client, input.crestAccountAddress, input.deploymentBlock, input.finalizedBlock.number, [Object.keys(relevantCrestTopics) as Hex[]]),
-    getLogsInRanges(input.client, route.morphoAddress, input.deploymentBlock, input.finalizedBlock.number, [morphoBorrowTopic, input.marketId, input.crestAccountAddress]),
-    getLogsInRanges(input.client, route.morphoAddress, input.deploymentBlock, input.finalizedBlock.number, [morphoRepayTopic, null, input.crestAccountAddress]),
-    getLogsInRanges(input.client, route.vaultAddress, input.deploymentBlock, input.finalizedBlock.number, [vaultDepositTopic, input.crestAccountAddress]),
-    getLogsInRanges(input.client, route.vaultAddress, input.deploymentBlock, input.finalizedBlock.number, [vaultWithdrawTopic, null, input.crestAccountAddress]),
+    getLogsInRanges(input.client, route.morphoAddress, input.deploymentBlock, input.finalizedBlock.number, [morphoBorrowTopic, input.marketId, padHex(input.crestAccountAddress)]),
+    getLogsInRanges(input.client, route.morphoAddress, input.deploymentBlock, input.finalizedBlock.number, [morphoRepayTopic, null, null, padHex(input.crestAccountAddress)]),
+    getLogsInRanges(input.client, route.vaultAddress, input.deploymentBlock, input.finalizedBlock.number, [vaultDepositTopic, null, padHex(input.crestAccountAddress)]),
+    getLogsInRanges(input.client, route.vaultAddress, input.deploymentBlock, input.finalizedBlock.number, [vaultWithdrawTopic, null, null, padHex(input.crestAccountAddress)]),
   ]);
 
   const events = await decodeCanonicalEvents({
@@ -367,15 +367,14 @@ async function getLogsInRanges(
   topics: readonly (Hex | readonly Hex[] | null)[],
 ): Promise<readonly Log[]> {
   const logs: Log[] = [];
-  const getLogs = client.getLogs as unknown as (parameters: {
-    address: Address;
-    fromBlock: bigint;
-    toBlock: bigint;
-    topics: readonly (Hex | readonly Hex[] | null)[];
-  }) => Promise<readonly Log[]>;
   for (let start = fromBlock; start <= toBlock; start += 1_000n) {
     const end = start + 999n > toBlock ? toBlock : start + 999n;
-    logs.push(...await getLogs({ address, fromBlock: start, toBlock: end, topics }));
+    const request = client.request as unknown as (parameters: unknown) => Promise<readonly Parameters<typeof formatLog>[0][]>;
+    const result = await request({
+      method: "eth_getLogs",
+      params: [{ address, fromBlock: toRpcHex(start), toBlock: toRpcHex(end), topics }],
+    });
+    logs.push(...result.map((log) => formatLog(log) as Log));
   }
   return logs;
 }

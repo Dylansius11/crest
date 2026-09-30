@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
-import { encodeAbiParameters, encodeEventTopics, type Address, type Hex } from "viem";
+import { createPublicClient, custom, encodeAbiParameters, encodeEventTopics, padHex, toEventSelector, toHex, type Address, type Hex } from "viem";
 import { createDatabase } from "./client.ts";
 import {
   indexCrestEvents,
@@ -53,6 +53,11 @@ const strategyRepayEventAbi = [{
 
 const event = (overrides: Partial<IndexedCrestEvent> = {}): IndexedCrestEvent => ({
   id: "0x01:0", blockNumber: 10n, logIndex: 0, canonical: true, kind: "BorrowedAndDeployed", assets: 100n, shares: 100n, ...overrides,
+});
+const rpcLog = (log: { address: Address; blockHash: Hex; blockNumber: bigint; transactionHash: Hex; logIndex: number; topics: unknown; data: Hex }) => ({
+  ...log,
+  blockNumber: toHex(log.blockNumber),
+  logIndex: toHex(BigInt(log.logIndex)),
 });
 
 beforeAll(async () => {
@@ -107,6 +112,32 @@ describe("canonical Crest event accounting", () => {
     expect(isObservedStrategyDebtReduction({ canonical: true, receiptSucceeded: true, debtBeforeAssets: 100n, debtAfterAssets: 100n })).toBeNull();
   });
 
+  test("real viem client sends indexed account topics to RPC rather than scanning whole contracts", async () => {
+    const filters: Array<{ address: Address; topics: (Hex | Hex[] | null)[] }> = [];
+    const transport = custom({
+      request: async ({ method, params }: { method: string; params?: unknown[] }) => {
+        if (method !== "eth_getLogs") throw new Error(`unexpected ${method}`);
+        filters.push((params as Array<{ address: Address; topics: (Hex | Hex[] | null)[] }>)[0]!);
+        return [];
+      },
+    });
+    const rpc = {
+      ...createPublicClient({ transport }),
+      getBlock: async ({ blockNumber }: { blockNumber: bigint }) => ({ hash: hash(blockNumber), timestamp: 1_700_000_000n }),
+    };
+    const result = await indexCrestEvents({
+      db, client: rpc as never, crestAccountId: ids.account, crestAccountAddress: accountAddress,
+      marketId, deploymentBlock: 100n, finalizedBlock: { number: 100n, hash: hash(100n) },
+    });
+    expect(result.strategyCostBasisAssets).toBeNull();
+    expect(filters).toHaveLength(5);
+    expect(filters.every((filter) => filter.topics.length > 0)).toBe(true);
+    expect(filters[1]?.topics).toEqual([toEventSelector("Borrow(bytes32,address,address,address,uint256,uint256)"), marketId, padHex(accountAddress)]);
+    expect(filters[2]?.topics).toEqual([toEventSelector("Repay(bytes32,address,address,uint256,uint256)"), null, null, padHex(accountAddress)]);
+    expect(filters[3]?.topics).toEqual([toEventSelector("Deposit(address,address,uint256,uint256)"), null, padHex(accountAddress)]);
+    expect(filters[4]?.topics).toEqual([toEventSelector("Withdraw(address,address,address,uint256,uint256)"), null, null, padHex(accountAddress)]);
+  });
+
   test("decodes bounded log ranges and atomically replays canonical events into one database cursor", async () => {
     const policyLog = {
       address: accountAddress, blockHash: hash(100n), blockNumber: 100n, transactionHash: hash(101n), logIndex: 0,
@@ -129,9 +160,12 @@ describe("canonical Crest event accounting", () => {
     const ranges: Array<{ fromBlock: bigint; toBlock: bigint; topics?: unknown }> = [];
     const publicClient = {
       getBlock: async ({ blockNumber }: { blockNumber: bigint }) => ({ hash: hash(blockNumber), timestamp: 1_700_000_000n }),
-      getLogs: async ({ address: logAddress, fromBlock, toBlock, topics }: { address: Address; fromBlock: bigint; toBlock: bigint; topics?: unknown }) => {
-        ranges.push({ fromBlock, toBlock, topics });
-        return logAddress === accountAddress ? [policyLog, deployedLog, repaidLog].filter((log) => log.blockNumber >= fromBlock && log.blockNumber <= toBlock) : [];
+      request: async ({ params }: { params?: unknown[] }) => {
+        const filter = params?.[0] as { address: Address; fromBlock: Hex; toBlock: Hex; topics: unknown };
+        const fromBlock = BigInt(filter.fromBlock);
+        const toBlock = BigInt(filter.toBlock);
+        ranges.push({ fromBlock, toBlock, topics: filter.topics });
+        return filter.address === accountAddress ? [policyLog, deployedLog, repaidLog].filter((log) => log.blockNumber >= fromBlock && log.blockNumber <= toBlock).map(rpcLog) : [];
       },
       getTransactionReceipt: async ({ hash: transactionHash }: { hash: Hex }) => {
         if (transactionHash !== repaidLog.transactionHash) throw new Error("unexpected receipt");
@@ -186,9 +220,12 @@ describe("canonical Crest event accounting", () => {
         hash: blockNumber === 100n ? hash(1_100n) : blockNumber === 101n ? hash(1_101n) : blockNumber === 102n ? hash(1_102n) : hash(3_000n),
         timestamp: 1_700_000_000n,
       }),
-      getLogs: async ({ address: logAddress, fromBlock, toBlock }: { address: Address; fromBlock: bigint; toBlock: bigint }) => {
-        ranges.push({ fromBlock, toBlock });
-        return logAddress === accountAddress ? [forkPolicyLog, forkDeployedLog, forkRepaidLog].filter((log) => log.blockNumber >= fromBlock && log.blockNumber <= toBlock) : [];
+      request: async ({ params }: { params?: unknown[] }) => {
+        const filter = params?.[0] as { address: Address; fromBlock: Hex; toBlock: Hex; topics: unknown };
+        const fromBlock = BigInt(filter.fromBlock);
+        const toBlock = BigInt(filter.toBlock);
+        ranges.push({ fromBlock, toBlock, topics: filter.topics });
+        return filter.address === accountAddress ? [forkPolicyLog, forkDeployedLog, forkRepaidLog].filter((log) => log.blockNumber >= fromBlock && log.blockNumber <= toBlock).map(rpcLog) : [];
       },
       getTransactionReceipt: async ({ hash: transactionHash }: { hash: Hex }) => {
         if (transactionHash !== forkRepaidLog.transactionHash) throw new Error("unexpected receipt");
@@ -244,8 +281,14 @@ describe("canonical Crest event accounting", () => {
         hash: blockNumber === 100n ? hash(1_100n) : blockNumber === 101n ? hash(1_101n) : blockNumber === 102n ? hash(1_102n) : blockNumber === 103n ? hash(1_103n) : hash(3_000n),
         timestamp: 1_700_000_000n,
       }),
-      getLogs: async ({ address: logAddress, fromBlock, toBlock }: { address: Address; fromBlock: bigint; toBlock: bigint }) =>
-        logAddress === accountAddress ? [forkPolicyLog, forkDeployedLog, forkRepaidLog, nextPolicyLog].filter((log) => log.blockNumber >= fromBlock && log.blockNumber <= toBlock) : [],
+      request: async ({ params }: { params?: unknown[] }) => {
+        const filter = params?.[0] as { address: Address; fromBlock: Hex; toBlock: Hex };
+        const fromBlock = BigInt(filter.fromBlock);
+        const toBlock = BigInt(filter.toBlock);
+        return filter.address === accountAddress
+          ? [forkPolicyLog, forkDeployedLog, forkRepaidLog, nextPolicyLog].filter((log) => log.blockNumber >= fromBlock && log.blockNumber <= toBlock).map(rpcLog)
+          : [];
+      },
     };
     await expect(indexCrestEvents({ ...input, client: higherPolicyClient as never, finalizedBlock: { number: 2_100n, hash: hash(3_000n) } }))
       .resolves.toEqual({ strategyCostBasisAssets: 40n, indexedPolicyNonce: 2n });
@@ -257,10 +300,13 @@ describe("canonical Crest event accounting", () => {
     expect(supersededState).toEqual({ policy_status: "superseded", assessment_invalidated: true, trigger_status: "superseded" });
     const malformedClient = {
       ...forkClient,
-      getLogs: async ({ address: logAddress, fromBlock, toBlock }: { address: Address; fromBlock: bigint; toBlock: bigint }) => {
-        return logAddress === accountAddress
-          ? [forkPolicyLog, forkDeployedLog, forkRepaidLog, { ...forkPolicyLog, transactionHash: hash(104n), logIndex: 1, data: "0x" }]
-            .filter((log) => log.blockNumber >= fromBlock && log.blockNumber <= toBlock)
+      request: async ({ params }: { params?: unknown[] }) => {
+        const filter = params?.[0] as { address: Address; fromBlock: Hex; toBlock: Hex };
+        const fromBlock = BigInt(filter.fromBlock);
+        const toBlock = BigInt(filter.toBlock);
+        return filter.address === accountAddress
+          ? [forkPolicyLog, forkDeployedLog, forkRepaidLog, { ...forkPolicyLog, transactionHash: hash(104n), logIndex: 1, data: "0x" as Hex }]
+            .filter((log) => log.blockNumber >= fromBlock && log.blockNumber <= toBlock).map(rpcLog)
           : [];
       },
     };

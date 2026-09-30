@@ -25,6 +25,11 @@ Rules for this file:
 
 ---
 
+## 2026-09-30 — Viem `getLogs` ignores raw `topics` (Technical)
+
+- The Task 7 indexer passed a `topics` property to viem's public `getLogs`, but viem v2.56.8 did not forward it to `eth_getLogs`. An RPC-capturing regression reproduced empty filters, which would scan entire Morpho and vault contracts each poll.
+- Rule: send `eth_getLogs` with explicit encoded topics and normalize its RPC logs with `formatLog`. Pad indexed account addresses to 32 bytes and filter the actual indexed `onBehalf` or `owner` position, not caller, sender, or receiver.
+
 ## 2026-09-29 — Vault withdrawal proceeds are not invested principal (Technical)
 
 - In a regression, 100 deposited assets minted 100 shares; after yield accrual, an 11-asset withdrawal burned only 10 shares. Subtracting all 11 withdrawn assets falsely reported 89 principal instead of 90 for the remaining 90 shares.
