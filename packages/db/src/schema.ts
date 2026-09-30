@@ -615,6 +615,7 @@ export const automationRuns = pgTable("automation_runs", {
   finishedAt: utc("finished_at"),
 }, (table) => [
   unique("automation_runs_trigger_unique").on(table.triggerId),
+  uniqueIndex("automation_runs_in_flight_guardian_unique").on(table.guardianAddress).where(sql`${table.status} in ('claimed', 'signed', 'broadcast')`),
   check("automation_runs_selector_allowed", sql`${table.selector} in ('freezeBorrowing()','repayFromReserve(uint256)','repayFromStrategy(uint256)')`),
   check("automation_runs_retry_nonnegative", sql`${table.retryCount} >= 0`),
 ]).enableRLS();
@@ -630,6 +631,7 @@ export const transactionAttempts = pgTable("transaction_attempts", {
   calldataHash: binary("calldata_hash").notNull(),
   decodedOperation: text("decoded_operation").notNull(),
   simulationBlockNumber: numeric78("simulation_block_number").notNull(),
+  simulationBlockHash: binary("simulation_block_hash"),
   simulationSuccess: boolean("simulation_success").notNull(),
   simulationGas: numeric78("simulation_gas"),
   nonce: numeric78("nonce"),
@@ -648,6 +650,7 @@ export const transactionAttempts = pgTable("transaction_attempts", {
   }),
   check("transaction_attempts_operation_allowed", sql`${table.decodedOperation} in ('freezeBorrowing()','repayFromReserve(uint256)','repayFromStrategy(uint256)')`),
   check("transaction_attempts_number_positive", sql`${table.attemptNumber} > 0`),
+  check("transaction_attempts_simulation_hash_present", sql`${table.simulationBlockHash} is not null`),
 ]).enableRLS();
 
 export const transactionReceipts = pgTable("transaction_receipts", {
@@ -663,7 +666,8 @@ export const transactionReceipts = pgTable("transaction_receipts", {
   observedAt: utc("observed_at").notNull(),
   reorgedAt: utc("reorged_at"),
 }, (table) => [
-  unique("transaction_receipts_attempt_unique").on(table.attemptId),
+  unique("transaction_receipts_attempt_block_unique").on(table.attemptId, table.blockHash),
+  uniqueIndex("transaction_receipts_attempt_canonical_unique").on(table.attemptId).where(sql`${table.canonical}`),
 ]).enableRLS();
 
 export const postconditionChecks = pgTable("postcondition_checks", {
@@ -677,7 +681,7 @@ export const postconditionChecks = pgTable("postcondition_checks", {
   checkedBlockHash: binary("checked_block_hash").notNull(),
   checkedAt: utc("checked_at").notNull(),
 }, (table) => [
-  unique("postcondition_checks_run_kind_unique").on(table.runId, table.kind),
+  unique("postcondition_checks_run_kind_block_unique").on(table.runId, table.kind, table.checkedBlockHash),
   index("postcondition_checks_run_id_idx").on(table.runId),
   check("postcondition_checks_kind_valid", sql`${table.kind} in ('frozen','debt_decreased','reserve_floor_held','strategy_floor_held','vault_receiver_fixed','repay_beneficiary_fixed')`),
 ]).enableRLS();

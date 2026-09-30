@@ -393,21 +393,27 @@ Versioned scenario configuration with provenance and status `illustrative/calibr
 
 ### `automation_run`
 
-One run per trigger: state machine status, Guardian address, exact selector, observed policy nonce, pre-state references, timing, failure class, and retry count.
+One run per trigger; a partial unique index on `guardian_address` for `claimed/signed/broadcast` permits
+only one in-flight signer across accounts. Terminal statuses release it; a later receipt reorg reacquires
+the same signer for the original signed hash or fails closed on a collision. Runs retain exact selector,
+observed policy nonce, timing, and failure classification.
 
 ### `transaction_attempt`
 
-Run and attempt number, chain/account/from/to, calldata hash and decoded permitted operation, simulation block/result/gas, nonce, transaction hash, submission status/error.
-
-Never store a private key or raw signature.
+Run and attempt number, chain/account/from/to, calldata hash and decoded permitted operation,
+simulation **block number and hash**, result/gas, nonce, signed transaction hash, submission status/error.
+The hash is persisted before broadcast and the signed bytes/private key are never stored.
 
 ### `transaction_receipt`
 
-Attempt ID, canonical block/hash, success/revert, gas, decoded Crest/Morpho/vault events, observed time.
+Attempt ID, observed block/hash, canonical flag, success/revert, gas, decoded Crest/Morpho/vault events,
+observed/reorged time. The `(attempt_id,block_hash)` pair is immutable and only one canonical receipt
+may exist per attempt; an orphaned receipt stays recorded with `canonical=false`.
 
 ### `postcondition_check`
 
-Kinds:
+One row per `(run_id,kind,checked_block_hash)`; re-mining the same signed hash appends new checks while
+orphaned block evidence remains auditable. Kinds:
 
 - `frozen`;
 - `debt_decreased`;
@@ -416,7 +422,7 @@ Kinds:
 - `vault_receiver_fixed`;
 - `repay_beneficiary_fixed`.
 
-A run is verified only when every required check passes.
+A run is verified only when the current canonical receipt and every required postcondition pass.
 
 ## 9. Indexing and reorgs
 
