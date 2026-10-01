@@ -25,6 +25,12 @@ Rules for this file:
 
 ---
 
+## 2026-10-01 — The code graph cannot see Solidity, and an incremental rebuild renames communities (Technical)
+
+- The local `graphify` build extracts code with tree-sitter grammars for TypeScript, JavaScript, Python, Java, C/C++ and others, but ships none for Solidity. `contracts/src/CrestAccount.sol`, `contracts/src/libraries/VaultV2Liquidity.sol`, the deployment script, and the Foundry tests contribute zero nodes, and the post-commit rebuild reports `.sol` as an unclassified extension. Contract behavior reaches the graph only through `docs/technical/SMART-CONTRACT.md`.
+- A post-commit rebuild re-runs clustering. When the community set changes, saved names are discarded and every community is renamed after its hub node, so a curated `graphify-out/.graphify_labels.json` must be re-mapped by member overlap and re-applied before the report is quoted.
+- Rule: treat `graphify-out/` as a navigation aid for the TypeScript, SQL, and document layers only; read `contracts/src/` directly for contract behavior. After any rebuild that changes the community count, re-check that community names are still the curated ones.
+
 ## 2026-10-01 — Resolve manifest paths from the module, not a package command's working directory (Technical)
 
 - `pnpm --filter @crest/api start` runs inside `apps/api`. The read-only API failed with `ENOENT` when `loadDeploymentManifest()` looked for `apps/api/config/deployment-manifest.json`; a module-relative path successfully started the service and served the recorded registry from local PostgreSQL.

@@ -1,0 +1,62 @@
+# Graphify corpus control for the Crest monorepo.
+#
+# Semantics: `.gitignore` is read first and `.graphifyignore` last, so this file can only
+# exclude more than `.gitignore` already does, never re-include a path. Patterns follow
+# the gitignore spec and are anchored to the directory that contains this file.
+
+# Graphify output. Never re-ingest the artifact that is derived from the corpus.
+graphify-out/
+
+# Version control and machine-local state.
+.git/
+.github/
+.turbo/
+.tmp/
+
+# Dependency and build trees. `contracts/lib` holds Foundry submodules (forge-std,
+# morpho-blue, openzeppelin-contracts) that `.gitignore` does not cover; graphing them
+# would bury Crest's own sources under thousands of vendored files.
+node_modules/
+contracts/lib/
+contracts/out/
+contracts/cache/
+contracts/broadcast/
+dist/
+.next/
+coverage/
+*.tsbuildinfo
+
+# Machine-generated lockfiles: high volume, no architectural content.
+pnpm-lock.yaml
+skills-lock.json
+
+# Generated contract artifact (ABI plus creation bytecode) emitted from contracts/src by
+# packages/contracts/src/generate.ts. The generator and the Solidity sources stay in the graph.
+packages/contracts/generated/
+
+# Vendored skill documentation installed by the skills CLI (see skills-lock.json). These are
+# third-party framework and styling handbooks, not Crest sources, so they would form large
+# generic communities that pull codebase queries away from the project's own graph. The
+# Crest-authored and protocol-integration skills under `.agents/skills/` stay in the corpus
+# because the repository routes real work through them.
+.agents/skills/vercel-react-best-practices/
+.agents/skills/shadcn/
+.agents/skills/migrate-radix-to-base/
+.agents/skills/gsap-core/
+.agents/skills/gsap-frameworks/
+.agents/skills/gsap-performance/
+.agents/skills/gsap-plugins/
+.agents/skills/gsap-react/
+.agents/skills/gsap-scrolltrigger/
+.agents/skills/gsap-timeline/
+.agents/skills/gsap-utils/
+.agents/skills/SOURCES.md
+.agents/skills/THIRD_PARTY_NOTICES.md
+
+# Binary design reference and raster brand assets: not text, and they carry no code structure
+# for the graph to relate.
+reference/
+**/*.png
+**/*.jpg
+**/*.jpeg
+**/*.webp

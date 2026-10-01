@@ -19,3 +19,7 @@ contracts/broadcast/
 reference/*.tsbuildinfo
 
 *.tsbuildinfo
+
+# Graphify knowledge-graph output. Derived from the corpus by `graphify .`;
+# see .graphifyignore for what the corpus includes.
+graphify-out/
