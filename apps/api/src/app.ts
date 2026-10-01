@@ -1,4 +1,15 @@
+import { fileURLToPath } from "node:url";
 import { Hono } from "hono";
+
+import {
+  createRecordedAccountReader,
+  parsePublicAddress,
+  type AccountPositionResponse,
+  type AccountRegistryResponse,
+  type RecordedAccountReader,
+} from "./accounts.ts";
+
+import { createDatabase } from "@crest/db";
 
 import { crestAccountAbi, GUARDIAN_SELECTORS } from "@crest/contracts";
 import { loadDeploymentManifest } from "@crest/contracts/manifest/file";
@@ -47,6 +58,12 @@ export interface AuthorityResponse {
   stateChanging: string[];
 }
 
+export type { AccountPositionResponse, AccountRegistryResponse, RecordedAccount, RecordedAccountReader } from "./accounts.ts";
+
+export interface CreateAppOptions {
+  accounts?: RecordedAccountReader;
+}
+
 function stateChangingSignatures(): string[] {
   return crestAccountAbi
     .filter((entry) => entry.type === "function" && entry.stateMutability !== "view" && entry.stateMutability !== "pure")
@@ -54,7 +71,7 @@ function stateChangingSignatures(): string[] {
     .sort();
 }
 
-export function createApp(manifest: DeploymentManifest): Hono {
+export function createApp(manifest: DeploymentManifest, options: CreateAppOptions = {}): Hono {
   const app = new Hono();
 
   app.get("/health", (context) => context.json({ status: "ok", service: "crest-api" }));
@@ -101,11 +118,34 @@ export function createApp(manifest: DeploymentManifest): Hono {
     return context.json(body);
   });
 
+  app.get("/v1/accounts", async (context) => {
+    const owner = context.req.query("owner");
+    const address = owner ? parsePublicAddress(owner) : null;
+    if (!address) return context.json({ error: "invalid owner address" }, 400);
+    if (!options.accounts) return context.json({ error: "recorded account reader unavailable" }, 503);
+    const body: AccountRegistryResponse = { evidence: "recorded", accounts: await options.accounts.listByOwner(address) };
+    return context.json(body);
+  });
+
+  app.get("/v1/accounts/:address/position", async (context) => {
+    const address = parsePublicAddress(context.req.param("address"));
+    if (!address) return context.json({ error: "invalid account address" }, 400);
+    if (!options.accounts) return context.json({ error: "recorded account reader unavailable" }, 503);
+    const position: AccountPositionResponse | null = await options.accounts.positionByAddress(address);
+    return position ? context.json(position) : context.json({ error: "account not found" }, 404);
+  });
+
   app.notFound((context) => context.json({ error: "not found" }, 404));
   return app;
 }
 
-/** Fails closed: an unreadable or invalid manifest must stop the service, never degrade it. */
+/** Fails closed: the reviewed manifest and recorded database must both be readable. */
 export async function createAppFromManifest(): Promise<Hono> {
-  return createApp(await loadDeploymentManifest());
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) throw new Error("DATABASE_URL is required");
+  const manifest = await loadDeploymentManifest(
+    fileURLToPath(new URL("../../../config/deployment-manifest.json", import.meta.url)),
+  );
+  const { db } = createDatabase(databaseUrl);
+  return createApp(manifest, { accounts: createRecordedAccountReader(db, manifest) });
 }

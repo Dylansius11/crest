@@ -339,7 +339,7 @@ Fixtures test adapters. They are never live demo evidence.
 
 ```bash
 pnpm --filter @crest/web dev            # Next.js owner surface on :3000
-pnpm --filter @crest/api start          # read-only route/authority API on :8787
+pnpm --filter @crest/api start          # read-only reviewed route and recorded-account API on :8787
 pnpm --filter @crest/monitor observe:once   # one confirmed-block assessment, no signing
 pnpm --filter @crest/automation doctor  # Guardian authority check; never signs
 pnpm --filter @crest/automation exec node src/main.ts run --once --trigger-id <trigger-id>
@@ -354,6 +354,8 @@ forge build
 forge test
 forge test --match-contract CrestAccountInvariantTest
 ```
+
+The API needs `DATABASE_URL` and starts with the repository's reviewed manifest, even when launched from `apps/api`. The web account screen forwards only `/v1/accounts` and `/v1/accounts/:address/position` through the Next.js same-origin proxy to `CREST_API_URL` (default `http://127.0.0.1:8787`). Start the API separately to inspect recorded positions; an unavailable API never becomes live data. No wallet is needed for address lookup; wallet actions additionally require a recorded account and direct onchain owner/bytecode checks.
 
 `@crest/monitor` requires `ROBINHOOD_CHAIN_RPC_URL`, `DATABASE_URL`, and `CREST_ACCOUNT_ADDRESS`; the address must
 already have an active registry row and a registered owner policy. The indexer activates that policy only when

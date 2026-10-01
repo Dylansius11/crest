@@ -23,11 +23,10 @@ Safety comes from asymmetry:
 flowchart LR
   O[Owner wallet] --> W[Crest web]
   W --> API[Crest API]
-  W --> CA[Crest Account]
+  W --> RPC
 
   subgraph Offchain[Crest services]
     API --> DB[(PostgreSQL)]
-    API --> RE[Risk and carry engine]
     MON[Monitor] --> RE
     G[Crest Guardian worker] --> CA
     MON --> DB
@@ -43,7 +42,6 @@ flowchart LR
 
   RH[Robinhood read-only APIs] --> MON
   RPC[EVM RPC] --> MON
-  API --> RPC
   RE --> G
   MORPHO --> RPC
   VAULT --> RPC
@@ -56,7 +54,7 @@ flowchart LR
 | Unit | Responsibility | Explicitly forbidden |
 |---|---|---|
 | `apps/web` | Asset intents, route verification, owner transactions, LTV/carry/debt evidence | Holding keys, presenting projections as realized |
-| `apps/api` | Versioned read/config APIs and typed orchestration | Calling Guardian methods directly |
+| `apps/api` | Reviewed route/ABI facts and canonical recorded-account reads over PostgreSQL | Signing, unverified live claims, Guardian calls |
 | `apps/monitor` | Read market, position, vault, rates, and lifecycle; create assessments/triggers | Signing, changing policy, or selecting arbitrary routes |
 | `apps/automation` | Claim trigger, simulate, sign only freeze/own-debt repayment, reconcile | Borrowing, generic calls, swaps, withdrawals to receivers |
 | `packages/risk` | Pure LTV, health, capacity, carry, withdrawal, and action calculations | Provider/database access |
@@ -69,6 +67,8 @@ flowchart LR
 | `contracts` | `CrestAccount`, fixed-vault boundary, and tests | Arbitrary execution, Guardian borrowing, swaps, collateral sales |
 
 Monitor and automation are separate processes even if they share a deployment initially. Read-provider compromise must not automatically equal signer compromise.
+
+The read-only `/v1/accounts?owner=...` registry and `/v1/accounts/:address/position` endpoint return only stored evidence for chain 4663. A position requires canonical account, Morpho-position, and vault-position snapshots at the same block/hash on the reviewed market and vault; an assessment must reference those exact snapshots and the active policy nonce. The realized repayment total sums canonical `repay` events only. Missing snapshots, economics, or repayment events remain `null`, never a projected substitute. This API does not register or deploy accounts and never signs. The web proxies these account reads on its own origin and independently checks owner/bytecode and simulates a transaction before offering a signature.
 
 ## 4. Trust boundaries
 

@@ -25,6 +25,11 @@ Rules for this file:
 
 ---
 
+## 2026-10-01 — Resolve manifest paths from the module, not a package command's working directory (Technical)
+
+- `pnpm --filter @crest/api start` runs inside `apps/api`. The read-only API failed with `ENOENT` when `loadDeploymentManifest()` looked for `apps/api/config/deployment-manifest.json`; a module-relative path successfully started the service and served the recorded registry from local PostgreSQL.
+- Rule: package-local commands must resolve checked-in route evidence relative to their own module, not assume the repository root is the process working directory. Keep the account API's same-origin proxy explicit and label its DB results `recorded`, never `live`.
+
 ## 2026-09-30 — A signed Guardian attempt outlives its first receipt (Technical)
 
 - Local PostgreSQL integration verified two independent trigger claims using one signer need a partial in-flight unique index; without it, two workers can sign the same pending nonce. The reorg regression also reproduced a later claim slipping through after a conflicting run finished, while the orphan's signed hash was still unresolved.

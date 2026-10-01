@@ -11,9 +11,12 @@
   },
   "dependencies": {
     "@crest/contracts": "workspace:*",
+    "@crest/db": "workspace:*",
     "@crest/domain": "workspace:*",
     "@hono/node-server": "2.1.1",
+    "drizzle-orm": "0.45.2",
     "hono": "4.13.8",
+    "viem": "2.56.8",
     "zod": "4.6.4"
   }
 }
