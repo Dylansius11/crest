@@ -291,8 +291,11 @@ or Guardian key was provided for this local proof. Keep live canary execution in
 The styling foundation — global stylesheet, theme tokens, and the shadcn/ui component base — is scaffolded
 separately by the product owner. Build screens on top of it; do not introduce a second styling convention.
 
+**Testnet-first gate (2026-10-01):** The checked-in manifest, chain client, and Tasks 1/4 fork proofs target mainnet 4663. They remain archival evidence, not authorization to transact on 46630. Approach 1 now has a TLS-authenticated testnet RPC, exact TSLA-labeled/Paxos USDG Morpho market and same-core Vault V2, and a **separate finalized fork-only** supply → 0.1 USDG borrow/deposit → Guardian repay → owner exit proof in `contracts/test/RobinhoodTestnetCandidate.t.sol`. Its collateral registry identity, unverified owner-controlled oracle semantics and independent price feeds, and testnet funding are unresolved; its vault allocates to a mock-collateral market, so no real-yield claim is permitted. See [testnet candidate evidence](./technical/INTEGRATIONS.md#testnet-candidate-status-2026-10-01). Before enabling the owner workspace, qualify those dependencies, record current liquidity and full manifest evidence, then migrate the manifest, verifier, contract proof, API, monitor, Guardian, and web chain together. Until then show the candidate as **fork-tested, not live/qualified**, and expose no owner signature path or mainnet switch.
+
 **Steps**
 
+- [x] Disable owner signatures while the reviewed manifest remains mainnet-only; label its landing evidence as archived.
 - [ ] Build disconnected wallet inventory with explicit asset intent.
 - [ ] Build combined market/vault verification with fallback.
 - [ ] Build draft → typed policy → exact calldata consequence preview.
@@ -302,6 +305,9 @@ separately by the product owner. Build screens on top of it; do not introduce a 
 - [ ] Make additional borrow an owner approval.
 - [ ] Cover wrong chain, unsupported route, stale rate, vault constrained/loss, frozen, no debt, floor reached, transaction failure, and postcondition failure.
 - [ ] Verify keyboard flow, reduced motion, and narrow viewport.
+
+- [ ] Qualify the exact 46630 route with authenticated RPC, current liquidity, and a pinned testnet proof before enabling transactions.
+- [ ] Migrate manifest, verifier, contract proof, API, monitor, Guardian, and web to the same qualified 46630 route, or keep all owner signatures disabled.
 
 **Acceptance**
 
@@ -331,7 +337,7 @@ A first-time judge can distinguish owner versus Guardian authority, projected ve
 
 The demo proves useful autonomous downside management without autonomous debt creation or promotional APY.
 
-## Task 11: Mainnet canary and final review
+## Task 11: Testnet canary and final review
 
 **Steps**
 
@@ -346,7 +352,7 @@ The demo proves useful autonomous downside management without autonomous debt cr
 
 **Acceptance**
 
-Live evidence proves the route and debt reduction, or the submission explicitly labels the fork boundary and reserve-only fallback.
+Canonical testnet evidence proves the route and debt reduction; if qualification fails, report the unavailable gate rather than substituting mainnet or a simulated receipt.
 
 ## Post-MVP A plan — do not start with MVP
 

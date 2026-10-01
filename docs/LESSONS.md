@@ -25,11 +25,22 @@ Rules for this file:
 
 ---
 
+## 2026-10-01 — A same-core fork route does not establish oracle trust (Technical)
+
+- A TLS-authenticated official testnet RPC through the SNI-preserving proxy returned chain 46630 and let Foundry replay a finalized TSLA-labeled/Paxos test USDG Morpho market and USDG Vault V2. The fork proved 0.1 USDG borrow/deposit, Guardian strategy repayment, and owner exit; the market had only 1 USDG shared free liquidity at the evidence block.
+- The vault's downstream position depends on a mock-collateral market, and the market oracle source and independent price feeds were not verified. The official Robinhood `/rhj/assets` registry returned 194 assets but **no 46630 deployments**, including TSLA; a verified testnet proxy named `Stock` is not enough to assert canonical issuer identity. A same-asset, same-core vault and a passing fork do not turn manually priced test tokens into an independently valued Stock Token route.
+- Rule: separate fork execution compatibility from route qualification. Keep owner signatures disabled until token provenance, oracle/feed trust, current liquidity, funding, and all chain-bound clients pass a single reviewed testnet gate; never market experimental vault shares as live yield.
+
 ## 2026-10-01 — The code graph cannot see Solidity, and an incremental rebuild renames communities (Technical)
 
 - The local `graphify` build extracts code with tree-sitter grammars for TypeScript, JavaScript, Python, Java, C/C++ and others, but ships none for Solidity. `contracts/src/CrestAccount.sol`, `contracts/src/libraries/VaultV2Liquidity.sol`, the deployment script, and the Foundry tests contribute zero nodes, and the post-commit rebuild reports `.sol` as an unclassified extension. Contract behavior reaches the graph only through `docs/technical/SMART-CONTRACT.md`.
 - A post-commit rebuild re-runs clustering. When the community set changes, saved names are discarded and every community is renamed after its hub node, so a curated `graphify-out/.graphify_labels.json` must be re-mapped by member overlap and re-applied before the report is quoted.
 - Rule: treat `graphify-out/` as a navigation aid for the TypeScript, SQL, and document layers only; read `contracts/src/` directly for contract behavior. After any rebuild that changes the community count, re-check that community names are still the curated ones.
+
+## 2026-10-01 — A faucet does not qualify a borrowing route (Technical)
+
+- The owner wallet connected to Robinhood testnet 46630 while Crest's reviewed manifest and fork proof targeted mainnet 4663. `cast chain-id` against the official testnet RPC failed TLS hostname validation on this workstation; the official Morpho address list did not identify a Robinhood testnet Blue deployment. Neither observation proves that no testnet route exists, but no 46630 AAPL/USDG market and vault have passed Crest's gate.
+- Rule: qualify tokens, five Morpho market parameters, oracle, liquidity, vault, bytecode, block, and fork independently for each network. A testnet faucet provides gas, not a market. Keep mainnet evidence visible only as historical evidence and block owner signatures until every runtime component uses the same qualified testnet route.
 
 ## 2026-10-01 — Resolve manifest paths from the module, not a package command's working directory (Technical)
 

@@ -19,7 +19,7 @@
 
 ## 2. Robinhood Chain
 
-Current official connection documentation identifies Robinhood Chain as EVM/Arbitrum-based, mainnet chain ID `4663`, with ETH as gas.
+Robinhood Chain mainnet is EVM/Arbitrum-based, chain ID `4663`; the testnet is chain ID `46630` with ETH gas. The current `deployment-manifest.json` qualifies **mainnet only**, so it cannot authorize testnet execution.
 
 Rules:
 
@@ -30,6 +30,14 @@ Rules:
 - reverify immediately before fork/mainnet demo.
 
 The event-period `deployment-manifest.json` is the reviewed route registry for contracts, apps, fork tests, and the UI.
+
+### Testnet candidate status (2026-10-01)
+
+Approach 1 is **experimental and read-only in Crest**. A TLS-authenticated connection to `https://rpc.testnet.chain.robinhood.com/rpc` through the existing SNI-preserving proxy returned chain ID `46630`. At finalized block `127234001` (`0xdb19c57b9ed59613ee39cfe11623c5305da8894485df91d959dfd72079d3d544`, 2026-10-01 17:19:22 UTC), the Morpho core [`0x2275d8C96E52C3368E062aA04F41578E9bFb99d3`](https://explorer.testnet.chain.robinhood.com/address/0x2275d8C96E52C3368E062aA04F41578E9bFb99d3) exposed TSLA-labeled collateral `0xC9f9c86933092BbbfFF3CCb4b105A4A94bf3Bd4E` against [Paxos testnet USDG](https://docs.paxos.com/guides/stablecoin/usdg/testnet) `0x7E955252E15c84f5768B83c41a71F9eba181802F`. Market `0xa5b036cccef6ef2079619c6c438aec1a223f451ef17b2304de2dd262c637d80d` uses oracle `0xb92da213f9428e19c9e212dbf50a469b959e0a8c`, IRM `0x438c11352e0e9226d71584b70d86912c389cc42c`, and 86% LLTV. It held 10 USDG supply against 9 USDG borrow: **1 USDG shared free liquidity at that block**, not a reservation or a current quote.
+
+The only explorer-verified Vault V2 among three discovered with that **exact Paxos USDG** underlying is [`0xA630E3995B74C9Dc50Bf05eF6bbBD1D7C67b9D41`](https://explorer.testnet.chain.robinhood.com/address/0xA630E3995B74C9Dc50Bf05eF6bbBD1D7C67b9D41). Its liquidity adapter `0x13D1a376d3e2d5d77e5fb52dbe1576A36bA36172` uses the **same** Morpho core; its default downstream market is `0x54f0f9c9c7428ac75b68019b2d930813e8e9df45675ed8078b5ee99535366200`, backed by a `FakeWBTC`-labeled mock collateral. The vault is not evidence of production yield or a real BTC market. The other verified Vault V2 contracts (`0x581a1A5C8102f110a2d404660239100E1aA5f805`, `0xA63A21c23Ce74612B823DF21D893B5527c215537`) returned different assets; a more liquid exact-asset vault has **not** been verified.
+
+`contracts/test/RobinhoodTestnetCandidate.t.sol` replayed a finalized fork: fork-funded 1 TSLA-labeled token, 0.1 USDG owner borrow/deposit, Guardian freeze and 0.05 USDG strategy repayment, then owner repayment and collateral withdrawal. The fork had **cheatcode-funded collateral and debt close**, not a wallet transaction, live account, APY, or a canonical receipt. Blockscout verifies the collateral's BeaconProxy/`Stock` implementation, but the [official `/rhj/assets` registry](https://api.robinhood.com/rhj/assets) returned **194 assets and zero `chainId: 46630` deployments** at 2026-10-01 17:47 UTC; TSLA listed only `0x322F0929c4625eD5bAd873c95208D54E1c003b2d` on mainnet 4663. The market oracle has unverified source; `owner()` exposes an externally controlled address, and a selector matches `setPrice(uint256)`, but its implementation and price/feed freshness are **not proven**. Crest's existing risk engine requires independent collateral/loan feeds, and this candidate supplies no verified feeds. **No `full_route` gate, testnet manifest migration, or owner signature is authorized**. The checked-in 4663 manifest remains archival, and testnet debt creation must stay unavailable until these dependencies and a current exact simulation are proven. Testnet USDG has no monetary value.
 
 ## 3. Robinhood Stock Token APIs
 
