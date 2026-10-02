@@ -25,6 +25,12 @@ Rules for this file:
 
 ---
 
+## 2026-10-02 — An Anvil fork of 46630 stops mining once upstream prunes the fork-base state (Technical)
+
+- About 25 minutes into a UI rehearsal, the `:8546` fork froze at block 127528964 and `evm_mine` failed with `failed to get storage for 0x0000F90827F1C53a10cb7A02335B175320002935 ... historical state ... is not available`, while the upstream relay kept advancing.
+- Every new block runs the EIP-2935 history-contract system call, which reads that contract's storage at the fork-base block. Once the upstream RPC prunes that historical state, the fork cannot produce any further block and cannot be recovered.
+- Rule: finish each fork rehearsal inside the upstream's state window, record evidence as you go, and restart from a fresh block (with a fresh database) rather than trying to revive a stalled fork.
+
 ## 2026-10-02 — An onchain policy hash cannot authenticate an offchain draft (Technical)
 
 - `policyHashOf(config)` hashes only the contract's configuration, while `contentHash` includes typed intents, spread, freshness, and trigger settings. Two drafts can therefore share an onchain hash but disagree on offchain Guardian behavior. The API previously accepted a public owner-address string as staging authority, letting another caller reserve the next unique policy nonce.

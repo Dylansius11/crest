@@ -260,7 +260,7 @@ The Guardian key:
 - is authorized only in explicitly allowlisted Crest Accounts;
 - can call only `freezeBorrowing()`, `repayFromReserve(uint256)`, and `repayFromStrategy(uint256)` by contract design;
 - cannot borrow, unfreeze, choose a receiver/venue, transfer, swap, sell collateral, or change policy;
-- can be revoked by owner.
+- can be revoked by owner: `setGuardian(newGuardian)` takes effect onchain immediately and advances `policyNonce`, so the old key reverts `Unauthorized`, the claim query refuses every trigger whose snapshot guardian or policy nonce no longer matches the active policy, and `doctor` fails its guardian check. Custos stays disabled for that account until the owner stages a new signed policy and configures it onchain, so the indexer can activate a policy at the current nonce.
 
 MVP may use one isolated hot Guardian key because its onchain authority is debt-reducing and non-extractive. Production signing infrastructure is added only when operations require it.
 

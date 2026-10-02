@@ -354,9 +354,11 @@ The demo proves useful autonomous downside management without autonomous debt cr
 - [ ] Deploy/verify source with small limits.
 - [ ] Execute canary owner supply → borrow-and-deploy → Guardian freeze → bounded repay → owner close.
 - [ ] Record exact hashes, blocks, policy, shares, debt, floors, and environment.
-- [ ] Test Guardian revocation, owner unfreeze, and process recovery.
+- [x] Test Guardian revocation, owner unfreeze, and process recovery.
 - [ ] Run focused Foundry, package, database, API, browser, and canary checks.
-- [ ] Confirm no Post-MVP A/B authority entered release.
+- [x] Confirm no Post-MVP A/B authority entered release.
+
+Revocation and recovery evidence comes from an Anvil fork of 46630, not canonical testnet. Process recovery: Custos `run --once` left run `172193ff-cac4-49ed-892a-c584106fcb7e` pending (tx `0x56a336…fa6f`), a second run on the same trigger returned `no_trigger`, and two reconciles in fresh processes both returned verified with one `transaction_attempts` row. The Guardian's `unfreezeBorrowing` reverted `OwnableUnauthorizedAccount`; the owner unfroze in tx `0x65eb0f640d8ad02b187f95bb6ed62decd0e20477a321e4ec81fba27f9fe45a75` (block 127528937). `setGuardian(0x0)` in tx `0xdcd32489db39b6626a69993813da75a60144cbbe3babdc54d73af5ba5a337a04` (block 127528942) advanced `policyNonce` 1→2; the old key's `freezeBorrowing` reverted `Unauthorized()`, Custos returned `no_trigger` on the monitor's next freeze trigger, and `doctor` failed its guardian check. `CrestAccount` exposes no envelope, permit, swap, sale, multicall, or delegatecall surface.
 
 **Acceptance**
 
