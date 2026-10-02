@@ -1,0 +1,110 @@
+# Crest on the shared VPS: runtime RPC relay, API, read-only monitor, and the Custos Guardian worker.
+# The database is Supabase PostgreSQL; nothing here stores state on the host.
+#
+# Secrets live outside every release in $CREST_SECRETS_DIR (api.env, monitor.env, custos.env, mode 600).
+# Only custos.env holds the Guardian key; the monitor and API never receive it.
+# `node deploy/vps/deploy.ts` sets CREST_RELEASE and CREST_SECRETS_DIR.
+name: crest
+x-logging: &logging
+  driver: json-file
+  options: { max-size: "10m", max-file: "3" }
+x-runtime: &runtime
+  image: crest:${CREST_RELEASE:?set CREST_RELEASE}
+  restart: unless-stopped
+  logging: *logging
+x-route: &route
+  # Trust the pinned Supabase root CA for sslmode=verify-full (runtime only).
+  NODE_EXTRA_CA_CERTS: /app/deploy/vps/supabase-root-2021-ca.crt
+  ROBINHOOD_CHAIN_RPC_URL: http://relay:8604
+  DEPLOYMENT_MANIFEST_PATH: /app/config/deployment-manifest.46630.json
+services:
+  relay:
+    <<: *runtime
+    build:
+      context: ../..
+      dockerfile: deploy/vps/Dockerfile
+    container_name: crest-relay-1
+    environment:
+      CREST_UPSTREAM_RPC: https://rpc.testnet.chain.robinhood.com/rpc
+      CREST_PROXY_HOST: 0.0.0.0
+      CREST_PROXY_PORT: "8604"
+      # Runtime reads must re-read unfinalized heights; a cached reorged block would hide canonical state.
+      CREST_PROXY_CACHE: "off"
+    command: ["node", "scripts/rpc-retry-proxy.ts"]
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:8604',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'eth_chainId',params:[]})}).then((r)=>r.json()).then((j)=>process.exit(j.result==='0xb626'?0:1),()=>process.exit(1))"
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
+    # Caddy forwards the web client's same-origin /rpc reads here.
+    networks: [default, edge]
+    mem_limit: 128m
+  api:
+    <<: *runtime
+    container_name: crest-api-1
+    depends_on:
+      relay: { condition: service_healthy }
+    env_file: ["${CREST_SECRETS_DIR:?set CREST_SECRETS_DIR}/api.env"]
+    environment:
+      <<: *route
+      API_PORT: "8787"
+    working_dir: /app/apps/api
+    command: ["node", "src/server.ts"]
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:8787/health').then((r)=>process.exit(r.ok?0:1),()=>process.exit(1))"
+      interval: 15s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+    # No host port. Caddy reaches it over its own Docker network only.
+    networks: [default, edge]
+    mem_limit: 256m
+  monitor:
+    <<: *runtime
+    container_name: crest-monitor-1
+    depends_on:
+      relay: { condition: service_healthy }
+    env_file: ["${CREST_SECRETS_DIR:?set CREST_SECRETS_DIR}/monitor.env"]
+    environment:
+      <<: *route
+      MONITOR_INTERVAL_MS: "60000"
+    working_dir: /app/apps/monitor
+    command: ["node", "src/main.ts"]
+    networks: [default]
+    mem_limit: 256m
+  custos:
+    <<: *runtime
+    container_name: crest-custos-1
+    depends_on:
+      relay: { condition: service_healthy }
+    env_file: ["${CREST_SECRETS_DIR:?set CREST_SECRETS_DIR}/custos.env"]
+    environment:
+      <<: *route
+      GUARDIAN_EXPECTED_CHAIN_ID: "46630"
+      GUARDIAN_POLL_INTERVAL_MS: "30000"
+      GUARDIAN_HEARTBEAT_FILE: /tmp/custos-heartbeat
+    working_dir: /app/apps/automation
+    command: ["node", "src/main.ts", "watch"]
+    healthcheck:
+      test: ["CMD", "node", "src/main.ts", "health"]
+      interval: 60s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+    networks: [default]
+    mem_limit: 256m
+networks:
+  # The shared Caddy's network, owned by another compose project on this host.
+  # External, so nothing here creates, renames, or removes it.
+  edge:
+    external: true
+    name: vps_annona

@@ -312,15 +312,18 @@ Mocks cover failure boundaries; they do not prove the claimed live route.
 ## 12. Deployment topology
 
 ```text
-Web/API deployment
-Monitor deployment without signing key
-Guardian deployment with minimally funded key
-Supabase Postgres
-Robinhood Chain RPC
-Robinhood lifecycle/rate sources
+Vercel             apps/web (Next.js); /v1/* and /rpc rewrite to the VPS API origin
+Shared VPS         Docker Compose project `crest`, image node:24.21.0-bookworm-slim + pnpm 12.4.1
+  crest-relay-1    scripts/rpc-retry-proxy.ts, cache off, testnet RPC upstream (128 MiB)
+  crest-api-1      apps/api on :8787, no host port (256 MiB)
+  crest-monitor-1  apps/monitor, no signing key (256 MiB)
+  crest-custos-1   apps/automation watch, the only container with the Guardian key (256 MiB)
+  vps-caddy-1      shared Caddy (another project); crest-api.43-129-38-115.nip.io -> API, /rpc -> relay
+Supabase Postgres  session pooler, sslmode=verify-full against the pinned Supabase root CA
+Robinhood Chain RPC, Robinhood lifecycle/rate sources
 ```
 
-Automation starts only after manifest and contract verification. Owner remains a user-controlled wallet.
+`node deploy/vps/deploy.ts` ships `git archive HEAD`, builds one image per commit on the VPS, swaps services only after their health checks pass, and keeps three releases for `--rollback`. Secrets live in `~/crest/{api,monitor,custos}.env` (mode 600), outside every release. Automation starts only after manifest and contract verification. Owner remains a user-controlled wallet.
 
 ## 13. Environment separation
 

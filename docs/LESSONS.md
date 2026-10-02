@@ -25,6 +25,13 @@ Rules for this file:
 
 ---
 
+## 2026-10-02 — Supabase pooler connections are plaintext unless the URL asks for TLS (Technical)
+
+- Postgres.js connected to the Supabase session pooler with no `sslmode` and the pooler accepted it, so the hosted database traffic was unencrypted until `?sslmode=` was added. With `sslmode=verify-full`, the connection fails `SELF_SIGNED_CERT_IN_CHAIN` until `NODE_EXTRA_CA_CERTS` points at the Supabase Root 2021 CA, whose SHA-256 matches Supabase's published `prod-ca-2021.crt`.
+- `pg_stat_ssl` cannot prove client TLS through Supavisor: it reports the pooler's own backend connection (`ssl = false`) either way. Prove TLS by making verification fail without the CA.
+- The direct host `db.<ref>.supabase.co` has only an AAAA record, so IPv4-only machines must use the session pooler for migrations as well as runtime.
+- Rule: every hosted `DATABASE_URL` carries `sslmode=verify-full` with the pinned CA, local cloud access carries at least `sslmode=require`, and TLS is proven by a failing negative check.
+
 ## 2026-10-02 — Groq strict JSON Schema is available on both Crest draft models (Technical)
 
 - [Groq Structured Outputs](https://console.groq.com/docs/structured-outputs#models-with-strict-mode-strict-true) lists both `openai/gpt-oss-120b` and `qwen/qwen3.8-27b` under `json_schema` with `strict: true`. Strict mode requires every field and `additionalProperties: false`; it constrains syntax, not Crest policy semantics.

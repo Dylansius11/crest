@@ -1,0 +1,35 @@
+# Crest - policy-controlled Stock Token borrowing (relay, API, monitor, Custos in ~/crest; deploy/vps in the Crest repo).
+# Appended to the shared /opt/annona/deploy/vps/Caddyfile at the owner's request. Nothing above it changes.
+crest-api.43-129-38-115.nip.io {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+		-Server
+	}
+	# The web client's same-origin chain reads: JSON-RPC POSTs only, bounded, through the retry relay.
+	@rpc path /rpc
+	handle @rpc {
+		@notPost not method POST
+		respond @notPost 405
+		request_body {
+			max_size 64KB
+		}
+		reverse_proxy crest-relay-1:8604 {
+			transport http {
+				dial_timeout 5s
+				response_header_timeout 30s
+			}
+		}
+	}
+	handle {
+		reverse_proxy crest-api-1:8787 {
+			transport http {
+				dial_timeout 5s
+				# A policy draft may fall back to the second model; both are bounded inside the API.
+				response_header_timeout 60s
+			}
+		}
+	}
+}

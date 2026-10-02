@@ -208,6 +208,12 @@ For hosted environments:
 - never expose database passwords, direct URLs, secret/service-role keys, or Guardian credentials to the browser;
 - record the hosted PostgreSQL major, required extensions, region, pooling mode, and migration result as deployment evidence.
 
+**Hosted Crest database (2026-10-02).** Supabase project in `ap-southeast-2`, PostgreSQL 17.11. Every runtime and migration connection uses the **session pooler** (`aws-0-<region>.pooler.supabase.com:5432`, user `postgres.<project-ref>`): the direct host `db.<project-ref>.supabase.co` publishes only an AAAA record, so IPv4-only hosts cannot reach it (this workstation's resolver returned `ENOTFOUND`; the VPS resolves it but has no global IPv6 address). Apply migrations from a workstation with `pnpm exec supabase db push --db-url "<session pooler URL>"` (dry-run first); deploys never migrate.
+
+Postgres.js connects **without TLS** unless the URL says otherwise, and the pooler accepts it. Always append `sslmode`: `?sslmode=verify-full` on hosted runtimes with `NODE_EXTRA_CA_CERTS` pointing at `deploy/vps/supabase-root-2021-ca.crt` (Supabase Root 2021 CA, SHA-256 `80:70:25:AD:…:CA:FA`, identical to Supabase's published `prod-ca-2021.crt`), or `?sslmode=require` locally. Proof: `verify-full` without the CA fails with `SELF_SIGNED_CERT_IN_CHAIN`, with it the query succeeds.
+
+The live 46630 records moved from the local stack with `pg_dump --data-only --schema=public` and one `psql -1 -v ON_ERROR_STOP=1` transaction after the four migrations; all 34 public tables matched row for row except monitor cycles written after the dump. Every table keeps RLS enabled with no policies, so the Supabase Data API exposes nothing to `anon` or `authenticated`.
+
 No Neon, Redis, or message broker. One Guardian worker plus Supabase Postgres leases/idempotency is MVP.
 
 ## 9. Deployment manifest
@@ -391,7 +397,7 @@ CREST_UPSTREAM_RPC=https://rpc.testnet.chain.robinhood.com/rpc CREST_UPSTREAM_IP
 CREST_PROXY_PORT=8604 CREST_PROXY_CACHE=off node scripts/rpc-retry-proxy.ts
 ```
 
-TLS still validates the real hostname. `CREST_PROXY_CACHE=off` is mandatory here: the fork proxy caches block-pinned reads, which would hide a reorged block or receipt from the canonical-receipt checks. The browser never talks to the RPC directly; it reads through the web app's same-origin `/rpc` rewrite, while the wallet signs through its own configured RPC.
+TLS still validates the real hostname. `CREST_PROXY_CACHE=off` is mandatory here: the fork proxy caches block-pinned reads, which would hide a reorged block or receipt from the canonical-receipt checks. The proxy listens on loopback unless `CREST_PROXY_HOST` says otherwise; only the VPS container sets `0.0.0.0` so its sibling services can reach it. The browser never talks to the RPC directly; it reads through the web app's same-origin `/rpc` rewrite, while the wallet signs through its own configured RPC.
 
 `@crest/monitor` requires `ROBINHOOD_CHAIN_RPC_URL`, `DATABASE_URL`, and `CREST_ACCOUNT_ADDRESS`; the address must
 already be enrolled (`pending_policy` or `active`) with a staged owner policy. The indexer activates the account and
@@ -527,3 +533,23 @@ The current mainnet-pinned proof does not satisfy this section. A failed testnet
 - Post-MVP B multi-market/multi-vault or collateral-sale methods.
 
 Each requires an approved scope and updated threat model.
+
+## 17. Hosted runtime on the shared VPS
+
+The relay, API, monitor, and Custos run as the Docker Compose project `crest` on the shared VPS (`deploy/vps/`). Topology and limits are in [TECH-STACK §12](./TECH-STACK.md#12-deployment-topology); the database setup is §8 above.
+
+One-time setup:
+
+1. Key-only SSH alias `crest-vps` in `~/.ssh/config` (dedicated `crest_vps_ed25519` key).
+2. `~/crest/api.env`, `~/crest/monitor.env`, `~/crest/custos.env` on the VPS, mode 600, from the `deploy/vps/*.env.example` templates. `DATABASE_URL` is the session pooler with `?sslmode=verify-full`. Generate the Guardian key on the VPS; it never leaves `custos.env`.
+3. Append `deploy/vps/Caddyfile.crest` to the shared `/opt/annona/deploy/vps/Caddyfile` after a timestamped backup, then `caddy validate` and `caddy reload` inside `vps-caddy-1`. Never edit another project's block.
+
+Deploy the committed HEAD:
+
+```bash
+pnpm deploy:vps                                   # relay, api, monitor, custos
+pnpm deploy:vps --services "relay api monitor"    # without the signer
+pnpm deploy:vps --rollback <12-char sha>          # previous release, no rebuild
+```
+
+The script verifies `https://crest-api.43-129-38-115.nip.io/health`, `/v1/route`, and a `/rpc` `eth_chainId` after the swap. Start `custos` only once the onchain Guardian equals the key in `custos.env`; otherwise `watch` exits nonzero by design and Docker keeps restarting it. Stop any local monitor or Custos pointed at the same database before the VPS copies start, so one monitor and one Guardian worker exist per account.
