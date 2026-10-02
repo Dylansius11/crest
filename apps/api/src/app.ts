@@ -1,4 +1,5 @@
 import { Hono, type Context } from "hono";
+import { BaseError } from "viem";
 
 import {
   createRecordedAccountReader,
@@ -93,6 +94,11 @@ async function readEnrollmentBody(context: Context): Promise<unknown> {
 /** A refused enrollment is the truth; an unexpected failure is unreadable infrastructure, never a default. */
 function enrollmentFailure(context: Context, error: unknown): Response {
   if (error instanceof EnrollmentError) return context.json({ error: error.message }, error.status);
+  // viem's full message embeds the RPC URL, which can carry a provider key; its short message does not.
+  // Drizzle wraps the driver error, so the cause carries the actual reason (for example a refused connection).
+  const describe = (value: unknown) => value instanceof BaseError ? value.shortMessage : value instanceof Error ? value.message.split("\n")[0] : String(value);
+  const cause = error instanceof Error && error.cause !== undefined ? `; cause: ${describe(error.cause)}` : "";
+  console.error(`enrollment failed: ${describe(error)}${cause}`);
   return context.json({ error: "enrollment failed: chain or database is unreadable" }, 503);
 }
 
