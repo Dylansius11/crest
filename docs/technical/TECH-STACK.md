@@ -312,7 +312,7 @@ Mocks cover failure boundaries; they do not prove the claimed live route.
 ## 12. Deployment topology
 
 ```text
-Vercel             apps/web (Next.js); /v1/* and /rpc rewrite to the VPS API origin
+Vercel             project `crest`, apps/web (Next.js 16, Node 24.x), CLI vercel@62.2.0; /v1/* and /rpc rewrite to the VPS API origin
 Shared VPS         Docker Compose project `crest`, image node:24.21.0-bookworm-slim + pnpm 12.4.1
   crest-relay-1    scripts/rpc-retry-proxy.ts, cache off, testnet RPC upstream (128 MiB)
   crest-api-1      apps/api on :8787, no host port (256 MiB)

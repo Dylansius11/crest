@@ -25,6 +25,12 @@ Rules for this file:
 
 ---
 
+## 2026-10-03 — The Vercel CLI uploads untracked files, and `vercel link` rewrites `.gitignore` (Technical)
+
+- A CLI deploy sends the working tree, not git's tracked set: a dry run with git's matcher showed `.env.example` and the untracked `apps/web/AGENTS.md` and `CLAUDE.md` in the upload until the root `.vercelignore` became an allowlist. The repo root also holds `.env` with live credentials.
+- `vercel link` (CLI 62.2.0) wrote `.env.local` with a `VERCEL_OIDC_TOKEN` and appended `.vercel` and `.env*` to `.gitignore`; the appended `.env*` sits after `!.env.example` and silently ignores the tracked template.
+- Rule: before any CLI upload, check the set with git's matcher (`git ls-files -c -i --exclude-from=.vercelignore` lists the tracked files dropped, `git ls-files -o --exclude-from=.vercelignore` lists the untracked files that would ship), keep `.vercelignore` an allowlist, and review the `.gitignore` diff after `vercel link`.
+
 ## 2026-10-02 — A Guardian action outruns the monitor's confirmation depth (Technical)
 
 - Right after hosted Custos froze the account (block 127691278), the monitor's next cycle was still pinned 20 blocks back, before the freeze, and wrote one more freeze trigger. Custos claimed it on the next tick and closed the run as `pre_sign_validation_or_simulation` because the live account was already frozen; the Guardian's transaction count stayed 1.

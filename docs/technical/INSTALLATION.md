@@ -553,3 +553,24 @@ pnpm deploy:vps --rollback <12-char sha>          # previous release, no rebuild
 ```
 
 The script verifies `https://crest-api.43-129-38-115.nip.io/health`, `/v1/route`, and a `/rpc` `eth_chainId` after the swap. Start `custos` only once the onchain Guardian equals the key in `custos.env`; otherwise `watch` exits nonzero by design and Docker keeps restarting it. Stop any local monitor or Custos pointed at the same database before the VPS copies start, so one monitor and one Guardian worker exist per account.
+
+## 18. Web on Vercel
+
+`apps/web` deploys from the CLI to the Vercel project `crest` (Root Directory `apps/web`, Next.js preset, Node 24.x); production is `https://crest-three-omega.vercel.app`. Project env vars, for production, preview, and development, none secret:
+
+| Variable | Value |
+|---|---|
+| `NEXT_PUBLIC_ROBINHOOD_CHAIN_ID` | `46630` |
+| `CREST_API_URL` | `https://crest-api.43-129-38-115.nip.io` |
+| `CREST_RPC_UPSTREAM` | `https://crest-api.43-129-38-115.nip.io/rpc` |
+| `ENABLE_EXPERIMENTAL_COREPACK` | `1`, so the build uses the pinned `pnpm@12.4.1` |
+
+Deploy from the repository root, never from `apps/web`: the build reads `config/` and the workspace packages.
+
+```bash
+npx vercel@62.2.0 login                  # once per machine
+npx vercel@62.2.0 link --yes --project crest
+npx vercel@62.2.0 deploy --prod --yes
+```
+
+The CLI uploads the working tree, untracked files included. The root `.vercelignore` is an allowlist of the workspace manifests, lockfile, `apps/web`, `packages`, and `config`, and drops every `.env*`, agent note, and other app's sources. `vercel link` writes `.env.local` (a short-lived OIDC token) and appends `.vercel` and `.env*` to `.gitignore`; drop those two lines, because `.env*` overrides `!.env.example` and `.gitignore` already covers both. Generated deployment URLs sit behind Vercel Authentication; the production domain is public. Rewrites are server-side, so the VPS needs no CORS rule.

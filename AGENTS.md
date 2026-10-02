@@ -30,6 +30,7 @@ Never present planned, forked, simulated, cached, or projected behavior as live.
 | `packages/db/src/` | Drizzle schema, client, integration tests | Persistence changes |
 | `supabase/` | Local Postgres config and migration history | Any schema migration |
 | `deploy/vps/` (+ root `.dockerignore`) | Runtime image, compose services, shared-Caddy block, secret templates, and `pnpm deploy:vps` | Hosting, runtime env, or service topology changes |
+| `.vercelignore` | Vercel CLI upload allowlist for `apps/web` (project `crest`) | Web hosting, upload scope, or web build inputs change |
 | `.agents/skills/` | Project-local skills | Task routing |
 | `.graphifyignore` | Corpus scope for the local knowledge graph | A path family should join or leave the graph |
 | `graphify-out/` (gitignored, machine-local) | Local code-and-document graph: `graph.json`, `GRAPH_REPORT.md` | Before answering a relationship question; never commit it |

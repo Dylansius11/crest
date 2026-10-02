@@ -12,6 +12,7 @@ coverage/
 supabase/.branches/
 supabase/.temp/
 .tmp/
+.vercel/
 contracts/out/
 contracts/cache/
 contracts/broadcast/
