@@ -1,0 +1,47 @@
+{
+  "evidenceClass": "canonical-testnet",
+  "trust": "sandbox",
+  "chainId": "46630",
+  "recordedAtUtc": "2026-10-02T16:38:00Z",
+  "finalizedThroughBlockAtRecording": "127683698",
+  "account": "0xaD8A3272c6E68cF819fe1E3b2aEFD0f8Fd5b2c75",
+  "owner": "0x712683F374Cd524F6336E87D577Fc39d1102930A",
+  "continues": "docs/evidence/canary-live-46630.json",
+  "guardianRotation": {
+    "reason": "The previous Guardian key appeared in local tool output, so a key generated on the VPS replaced it. The old key was removed from the workstation after its testnet ETH moved to the new Guardian.",
+    "previousGuardian": "0x4fd1139714C571Fc49BF26fFaA0375Adb137f271",
+    "newGuardian": "0xBBF6Ec4a16Babf20A1a14D8D8DEf7e3f6442A4dC",
+    "keyCustody": "Generated inside the crest runtime image on the VPS and written only to ~/crest/custos.env (mode 600); never printed or copied off the host.",
+    "funding": { "from": "0x4fd1139714C571Fc49BF26fFaA0375Adb137f271", "hash": "0x28cb203778c6bf95eab61c5377aeb17c70a7b92a6d0819c5ffc9a75435f0fc61", "block": "127674185", "valueEth": "0.004" },
+    "policy": {
+      "nonce": "3",
+      "policyHash": "0x378872644b919cb1e8c9f47d9bf83afeb848390b2c4773f0fcd2bea3fd871500",
+      "contentHash": "0x240f3844d51e38584827fccc00c7e7246a4a943a9e152d00f5553fe5c0fec1b7",
+      "configureTransaction": "0xd949537c63e6179b8b4b98eea2b8077b3df0ed4294ba56e27b691816cb63c08e",
+      "block": "127689896",
+      "signer": "owner, MetaMask, after the web app's simulation",
+      "limits": { "collateralCapTSLA": "1", "debtCeilingUSDG": "20", "strategyCapUSDG": "20", "reserveFloorUSDG": "0", "strategyFloorUSDG": "0", "guardianRepayCapUSDG": "10", "ltvPercent": { "lower": "5", "target": "10", "upper": "20", "critical": "40" }, "minNetSpreadBps": "0", "maxOracleDivergenceBps": "500", "harvestThresholdUSDG": "1" },
+      "triggers": { "freezeOnOracleDegraded": true, "freezeOnVaultDegraded": true, "freezeOnLifecycleDegraded": true },
+      "postcondition": { "guardian": "0xBBF6Ec4a16Babf20A1a14D8D8DEf7e3f6442A4dC", "policyNonce": "3", "indexedActiveAtMonitorCycle": "127690511" }
+    }
+  },
+  "unattendedFreeze": {
+    "worker": "Custos `watch` in container crest-custos-1 on the VPS, release 0b6eac7e558e, poll 30 s",
+    "degradedSources": { "loanFeed": ["unreadable"], "lifecycle": ["unreadable", "identity_mismatch"] },
+    "degradedSourcesNote": "Both are structural to the 46630 sandbox: the manifest has no USDG loan feed, and the testnet TSLA deployment is absent from Robinhood's asset registry. Every other source read normal.",
+    "transaction": { "step": "freezeBorrowing", "signer": "guardian", "hash": "0x86daefef76289df87bb66f2e43107d8425f1575a9a56744272e53f3c3f77971d", "block": "127691278", "calldata": "0x95b485cc", "custosRun": "739388fd-eb49-45cf-9ae3-d9230a24a6ae", "reconcile": "verified" },
+    "event": { "name": "BorrowingFrozen", "actor": "0xBBF6Ec4a16Babf20A1a14D8D8DEf7e3f6442A4dC", "policyNonce": "3" },
+    "raceAbsorbed": { "custosRun": "c0ce940a-70e9-4a2d-90a5-c0ed354a1865", "failureClass": "pre_sign_validation_or_simulation", "note": "A freeze trigger from a monitor cycle pinned before the freeze landed was claimed next tick and refused before signing because the account was already frozen." },
+    "steadyState": { "custos": "no_trigger on later ticks; health check exit 0", "monitor": "DEGRADED, recommendation owner_review, no new trigger", "guardianTransactionCount": "1" }
+  },
+  "environment": {
+    "rpc": "VPS relay crest-relay-1 (cache off) to https://rpc.testnet.chain.robinhood.com/rpc, public POST /rpc at https://crest-api.43-129-38-115.nip.io/rpc",
+    "database": "Supabase PostgreSQL 17 session pooler, sslmode=verify-full with the Supabase Root 2021 CA",
+    "services": "crest-relay-1, crest-api-1, crest-monitor-1, crest-custos-1 (Docker Compose project crest)"
+  },
+  "notReviewed": [
+    "Route trust is SANDBOX: the collateral price comes from a public MockFeed that anyone can set, there is no USDG loan feed, and the vault is idle-only.",
+    "The account stays frozen while those structural sources remain degraded; an owner unfreeze would be followed by another Guardian freeze.",
+    "Transactions after block 127683698 were canonical but not yet finalized when this file was recorded."
+  ]
+}

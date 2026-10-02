@@ -25,6 +25,12 @@ Rules for this file:
 
 ---
 
+## 2026-10-02 — A Guardian action outruns the monitor's confirmation depth (Technical)
+
+- Right after hosted Custos froze the account (block 127691278), the monitor's next cycle was still pinned 20 blocks back, before the freeze, and wrote one more freeze trigger. Custos claimed it on the next tick and closed the run as `pre_sign_validation_or_simulation` because the live account was already frozen; the Guardian's transaction count stayed 1.
+- Assessments read a confirmed block for reorg safety, while the Guardian validates against a fresh block before signing, so one stale trigger per action is expected.
+- Rule: keep pre-sign validation against fresh canonical state as the authority for every Guardian action, and read a single refused run after an action as this lag, not a fault.
+
 ## 2026-10-02 — An LLM anchors on any numeric limit it is shown (Technical)
 
 - The policy draft facts include `maximumCriticalLtvPercent: 76` so the model can respect it. GPT-OSS 120B at low effort counted bands down from it: across vague, "as much as possible", and 84%-request prompts with no current policy, 6 of 11 baseline drafts ended at critical LTV 76 (46/56/66/76, 50/60/70/76), and the "hard limit, not a target" wording did not stop it. Stating that the limit is validation only, fixing 25/35/45/55 bands unless the owner writes percentages, resetting (not clamping) an over-limit request, and naming 1 collateral / 10 loan token placeholders produced 12 of 12 expected drafts with explicit owner numbers kept.
