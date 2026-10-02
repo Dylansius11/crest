@@ -280,7 +280,7 @@ export async function indexCrestEvents(input: CrestEventIndexInput): Promise<{
 
     if (indexedPolicyNonce !== null) await transaction.execute(sql`
       update crest_accounts
-      set indexed_policy_nonce = ${indexedPolicyNonce.toString()}
+      set indexed_policy_nonce = ${indexedPolicyNonce.toString()}, status = 'active'
       where id = ${input.crestAccountId}
     `);
 
@@ -474,6 +474,7 @@ async function markReorged(transaction: { execute(query: SQL): Promise<unknown> 
   await transaction.execute(sql`update market_snapshots set canonical = false, reorged_at = ${now} where market_id = ${bytea(marketId)} and canonical and block_number >= ${block}`);
   await transaction.execute(sql`update vault_snapshots set canonical = false, reorged_at = ${now} where vault_deployment_id in (select id from vault_deployments where address = ${bytea(vaultAddress)}) and canonical and block_number >= ${block}`);
   await transaction.execute(sql`update policies set status = 'reorged', invalidated_at = ${now} where crest_account_id = ${crestAccountId} and status = 'active' and effective_block_number >= ${block}`);
+  await transaction.execute(sql`update crest_accounts set indexed_policy_nonce = 0, status = 'pending_policy' where id = ${crestAccountId}`);
   await transaction.execute(sql`update risk_assessments set invalidated_at = ${now}, invalidation_reason = 'canonical_event_reorg' where crest_account_id = ${crestAccountId} and invalidated_at is null`);
   await transaction.execute(sql`update automation_triggers t set status = 'superseded' from risk_assessments a where t.assessment_id = a.id and t.status = 'detected' and a.crest_account_id = ${crestAccountId}`);
 }

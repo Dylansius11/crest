@@ -23,10 +23,15 @@ const BACKOFF_MS = Number(process.env.CREST_PROXY_BACKOFF_MS ?? 50);
 const RETRYABLE =
   /historical state|state is not available|missing trie node|header not found|timeout|busy|rate limit|429|-32000|-32005|-32016|-32603/i;
 
-/** Block-pinned reads are immutable, so identical payloads are served from cache instead of upstream. */
+/**
+ * Block-pinned reads are immutable, so identical payloads are served from cache instead of upstream.
+ * `CREST_PROXY_CACHE=off` disables the cache: runtime services (web, API, monitor, Custos) must re-read
+ * unfinalized heights, because a cached block or call at a reorged height would hide the canonical state.
+ */
 const CACHE_PATH = process.env.CREST_PROXY_CACHE ?? ".tmp/rpc-cache.json";
+const CACHE_ENABLED = CACHE_PATH !== "off";
 const cache = new Map<string, string>(
-  existsSync(CACHE_PATH) ? (Object.entries(JSON.parse(readFileSync(CACHE_PATH, "utf8")) as Record<string, string>)) : [],
+  CACHE_ENABLED && existsSync(CACHE_PATH) ? (Object.entries(JSON.parse(readFileSync(CACHE_PATH, "utf8")) as Record<string, string>)) : [],
 );
 // Head-relative tags, and methods whose answer moves with the head even without a tag, are never immutable.
 const MUTABLE =
@@ -61,7 +66,7 @@ function post(payload: string): Promise<{ status: number; body: string }> {
 }
 
 async function forward(payload: string): Promise<{ status: number; body: string }> {
-  const cacheable = !MUTABLE.test(payload);
+  const cacheable = CACHE_ENABLED && !MUTABLE.test(payload);
   const hit = cacheable ? cache.get(payload) : undefined;
   if (hit !== undefined) {
     served += 1;
@@ -111,11 +116,11 @@ const server = createServer((request, response) => {
 });
 
 server.listen(PORT, "127.0.0.1", () => {
-  console.log(`rpc-retry-proxy listening on http://127.0.0.1:${PORT} -> ${UPSTREAM} (retries ${ATTEMPTS})`);
+  console.log(`rpc-retry-proxy listening on http://127.0.0.1:${PORT} -> ${UPSTREAM} (retries ${ATTEMPTS}, cache ${CACHE_ENABLED ? CACHE_PATH : "off"})`);
 });
 
 process.on("SIGINT", () => {
-  writeFileSync(CACHE_PATH, JSON.stringify(Object.fromEntries(cache)), "utf8");
+  if (CACHE_ENABLED) writeFileSync(CACHE_PATH, JSON.stringify(Object.fromEntries(cache)), "utf8");
   console.log(`rpc-retry-proxy retried ${retried} upstream requests, served ${served} from cache`);
   server.close(() => process.exit(0));
 });

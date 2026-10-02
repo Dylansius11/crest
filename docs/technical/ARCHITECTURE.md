@@ -68,7 +68,9 @@ flowchart LR
 
 Monitor and automation are separate processes even if they share a deployment initially. Read-provider compromise must not automatically equal signer compromise.
 
-The read-only `/v1/accounts?owner=...` registry and `/v1/accounts/:address/position` endpoint return only stored evidence for chain 4663. A position requires canonical account, Morpho-position, and vault-position snapshots at the same block/hash on the reviewed market and vault; an assessment must reference those exact snapshots and the active policy nonce. The realized repayment total sums canonical `repay` events only. Missing snapshots, economics, or repayment events remain `null`, never a projected substitute. This API does not register or deploy accounts and never signs. The web proxies these account reads on its own origin and independently checks owner/bytecode and simulates a transaction before offering a signature.
+The `/v1/accounts?owner=...` registry and `/v1/accounts/:address/position` endpoint return stored evidence for the **active manifest chain** selected by `DEPLOYMENT_MANIFEST_PATH`. A position requires canonical account, Morpho-position, and vault-position snapshots at the same block/hash on that route; an assessment must reference those snapshots and its active policy nonce. The realized repayment total sums canonical `repay` events only. Missing snapshots, economics, or repayment events remain `null`, never a projected substitute. The API also registers a canonical owner deployment receipt and stages a pending typed policy; only the monitor's matching canonical `PolicyConfigured` event activates it. The API never deploys, signs, or activates policy from an HTTP request.
+
+The default active route is the **46630 SANDBOX** manifest. Its testnet transactions are signed on 46630, but its public MockFeed collateral input, missing loan feed, idle-only vault, and disclosures mean it is never presented as reviewed. Mainnet 4663 remains registered as reviewed evidence, but runtime signing is disabled there.
 
 ## 4. Trust boundaries
 

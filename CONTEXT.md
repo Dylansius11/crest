@@ -4,7 +4,7 @@ Use this file to orient an agent with no prior conversation. It captures non-obv
 
 ## 1. What Crest is
 
-Crest is an Arbitrum Open House 2026 product deployed on Robinhood Chain if one exact real market passes runtime verification.
+Crest is an Arbitrum Open House 2026 product targeting Robinhood Chain **testnet 46630** first, only if one exact real testnet market and vault pass runtime verification. The checked-in 4663 manifest and fork proof are historical mainnet evidence, not testnet signing authority; the owner page remains non-transactional until a separately qualified 46630 route replaces all network bindings.
 
 > Crest lets an owner keep exposure to one supported Robinhood Stock Token, borrow USDG through one verified Morpho market, deploy eligible USDG into one fixed yield vault, and authorize Crest Guardian to freeze or repay—but never increase debt—in MVP.
 

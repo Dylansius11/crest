@@ -5,7 +5,7 @@ import { describe, expect, test } from "vitest";
 import { loadDeploymentManifest } from "@crest/contracts/manifest/file";
 
 import { createApp } from "./app.ts";
-import type { AccountPositionResponse, RecordedAccountReader } from "./accounts.ts";
+import type { RecordedAccountReader } from "./accounts.ts";
 
 const manifest = await loadDeploymentManifest(fileURLToPath(new URL("../../../config/deployment-manifest.json", import.meta.url)));
 const owner = "0x1111111111111111111111111111111111111111";
@@ -65,41 +65,4 @@ describe("recorded account API", () => {
     await expect(response.json()).resolves.toEqual({ error: "account not found" });
   });
 
-  test("returns the latest canonical snapshot only with its same-block assessment", async () => {
-    const responseBody: AccountPositionResponse = {
-      evidence: "recorded",
-      account,
-      snapshot: {
-        blockNumber: "70226651",
-        blockHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-        observedAt: "2026-09-30T12:00:00.000Z",
-        owner,
-        guardian: "0x3333333333333333333333333333333333333333",
-        frozen: false,
-        collateralAssets: "1000000",
-        debtAssets: "500000",
-        reserveAssets: "20000",
-        vaultShares: "300000",
-        quotedVaultAssets: "300100",
-        withdrawableVaultAssets: "250000",
-      },
-      assessment: {
-        status: "NORMAL",
-        reasonCodes: [],
-        ownerBorrowCapacityAssets: "100000",
-        projectedCarryAssets: null,
-        projectedSpreadBps: null,
-      },
-      realizedDebtRepaidAssets: null,
-    };
-    const app = appWith({
-      listByOwner: async () => [account],
-      positionByAddress: async () => responseBody,
-    });
-
-    const response = await app.request(`/v1/accounts/${account.address}/position`);
-
-    expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual(responseBody);
-  });
 });

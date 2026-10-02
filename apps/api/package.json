@@ -10,9 +10,11 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@crest/chain": "workspace:*",
     "@crest/contracts": "workspace:*",
     "@crest/db": "workspace:*",
     "@crest/domain": "workspace:*",
+    "@crest/policy": "workspace:*",
     "@hono/node-server": "2.1.1",
     "drizzle-orm": "0.45.2",
     "hono": "4.13.8",

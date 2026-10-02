@@ -16,5 +16,8 @@
   },
   "dependencies": {
     "@crest/domain": "workspace:*"
+  },
+  "devDependencies": {
+    "viem": "2.56.8"
   }
 }

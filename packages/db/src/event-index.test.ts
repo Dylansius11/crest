@@ -83,7 +83,7 @@ beforeAll(async () => {
     values (${ids.owner}, ${Buffer.from(ownerAddress.slice(2), 'hex')}, now(), now())`;
   await client`insert into crest_accounts
     (id, chain_id, address, owner_id, deployment_transaction_hash, deployment_block_number, contract_version, code_hash, indexed_policy_nonce, status)
-    values (${ids.account}, 4663, ${Buffer.from(accountAddress.slice(2), 'hex')}, ${ids.owner}, ${bytes('f', 32)}, 100, '1', ${bytes('a', 32)}, 0, 'active')`;
+    values (${ids.account}, 4663, ${Buffer.from(accountAddress.slice(2), 'hex')}, ${ids.owner}, ${bytes('f', 32)}, 100, '1', ${bytes('a', 32)}, 0, 'pending_policy')`;
   await client`insert into policies
     (id, crest_account_id, policy_nonce, schema_version, typed_json, content_hash, policy_hash, source, status, market_id, vault_deployment_id, loan_token_id, market_lltv_wad)
     values (${ids.policy}, ${ids.account}, 1, 2, '{}'::jsonb, ${bytes('b', 32)}, ${Buffer.from(policyHash.slice(2), 'hex')}, 'manual', 'pending', ${Buffer.from(marketId.slice(2), 'hex')}, ${ids.vault}, ${ids.loanToken}, 625000000000000000)`;
@@ -176,6 +176,8 @@ describe("canonical Crest event accounting", () => {
     const input = { db, client: publicClient as never, crestAccountId: ids.account, crestAccountAddress: accountAddress, marketId, deploymentBlock: 100n, finalizedBlock: { number: 2_100n, hash: hash(2_100n) } };
     await expect(indexCrestEvents(input)).resolves.toEqual({ strategyCostBasisAssets: 40n, indexedPolicyNonce: 1n });
     await expect(indexCrestEvents(input)).resolves.toEqual({ strategyCostBasisAssets: 40n, indexedPolicyNonce: 1n });
+    const [activatedAccount] = await client`select status, indexed_policy_nonce as nonce from crest_accounts where id = ${ids.account}`;
+    expect(activatedAccount).toEqual({ status: "active", nonce: "1" });
     const [events] = await client`select count(*)::int as count from canonical_account_events where crest_account_id = ${ids.account} and canonical`;
     const [realized] = await client`select debt_repaid_assets as debt, shares_before, shares_after from realized_strategy_events where crest_account_id = ${ids.account} and canonical`;
     const [cursor] = await client`select last_canonical_block_number as block from indexer_cursors where chain_id = 4663 and stream_key = ${`crest:${ids.account}:${marketId}`}`;
@@ -298,6 +300,14 @@ describe("canonical Crest event accounting", () => {
         (select invalidated_at is not null from risk_assessments where id = ${supersededAssessmentId}) as assessment_invalidated,
         (select status from automation_triggers where id = ${supersededTriggerId}) as trigger_status`;
     expect(supersededState).toEqual({ policy_status: "superseded", assessment_invalidated: true, trigger_status: "superseded" });
+    const noPolicyClient = {
+      ...higherPolicyClient,
+      getBlock: async ({ blockNumber }: { blockNumber: bigint }) => ({ hash: hash(blockNumber + 10_000n), timestamp: 1_700_000_000n }),
+      request: async () => [],
+    };
+    await indexCrestEvents({ ...input, client: noPolicyClient as never, finalizedBlock: { number: 2_100n, hash: hash(12_100n) } });
+    const [orphanedAccount] = await client`select status, indexed_policy_nonce as nonce from crest_accounts where id = ${ids.account}`;
+    expect(orphanedAccount).toEqual({ status: "pending_policy", nonce: "0" });
     const malformedClient = {
       ...forkClient,
       request: async ({ params }: { params?: unknown[] }) => {

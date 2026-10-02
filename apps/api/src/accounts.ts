@@ -25,6 +25,13 @@ export interface AccountSnapshot {
   frozen: boolean;
   collateralAssets: string | null;
   debtAssets: string | null;
+  collateralValueAssets: string | null;
+  ltvWad: string | null;
+  morphoHealthWad: string | null;
+  lowerLtvWad: string;
+  targetLtvWad: string;
+  upperLtvWad: string;
+  criticalLtvWad: string;
   reserveAssets: string | null;
   vaultShares: string | null;
   quotedVaultAssets: string | null;
@@ -33,6 +40,7 @@ export interface AccountSnapshot {
 
 export interface AccountAssessment {
   status: string;
+  createdAt: string;
   reasonCodes: string[];
   ownerBorrowCapacityAssets: string | null;
   projectedCarryAssets: string | null;
@@ -74,11 +82,19 @@ type PositionRow = AccountRow & {
   snapshotFrozen: boolean | null;
   collateralAssets: string | bigint | null;
   debtAssets: string | bigint | null;
+  collateralValueAssets: string | bigint | null;
+  ltvWad: string | bigint | null;
+  morphoHealthWad: string | bigint | null;
+  lowerLtvWad: string | bigint | null;
+  targetLtvWad: string | bigint | null;
+  upperLtvWad: string | bigint | null;
+  criticalLtvWad: string | bigint | null;
   reserveAssets: string | bigint | null;
   vaultShares: string | bigint | null;
   quotedVaultAssets: string | bigint | null;
   withdrawableVaultAssets: string | bigint | null;
   assessmentStatus: string | null;
+  assessmentCreatedAt: Date | string | null;
   assessmentReasonCodes: string[] | null;
   ownerBorrowCapacityAssets: string | bigint | null;
   projectedCarryAssets: string | bigint | null;
@@ -140,6 +156,13 @@ export function createRecordedAccountReader(
             a.borrowing_frozen,
             p.collateral_assets,
             p.borrow_assets_up,
+            p.collateral_value,
+            p.ltv_wad,
+            p.morpho_health_wad,
+            a.lower_ltv_wad,
+            a.target_ltv_wad,
+            a.upper_ltv_wad,
+            a.critical_ltv_wad,
             a.loan_token_balance,
             s.share_balance,
             s.quoted_assets,
@@ -180,10 +203,18 @@ export function createRecordedAccountReader(
           s.collateral_assets as "collateralAssets",
           s.borrow_assets_up as "debtAssets",
           s.loan_token_balance as "reserveAssets",
+          s.collateral_value as "collateralValueAssets",
+          s.ltv_wad as "ltvWad",
+          s.morpho_health_wad as "morphoHealthWad",
+          s.lower_ltv_wad as "lowerLtvWad",
+          s.target_ltv_wad as "targetLtvWad",
+          s.upper_ltv_wad as "upperLtvWad",
+          s.critical_ltv_wad as "criticalLtvWad",
           s.share_balance as "vaultShares",
           s.quoted_assets as "quotedVaultAssets",
           s.max_withdrawable_assets as "withdrawableVaultAssets",
           assessment.status as "assessmentStatus",
+          assessment.created_at as "assessmentCreatedAt",
           assessment.reason_codes as "assessmentReasonCodes",
           assessment.owner_borrow_capacity_assets as "ownerBorrowCapacityAssets",
           assessment.estimated_annual_carry_assets as "projectedCarryAssets",
@@ -247,12 +278,20 @@ function toPosition(row: PositionRow): AccountPositionResponse {
     frozen: required(row.snapshotFrozen),
     collateralAssets: nullableDecimal(row.collateralAssets),
     debtAssets: nullableDecimal(row.debtAssets),
+    collateralValueAssets: nullableDecimal(row.collateralValueAssets),
+    ltvWad: nullableDecimal(row.ltvWad),
+    morphoHealthWad: nullableDecimal(row.morphoHealthWad),
+    lowerLtvWad: decimal(required(row.lowerLtvWad)),
+    targetLtvWad: decimal(required(row.targetLtvWad)),
+    upperLtvWad: decimal(required(row.upperLtvWad)),
+    criticalLtvWad: decimal(required(row.criticalLtvWad)),
     reserveAssets: nullableDecimal(row.reserveAssets),
     vaultShares: nullableDecimal(row.vaultShares),
     quotedVaultAssets: nullableDecimal(row.quotedVaultAssets),
     withdrawableVaultAssets: nullableDecimal(row.withdrawableVaultAssets),
   };
   const assessment = row.assessmentStatus === null ? null : {
+    createdAt: timestamp(required(row.assessmentCreatedAt)),
     status: row.assessmentStatus,
     reasonCodes: row.assessmentReasonCodes ?? [],
     ownerBorrowCapacityAssets: nullableDecimal(row.ownerBorrowCapacityAssets),

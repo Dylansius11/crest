@@ -208,6 +208,9 @@ importers:
 
   apps/api:
     dependencies:
+      '@crest/chain':
+        specifier: workspace:*
+        version: link:../../packages/chain
       '@crest/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
@@ -217,6 +220,9 @@ importers:
       '@crest/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@crest/policy':
+        specifier: workspace:*
+        version: link:../../packages/policy
       '@hono/node-server':
         specifier: 2.1.1
         version: 2.1.1(hono@4.13.8)
@@ -386,6 +392,10 @@ importers:
       '@crest/domain':
         specifier: workspace:*
         version: link:../domain
+    devDependencies:
+      viem:
+        specifier: 2.56.8
+        version: 2.56.8(typescript@7.0.2)(zod@4.6.4)
 
   packages/db:
     dependencies:

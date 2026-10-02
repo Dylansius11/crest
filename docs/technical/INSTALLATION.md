@@ -144,7 +144,7 @@ Commit `.env.example`, never credentials.
 ```dotenv
 # Public
 NEXT_PUBLIC_APP_URL=http://localhost:3000
-NEXT_PUBLIC_ROBINHOOD_CHAIN_ID=4663
+NEXT_PUBLIC_ROBINHOOD_CHAIN_ID=46630
 NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=
 
 # Server only
@@ -157,13 +157,13 @@ CREST_ACCOUNT_ADDRESS=
 MONITOR_INTERVAL_MS=60000
 
 # Guardian process only
-GUARDIAN_EXPECTED_CHAIN_ID=4663
+GUARDIAN_EXPECTED_CHAIN_ID=46630
 GUARDIAN_PRIVATE_KEY=
 GUARDIAN_EXPECTED_ADDRESS=
 GUARDIAN_ALLOWED_ACCOUNT=
 
-# Verified route
-DEPLOYMENT_MANIFEST_PATH=./config/deployment-manifest.json
+# Active SANDBOX route
+DEPLOYMENT_MANIFEST_PATH=./config/deployment-manifest.46630.json
 
 # Optional policy drafting
 POLICY_LLM_PROVIDER=disabled
@@ -304,9 +304,9 @@ Fork prerequisites:
 
 A fork proves compatibility at one state, not future rates or liquidity.
 
-### Experimental testnet candidate (read-only fork)
+### Active 46630 SANDBOX route
 
-The 46630 TSLA-labeled / Paxos test USDG route is **not the reviewed manifest**. Its stock-token registry identity, oracle provenance/independent feeds, and real-yield claim have not passed the gate; never point `pnpm fork:record`, `pnpm manifest:verify`, or a signer at this candidate. For the independent fork-only contract-compatibility proof:
+The 46630 TSLA-labeled / test USDG route is the active **SANDBOX** manifest, not reviewed evidence. Its public MockFeed collateral input, unavailable loan feed, and idle-only vault mean monitoring degrades/freezes rather than treating the route as normal. It may be used for explicitly labeled testnet signing; never represent it as a qualified mainnet route. For the independent fork-only contract-compatibility proof:
 
 ```bash
 CREST_UPSTREAM_RPC=https://rpc.testnet.chain.robinhood.com/rpc \
@@ -320,7 +320,7 @@ CREST_TESTNET_FORK_RPC=http://127.0.0.1:8603 \
 forge test --match-contract RobinhoodTestnetCandidateTest -vv
 ```
 
-Re-resolve the testnet hostname via DNS-over-HTTPS and verify TLS/SNI before reusing that IP; IPs can rotate. This fork pins finalized block `127234001` and checks its canonical hash. The test uses disposable cheatcode-funded tokens, no private key and no live transaction. Public RPC state may be pruned: a missing historical proof is **unavailable evidence**, not permission to retarget silently or mark the route qualified.
+Re-resolve the testnet hostname via DNS-over-HTTPS and verify TLS/SNI before reusing that IP; IPs can rotate. This fork pins finalized block `127234001` and checks its canonical hash. The test uses disposable cheatcode-funded tokens, no private key and no live transaction. Public RPC state may be pruned: a missing historical proof is **unavailable evidence**, never permission to weaken the sandbox disclosure.
 
 ## 11. Fixtures
 
@@ -357,7 +357,7 @@ Fixtures test adapters. They are never live demo evidence.
 
 ```bash
 pnpm --filter @crest/web dev            # Next.js owner surface on :3000
-pnpm --filter @crest/api start          # reviewed-route and recorded-account API on :8787; not testnet execution
+pnpm --filter @crest/api start          # active-manifest and recorded-account API on :8787
 pnpm --filter @crest/monitor observe:once   # one confirmed-block assessment, no signing
 pnpm --filter @crest/automation doctor  # Guardian authority check; never signs
 pnpm --filter @crest/automation exec node src/main.ts run --once --trigger-id <trigger-id>
@@ -373,11 +373,20 @@ forge test
 forge test --match-contract CrestAccountInvariantTest
 ```
 
-The API loads the repository-root `.env` in local development and needs `DATABASE_URL`; start it separately on port 8787. Web forwards `/v1/accounts`, `/v1/accounts/register`, `/v1/accounts/:address/position`, and `/v1/accounts/:address/policies` to `CREST_API_URL` through the Next.js same-origin proxy. The current checked-in manifest and API still describe mainnet 4663, so the testnet-first `/account` screen intentionally exposes no owner transaction or registration controls. Do not set a mainnet RPC or start Guardian for a testnet demo. A chain 46630 wallet and faucet ETH alone cannot qualify a market; until verified testnet route evidence replaces the manifest and chain clients, no live testnet Crest Account exists in this release.
+The API loads the repository-root `.env` in local development and needs `DATABASE_URL`; start it separately on port 8787. Web forwards `/v1/accounts`, `/v1/accounts/register`, `/v1/accounts/:address/position`, and `/v1/accounts/:address/policies` to `CREST_API_URL` through the Next.js same-origin proxy. The default manifest is the 46630 SANDBOX route, so testnet owner transactions are permitted only with its visible disclosures; 4663 remains registered reviewed evidence but runtime signing stays disabled.
+
+**Runtime relay when the public hostname is hijacked locally.** Resolve the real origin over DNS-over-HTTPS, then run a separate, cache-free instance of the SNI-preserving proxy for every runtime service and point both `ROBINHOOD_CHAIN_RPC_URL` and `CREST_RPC_UPSTREAM` at it:
+
+```bash
+CREST_UPSTREAM_RPC=https://rpc.testnet.chain.robinhood.com/rpc CREST_UPSTREAM_IP=<DoH-resolved IP> \
+CREST_PROXY_PORT=8604 CREST_PROXY_CACHE=off node scripts/rpc-retry-proxy.ts
+```
+
+TLS still validates the real hostname. `CREST_PROXY_CACHE=off` is mandatory here: the fork proxy caches block-pinned reads, which would hide a reorged block or receipt from the canonical-receipt checks. The browser never talks to the RPC directly; it reads through the web app's same-origin `/rpc` rewrite, while the wallet signs through its own configured RPC.
 
 `@crest/monitor` requires `ROBINHOOD_CHAIN_RPC_URL`, `DATABASE_URL`, and `CREST_ACCOUNT_ADDRESS`; the address must
 already have an active registry row and a registered owner policy. The indexer activates that policy only when
-its `policy_hash` matches a canonical `PolicyConfigured` event on the reviewed route. The poll indexes events and
+its `policy_hash` matches a canonical `PolicyConfigured` event on the active manifest route. The poll indexes events and
 reads the account, market, vault, oracle, rates, and lifecycle, then stores immutable snapshots, an assessment,
 and at most one idempotent Guardian trigger. No account is fabricated or registered by a read-only poll. Use
 `pnpm --filter @crest/monitor start` for continuous polling (`MONITOR_INTERVAL_MS`, default 60000 ms); `--once`
@@ -387,7 +396,7 @@ exits on any registry, route, or RPC failure. A read-only monitor must not recei
 and `GUARDIAN_ALLOWED_ACCOUNT`. It checks the active registered account bytecode, exact Morpho/vault/token
 code hashes, vault asset, current policy/route, and qualified manifest at one fresh block; it never loads
 a key or signs. A degraded vault or Morpho read prevents a full-route attestation.
-`run --once` requires `GUARDIAN_EXPECTED_CHAIN_ID` equal to the reviewed manifest chain, `GUARDIAN_PRIVATE_KEY`, and an explicit detected trigger ID. For the testnet-first release this must be 46630 and requires a separately qualified testnet manifest; the current 4663 manifest must not be used for the demo.
+`run --once` requires `GUARDIAN_EXPECTED_CHAIN_ID` equal to the active manifest chain, `GUARDIAN_PRIVATE_KEY`, and an explicit detected trigger ID. The default is 46630; it signs only the SANDBOX route's full-route manifest and must preserve its disclosures.
 `reconcile --run-id` requires the same route, chain, account, Guardian, RPC and database settings, but
 **not** the key. Keep the key only in the isolated Guardian process, never in the monitor.
 `run` signs at most one action; `pending` or `uncertain` requires operator inspection of the persisted hash
@@ -429,7 +438,7 @@ verify pinned toolchains
 
 A missing external secret skips/fails visibly; it is never reported as passing live integration.
 
-## 14. Testnet canary (only after a qualified 46630 route)
+## 14. Testnet canary (46630 SANDBOX)
 
 1. Reverify route, code, liquidity, vault withdrawal, and current rates.
 2. Deploy and verify Crest Account source.

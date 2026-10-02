@@ -1,5 +1,4 @@
-import { fileURLToPath } from "node:url";
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 
 import {
   createRecordedAccountReader,
@@ -9,6 +8,15 @@ import {
   type RecordedAccountReader,
 } from "./accounts.ts";
 
+import {
+  createEnrollment,
+  createEnrollmentChainReader,
+  EnrollmentError,
+  MAX_ENROLLMENT_BODY_BYTES,
+  type Enrollment,
+} from "./enrollment.ts";
+
+import { createRobinhoodClient } from "@crest/chain";
 import { createDatabase } from "@crest/db";
 
 import { crestAccountAbi, GUARDIAN_SELECTORS } from "@crest/contracts";
@@ -23,10 +31,12 @@ import type { DeploymentManifest } from "@crest/contracts/manifest";
  */
 
 /** Where a response's numbers came from, so a client can never render reviewed evidence as live state. */
-export type EvidenceClass = "reviewed-manifest" | "forked" | "live";
+export type EvidenceClass = "reviewed-manifest" | "sandbox-manifest" | "forked" | "live";
 
 export interface RouteResponse {
   evidence: EvidenceClass;
+  /** A sandbox route always ships its disclosures; a client must show them beside any number. */
+  trust: DeploymentManifest["trust"];
   chainId: number;
   gate: DeploymentManifest["gate"];
   observedAt: { blockNumber: string; blockHash: string; timestamp: string; finality: string };
@@ -59,9 +69,31 @@ export interface AuthorityResponse {
 }
 
 export type { AccountPositionResponse, AccountRegistryResponse, RecordedAccount, RecordedAccountReader } from "./accounts.ts";
+export { EnrollmentError } from "./enrollment.ts";
+export type { Enrollment, RegisterResponse, StagePolicyResponse } from "./enrollment.ts";
 
 export interface CreateAppOptions {
   accounts?: RecordedAccountReader;
+  enrollment?: Enrollment;
+}
+
+/** The write surface accepts only a bounded, JSON envelope; nothing is parsed beyond the size guard. */
+async function readEnrollmentBody(context: Context): Promise<unknown> {
+  const raw = await context.req.text();
+  if (raw.length > MAX_ENROLLMENT_BODY_BYTES) {
+    throw new EnrollmentError(415, `request body exceeds ${MAX_ENROLLMENT_BODY_BYTES} bytes`);
+  }
+  try {
+    return JSON.parse(raw) as unknown;
+  } catch {
+    throw new EnrollmentError(400, "request body must be JSON");
+  }
+}
+
+/** A refused enrollment is the truth; an unexpected failure is unreadable infrastructure, never a default. */
+function enrollmentFailure(context: Context, error: unknown): Response {
+  if (error instanceof EnrollmentError) return context.json({ error: error.message }, error.status);
+  return context.json({ error: "enrollment failed: chain or database is unreadable" }, 503);
 }
 
 function stateChangingSignatures(): string[] {
@@ -78,7 +110,8 @@ export function createApp(manifest: DeploymentManifest, options: CreateAppOption
 
   app.get("/v1/route", (context) => {
     const body: RouteResponse = {
-      evidence: "reviewed-manifest",
+      evidence: manifest.trust.level === "sandbox" ? "sandbox-manifest" : "reviewed-manifest",
+      trust: manifest.trust,
       chainId: manifest.network.chainId,
       gate: manifest.gate,
       observedAt: {
@@ -135,6 +168,28 @@ export function createApp(manifest: DeploymentManifest, options: CreateAppOption
     return position ? context.json(position) : context.json({ error: "account not found" }, 404);
   });
 
+  // The only write surface. It registers a real owner-deployed account and stages a pending owner policy;
+  // activation stays with the monitor's canonical PolicyConfigured proof, never with this request.
+  app.post("/v1/accounts/register", async (context) => {
+    if (!options.enrollment) return context.json({ error: "enrollment requires ROBINHOOD_CHAIN_RPC_URL" }, 503);
+    try {
+      const body = await readEnrollmentBody(context);
+      return context.json(await options.enrollment.register(body), 200);
+    } catch (error) {
+      return enrollmentFailure(context, error);
+    }
+  });
+
+  app.post("/v1/accounts/:address/policies", async (context) => {
+    if (!options.enrollment) return context.json({ error: "enrollment requires ROBINHOOD_CHAIN_RPC_URL" }, 503);
+    try {
+      const body = await readEnrollmentBody(context);
+      return context.json(await options.enrollment.stagePolicy(context.req.param("address"), body), 200);
+    } catch (error) {
+      return enrollmentFailure(context, error);
+    }
+  });
+
   app.notFound((context) => context.json({ error: "not found" }, 404));
   return app;
 }
@@ -143,9 +198,17 @@ export function createApp(manifest: DeploymentManifest, options: CreateAppOption
 export async function createAppFromManifest(): Promise<Hono> {
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) throw new Error("DATABASE_URL is required");
-  const manifest = await loadDeploymentManifest(
-    fileURLToPath(new URL("../../../config/deployment-manifest.json", import.meta.url)),
-  );
+  const manifest = await loadDeploymentManifest();
   const { db } = createDatabase(databaseUrl);
-  return createApp(manifest, { accounts: createRecordedAccountReader(db, manifest) });
+  const options: CreateAppOptions = { accounts: createRecordedAccountReader(db, manifest) };
+  // The read surface works without an RPC; the write surface fails closed until one is explicit.
+  const rpcUrl = process.env.ROBINHOOD_CHAIN_RPC_URL;
+  if (rpcUrl) {
+    options.enrollment = createEnrollment({
+      manifest,
+      reader: createEnrollmentChainReader(createRobinhoodClient(rpcUrl, manifest.network.chainId)),
+      db,
+    });
+  }
+  return createApp(manifest, options);
 }

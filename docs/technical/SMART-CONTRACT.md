@@ -506,7 +506,7 @@ Collateral sale/unwind remains a separate later contract with fixed venue adapte
 
 ## 16. Deployment gate
 
-Before mainnet funding:
+Before testnet funding or owner signatures, qualify the exact 46630 route and deploy a new `CrestAccount` bound to that network's verified Morpho contract. The existing 4663 pinned fork and manifest do not satisfy this gate:
 
 - manifest evidence is genuinely finalized, strictly prior to the validation block, no more than 256 blocks old, and matches canonical `blockhash`;
 - exact Morpho market and vault route verified from current sources and bytecode;
