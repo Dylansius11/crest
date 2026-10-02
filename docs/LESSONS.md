@@ -25,6 +25,17 @@ Rules for this file:
 
 ---
 
+## 2026-10-02 - An inherited shell environment silently outranks `.env` (Technical)
+
+- The persistent agent shell still exported `NEXT_PUBLIC_ROBINHOOD_CHAIN_ID=4663`, `GUARDIAN_EXPECTED_CHAIN_ID=4663`, and the mainnet `DEPLOYMENT_MANIFEST_PATH` after `.env` moved to 46630. Loaders such as dotenv never overwrite an existing variable, so the web test that asserted the env-selected manifest failed and every service would have started on the wrong route. `DEPLOYMENT_MANIFEST_PATH` also resolves against the process cwd, which is the package directory under `pnpm --filter`.
+- Rule: start route-bound services with explicit `NEXT_PUBLIC_ROBINHOOD_CHAIN_ID`, `DEPLOYMENT_MANIFEST_PATH` (absolute), RPC, and chain variables. Tests name the manifest they check; they never assert whichever route the environment happens to select.
+
+## 2026-10-02 - A runtime RPC relay must not cache, and a degraded sandbox borrow needs consent (Technical)
+
+- The fork proxy caches every non-head-relative payload. That is right for pinned forks and wrong for runtime: a cached block or receipt at an unfinalized height would hide a reorg from the canonical-receipt checks. `CREST_PROXY_CACHE=off` runs the same SNI-preserving relay without a cache for web, API, monitor, and Custos.
+- On the 46630 sandbox the risk engine is DEGRADED by construction (MockFeed collateral price, no loan feed, idle-only vault), and the database forces DEGRADED capacity to zero. Per the owner's decision, a sandbox borrow may proceed only after the owner ticks an acknowledgement of the shown reason codes; a frozen account, a missing or stale (over 10 minutes) assessment, or a failed simulation still blocks it, and a reviewed route never borrows on DEGRADED.
+- Rule: keep runtime relays cache-free. Encode any sandbox exception as a tested pure gate (`apps/web/src/lib/borrow-gate.ts`) that can only add a consent step, never remove a block.
+
 ## 2026-10-02 - A testnet route is a sandbox by construction, and its mock oracle has a clock (Technical)
 
 - Robinhood's issuer registry, Chainlink's network directory, and Morpho's address page publish no 46630 deployments, so no testnet route can pass the reviewed gate. The manifest validator now fixes the trust tier per chain (4663 `reviewed`, 46630 `sandbox` with disclosures). The chosen sandbox oracle, `VigilOracle`, reverts when its session oracle judges the publicly settable `MockFeed` stale (18 h windows anchored to the market calendar), which blocks borrowing and collateral withdrawal with debt but not repayment.

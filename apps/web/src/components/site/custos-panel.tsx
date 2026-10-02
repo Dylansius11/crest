@@ -25,10 +25,7 @@ export function CustosPanel() {
     <div className="relative rounded-card border border-ink bg-paper text-ink shadow-[10px_10px_0_0_#041630]">
       <div className="flex items-stretch justify-between border-b border-ink">
         <span className="type-display flex min-h-12 items-center gap-3 px-4 text-poster-base uppercase">
-          <span className="relative flex size-3" aria-hidden>
-            <span className="absolute inline-flex size-full animate-ping rounded-full bg-signal-verified opacity-60 motion-reduce:animate-none" />
-            <span className="relative inline-flex size-3 rounded-full bg-signal-verified" />
-          </span>
+          <span className="inline-flex size-3 bg-crest-600" aria-hidden />
           Custos
         </span>
         <span className="type-display flex items-center border-l border-ink px-4 text-poster-sm uppercase">
@@ -38,9 +35,10 @@ export function CustosPanel() {
 
       <div className="p-5">
         <p className="max-w-md text-poster-sm text-ink-soft">
-          One automation, authorized once by the owner. Custos reads live
-          onchain state, holds the line at your upper guard, and pays debt down
-          from your own idle reserve and vault yield. It has no other powers.
+          When an owner configures a Crest Account, Custos can watch its
+          onchain state, freeze new borrowing, and repay that account&apos;s debt
+          from its own reserve or fixed vault. This panel is an authority
+          specimen, not a running Guardian or a live position.
         </p>
 
         <div className="mt-5 border-t border-ink pt-4">

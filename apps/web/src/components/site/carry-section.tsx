@@ -8,10 +8,7 @@ import { carry } from "@/lib/content";
  * No projection is ever rendered as a balance.
  */
 export function CarrySection() {
-  const vaultPct = Math.abs(Number.parseFloat(carry.vaultApy));
-  const borrowPct = Math.abs(Number.parseFloat(carry.borrowApy));
-  const total = vaultPct + borrowPct;
-  const vaultShare = (vaultPct / total) * 100;
+  const vaultShare = carry.vaultShare;
 
   return (
     <section className="paper-grid bg-paper px-5 py-24 sm:px-10" aria-label="Carry">
@@ -23,46 +20,40 @@ export function CarrySection() {
           </h2>
         </div>
         <p className="max-w-md text-poster-sm text-ink-soft">
-          Estimated, not realized. The realized section only moves when a
-          repayment is verified onchain at a block.
+          Pinned rate observations, not a current quote. These two averages use
+          different windows, so they cannot establish today's net carry.
+          Realized repayment appears only with a canonical account receipt.
         </p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
-        <Cell index="R" meta={`observed ${carry.observedAt}`} data-reveal="cell">
+        <Cell index="R" meta={`recorded block ${carry.blockNumber} · ${carry.observedAt}`} data-reveal="cell">
           <div className="p-6">
-            {/* spread bar: two opposing sides, sized by observed rates */}
-            <div className="mb-6">
-              <div className="flex h-14 w-full overflow-hidden border border-ink" role="img" aria-label={`Vault APY ${carry.vaultApy} against borrow APY ${carry.borrowApy}`}>
-                <div
-                  className="flex items-center bg-crest-600 px-3"
-                  style={{ width: `${vaultShare}%` }}
-                >
-                  <span className="type-display text-poster-sm text-paper uppercase">
-                    earn {carry.vaultApy}
-                  </span>
+            {vaultShare === null ? (
+              <p className="mb-6 border border-ink p-4 text-poster-sm text-ink-soft">
+                Rate comparison unavailable at this evidence block.
+              </p>
+            ) : (
+              <div className="mb-6 flex h-14 w-full overflow-hidden border border-ink" role="img" aria-label={`Recorded vault APY ${carry.vaultApy} against borrow APY ${carry.borrowApy}`}>
+                <div className="flex items-center bg-crest-600 px-3" style={{ width: `${vaultShare}%` }}>
+                  <span className="type-display text-poster-sm text-paper uppercase">earn {carry.vaultApy}</span>
                 </div>
-                <div
-                  className="flex flex-1 items-center justify-end bg-flame px-3 text-right"
-                >
-                  <span className="type-display text-poster-sm text-ink uppercase">
-                    pay {carry.borrowApy}
-                  </span>
+                <div className="flex flex-1 items-center justify-end bg-flame px-3 text-right">
+                  <span className="type-display text-poster-sm text-ink uppercase">pay {carry.borrowApy}</span>
                 </div>
               </div>
-            </div>
-
+            )}
             <dl>
-              <Fact label="Vault APY (USDG, 24h avg)">{carry.vaultApy}</Fact>
-              <Fact label="Borrow APY (AAPL market, 24h avg)">{carry.borrowApy}</Fact>
+              <Fact label={`Vault APY (USDG, ${carry.vaultWindow} average)`}>{carry.vaultApy}</Fact>
+              <Fact label={`Borrow APY (AAPL market, ${carry.borrowWindow} average)`}>{carry.borrowApy}</Fact>
               <Fact label="Estimated net spread">
                 <span className="font-medium text-signal-stop">{carry.netSpread}</span>
               </Fact>
             </dl>
             <p className="mt-4 text-poster-sm text-signal-warn">
-              Rates move. If the spread inverts, the Guardian tightens and no
-              new borrow is recommended. Stale inputs can only restrict
-              behavior, never extend it.
+              Historical, unequal windows are not a trade signal. Fresh onchain
+              rates, vault liquidity, and policy gates must be checked before
+              any owner-approved borrow.
             </p>
           </div>
         </Cell>
@@ -71,9 +62,8 @@ export function CarrySection() {
           <div className="p-6">
             <h3 className="type-display text-poster-md text-ink">Realized, so far</h3>
             <p className="mt-2 text-poster-sm text-ink-soft">
-              Nothing yet. This account has not repaid debt, so this cell stays
-              empty on purpose. When a Guardian repayment verifies, the exact
-              debt before and after appears here with the receipt block.
+              This landing page has no connected account or canonical repayment
+              receipt. Open your account to see realized debt reduction, if any.
             </p>
             <p className="type-display mt-6 border border-dashed border-ink/40 px-4 py-6 text-poster-sm text-ink-soft uppercase">
               Awaiting first verified repayment

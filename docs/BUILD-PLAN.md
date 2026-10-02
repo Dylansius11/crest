@@ -295,21 +295,23 @@ separately by the product owner. Build screens on top of it; do not introduce a 
 
 **Recheck (2026-10-02):** Official `/rhj/assets[].id` is documented as the onchain `uid()` across chains, but the faucet TSLA, AMZN, NFLX, PLTR, and AMD testnet tokens each returned a **different UID** from the issuer registry; none has a listed 46630 deployment. The TSLA market with 110.239151 USDG shared free liquidity (head block `127410031`) is a *loan market*, not a vault, and its verified oracle uses a publicly settable `MockFeed` and fixed `MockIRM`. A newly discovered factory-created USDG Vault V2 (`0x70f5…21bc`) had 63 USDG idle and a successful read-only 0.1 USDG existing-holder withdrawal simulation, but still allocates to the `FakeWBTC` market and has not passed Crest lifecycle/yield gates. [Full evidence](./technical/INTEGRATIONS.md#issuer-oracle-market-and-vault-recheck-2026-10-02). Do not enable owner signing or treat the more liquid route as qualified.
 
+**Sandbox decision (2026-10-02):** The owner chose "both, sandbox first", which supersedes the recheck's signing prohibition for the labeled sandbox only; the route is still not qualified. The 46630 route is registered as a labeled SANDBOX manifest (`config/deployment-manifest.46630.json`, trust tier enforced by the validator, disclosures rendered on every owner surface) and proven by `contracts/test/RobinhoodTestnetSandbox.t.sol`. Every chain-bound service binds to the active manifest. Owner signing is enabled only on the sandbox tier; 4663 stays registered, reviewed, and signing-disabled. A DEGRADED sandbox assessment permits an owner borrow only after explicit acknowledgement of its reason codes (`apps/web/src/lib/borrow-gate.ts`).
+
 **Steps**
 
-- [x] Disable owner signatures while the reviewed manifest remains mainnet-only; label its landing evidence as archived.
-- [ ] Build disconnected wallet inventory with explicit asset intent.
+- [x] Disable owner signatures while the reviewed manifest remains mainnet-only; label its landing evidence as archived. Superseded for 46630 by the sandbox decision; 4663 stays signing-disabled.
+- [x] Build disconnected wallet inventory with explicit asset intent.
 - [ ] Build combined market/vault verification with fallback.
-- [ ] Build draft → typed policy → exact calldata consequence preview.
-- [ ] Build owner deploy/configure/supply/borrow-and-deploy flow.
+- [x] Build draft → typed policy → exact calldata consequence preview.
+- [ ] Build owner deploy/configure/supply/borrow-and-deploy flow. Owner exit (repay, strategy, reserve, collateral, unfreeze) is built; closes on the live 46630 run.
 - [ ] Build LTV band, capital allocation, carry breakdown, realized repayment, permission, and evidence components.
-- [ ] Show quoted versus withdrawable vault assets.
-- [ ] Make additional borrow an owner approval.
+- [x] Show quoted versus withdrawable vault assets.
+- [x] Make additional borrow an owner approval.
 - [ ] Cover wrong chain, unsupported route, stale rate, vault constrained/loss, frozen, no debt, floor reached, transaction failure, and postcondition failure.
-- [ ] Verify keyboard flow, reduced motion, and narrow viewport.
+- [ ] Verify keyboard flow, reduced motion, and narrow viewport. Keyboard order and 390 px layout checked disconnected; repeat with a connected owner.
 
-- [ ] Qualify the exact 46630 route with authenticated RPC, current liquidity, and a pinned testnet proof before enabling transactions.
-- [ ] Migrate manifest, verifier, contract proof, API, monitor, Guardian, and web to the same qualified 46630 route, or keep all owner signatures disabled.
+- [x] Register the exact 46630 route as a labeled SANDBOX manifest with authenticated RPC, current liquidity, and a pinned testnet fork proof before enabling transactions.
+- [x] Migrate manifest, verifier, contract proof, API, monitor, Guardian, and web to the same active 46630 route.
 
 **Acceptance**
 

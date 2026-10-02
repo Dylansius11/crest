@@ -1,44 +1,39 @@
 import { GUARDIAN_SELECTORS } from "@crest/contracts";
+import deploymentEvidence from "../../../../config/deployment-manifest.json";
 
-import { reviewedManifest } from "@/lib/manifest";
+import { mainnetManifest } from "@/lib/manifest";
 
 /**
- * Every claim on the landing page is bound at build time to the reviewed
- * deployment manifest or the compiled ABI. No string here may invent a
- * number, address, or rate: components pull from these constants so the copy
- * and the evidence can never drift apart.
- *
- * The manifest type carries only the fields the verifier gates. Richer
- * observations in the JSON (rates, governance, fork tool) are read through
- * narrowed local shapes with fallbacks, so a schema tightening can never
- * break the build silently.
+ * The landing page shows the reviewed, pinned mainnet evidence. Current account state belongs
+ * on the account screen, not in these historical route facts.
  */
 
-const manifest = reviewedManifest;
+const manifest = mainnetManifest;
 
 /** Morpho LLTV as a percent, derived from the manifest WAD value. */
 export const marketLltvPercent = (Number(manifest.market.lltv) / 1e18) * 100;
 
-type RateObservation = { value: string; observedAt: string };
+const rates = deploymentEvidence.rates;
+const WAD = 10n ** 18n;
 
-/** Observed rates live in the JSON manifest; the TS type does not pin them. */
-const rates = (manifest as unknown as {
-  rates?: { marketBorrow?: RateObservation; vault?: RateObservation };
-}).rates;
+function rateWad(value: string | undefined): bigint | null {
+  if (value === undefined || !/^(0|[1-9]\d*)(\.\d{1,18})?$/.test(value)) return null;
+  const [whole, fraction = ""] = value.split(".");
+  return BigInt(whole!) * WAD + BigInt(fraction.padEnd(18, "0"));
+}
 
-/** Vault APY percent from the manifest rate observation. */
-export const vaultApyPercent = rates?.vault ? Number(rates.vault.value) * 100 : null;
+function percent(value: bigint | null): string {
+  if (value === null) return "Unavailable";
+  const hundredths = (value < 0n ? -value : value) * 10_000n / WAD;
+  return `${value < 0n ? "-" : ""}${hundredths / 100n}.${String(hundredths % 100n).padStart(2, "0")}%`;
+}
 
-/** Market borrow APY percent from the manifest rate observation. */
-export const borrowApyPercent = rates?.marketBorrow
-  ? Number(rates.marketBorrow.value) * 100
-  : null;
-
-/** Estimated net spread, vault APY minus borrow APY. Null without both rates. */
-export const netSpreadPercent =
-  vaultApyPercent !== null && borrowApyPercent !== null
-    ? vaultApyPercent - borrowApyPercent
-    : null;
+const vaultRate = rateWad(rates.vault.value);
+const borrowRate = rateWad(rates.marketBorrow.value);
+const comparable = rates.vault.window === rates.marketBorrow.window;
+const vaultShare = vaultRate === null || borrowRate === null || vaultRate + borrowRate === 0n
+  ? null
+  : Number(vaultRate * 100n / (vaultRate + borrowRate));
 
 /** Observed evidence timestamp, humanized for the poster footer. */
 export const evidenceDate = new Date(manifest.evidence.block.timestamp).toLocaleDateString(
@@ -61,13 +56,17 @@ export const policyBand = {
   lltv: marketLltvPercent.toFixed(1),
 } as const;
 
-const percent = (v: number | null, digits = 2) => (v === null ? "n/a" : `${v.toFixed(digits)}%`);
-
 export const carry = {
-  vaultApy: percent(vaultApyPercent),
-  borrowApy: percent(borrowApyPercent),
-  netSpread: percent(netSpreadPercent),
-  observedAt: rates?.vault?.observedAt ?? manifest.evidence.retrievedAt,
+  vaultApy: percent(vaultRate),
+  borrowApy: percent(borrowRate),
+  netSpread: comparable && vaultRate !== null && borrowRate !== null
+    ? percent(vaultRate - borrowRate)
+    : "Not comparable",
+  vaultShare,
+  vaultWindow: rates.vault.window,
+  borrowWindow: rates.marketBorrow.window,
+  observedAt: rates.vault.observedAt,
+  blockNumber: rates.vault.blockNumber,
 } as const;
 
 export const authority = {
@@ -112,6 +111,23 @@ export const routeFacts = {
   vaultGeneration: manifest.vault.generation,
   vault: manifest.vault.address,
   integrity: manifest.integrity.digest,
+} as const;
+
+const oraclePrice = BigInt(deploymentEvidence.market.oracleState.price);
+const collateralFeed = BigInt(deploymentEvidence.market.oracleState.collateralAnswer);
+const loanFeed = BigInt(deploymentEvidence.market.oracleState.loanAnswer);
+const priceScale = 10n ** BigInt(36
+  + deploymentEvidence.contracts.loanToken.decimals
+  - deploymentEvidence.contracts.collateralToken.decimals);
+
+function moneyFromCents(cents: bigint): string {
+  return `${cents / 100n}.${String(cents % 100n).padStart(2, "0")}`;
+}
+
+export const oracleFacts = {
+  morphoValue: moneyFromCents((oraclePrice * 100n + priceScale / 2n) / priceScale),
+  feedOnlyValue: moneyFromCents((collateralFeed * 100n + loanFeed / 2n) / loanFeed),
+  observedBlock: deploymentEvidence.market.state.observedBlockNumber,
 } as const;
 
 export const forkProof = {

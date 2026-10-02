@@ -16,13 +16,12 @@ export function TimelineSection() {
         <div>
           <CellLabel className="bg-paper text-ink">06 · The watch</CellLabel>
           <h2 className="type-display mt-4 max-w-3xl text-poster-lg text-paper sm:text-poster-xl">
-            Twelve seconds, start to finish.
+            An intervention, illustrated.
           </h2>
         </div>
         <p className="max-w-md text-poster-sm text-paper/75">
-          One intervention, from crossing the guard to a verified repayment.
-          Illustrative sequence with fixed timestamps; live receipts post with
-          their own block. Fork evidence dated {evidenceDate}.
+          This is a hypothetical sequence, not a live monitor run or a
+          transaction record. The separate fork proof is dated {evidenceDate}.
         </p>
       </div>
 
@@ -31,14 +30,14 @@ export function TimelineSection() {
           data-reveal="cell"
           className="flex flex-col justify-between bg-crest-950 p-6 md:col-span-3"
         >
-          <span className="tnum font-mono text-poster-sm text-paper/60">12:00:28</span>
+          <span className="tnum font-mono text-poster-sm text-paper/60">ILLUSTRATIVE · 01</span>
           <div className="mt-6">
             <h3 className="type-display text-poster-md text-flame uppercase">
               Upper guard crossed
             </h3>
             <p className="mt-2 text-poster-sm text-paper/75">
-              LTV printed 42.4% against a 42.0% guard on a fresh onchain read,
-              not a cached estimate.
+              If a fresh onchain read places policy LTV at 42.4% against a
+              42.0% upper guard, the monitor can recommend protection.
             </p>
           </div>
         </article>
@@ -47,49 +46,49 @@ export function TimelineSection() {
           data-reveal="cell"
           className="flex flex-col justify-between bg-crest-950 p-6 md:col-span-3"
         >
-          <span className="tnum font-mono text-poster-sm text-paper/60">12:00:31</span>
+          <span className="tnum font-mono text-poster-sm text-paper/60">ILLUSTRATIVE · 02</span>
           <div className="mt-6">
             <h3 className="type-display text-poster-md text-paper uppercase">Borrowing frozen</h3>
             <p className="mt-2 text-poster-sm text-paper/75">
-              freezeBorrowing() landed first, so the account cannot add debt
-              while it is under review.
+              A confirmed freeze would prevent additional borrowing while
+              the owner reviews the position.
             </p>
           </div>
         </article>
 
         <article data-reveal="cell" className="bg-crest-950 p-6 md:col-span-2">
-          <span className="tnum font-mono text-poster-sm text-paper/60">12:00:34</span>
+          <span className="tnum font-mono text-poster-sm text-paper/60">ILLUSTRATIVE · 03</span>
           <h3 className="type-display mt-4 text-poster-base text-paper uppercase">
             Liquidity refreshed
           </h3>
           <p className="mt-2 text-poster-sm text-paper/75">
-            Vault maxWithdraw read again at the current block. Quoted assets are
-            not withdrawable assets, and only the second one sizes a repayment.
+            Current withdrawal options and simulation would bound any strategy
+            repayment. Quoted shares are not withdrawable assets.
           </p>
         </article>
 
         <article data-reveal="cell" className="bg-crest-950 p-6 md:col-span-2">
-          <span className="tnum font-mono text-poster-sm text-paper/60">12:00:36</span>
+          <span className="tnum font-mono text-poster-sm text-paper/60">ILLUSTRATIVE · 04</span>
           <h3 className="type-display mt-4 text-poster-base text-paper uppercase">
-            Repayment submitted
+            Repayment proposed
           </h3>
           <p className="mt-2 font-mono text-[0.7rem] break-all text-crest-300">
             repayFromStrategy(250_000_000)
           </p>
           <p className="mt-2 text-poster-sm text-paper/75">
-            Custos chose nothing. The route is fixed and the amount is bounded
-            by the policy cap.
+            Custos could only repay the fixed account; the policy and current
+            withdrawable assets must both permit the amount.
           </p>
         </article>
 
         <article data-reveal="cell" className="bg-crest-950 p-6 md:col-span-2">
-          <span className="tnum font-mono text-poster-sm text-paper/60">12:00:42</span>
+          <span className="tnum font-mono text-poster-sm text-paper/60">ILLUSTRATIVE · 06</span>
           <h3 className="type-display mt-4 text-poster-base text-paper uppercase">
-            Policy LTV restored
+            Policy LTV rechecked
           </h3>
           <p className="mt-2 text-poster-sm text-paper/75">
-            Position back at 35.1%, inside the target band, with the account
-            still under owner control.
+            Only canonical post-state evidence could show the position back
+            inside its target band.
           </p>
         </article>
 
@@ -98,14 +97,15 @@ export function TimelineSection() {
           className="flex flex-col justify-between gap-6 bg-paper p-6 md:col-span-4"
         >
           <div>
-            <span className="tnum font-mono text-poster-sm text-ink-soft">12:00:40</span>
+            <span className="tnum font-mono text-poster-sm text-ink-soft">ILLUSTRATIVE · 05</span>
             <h3 className="type-display mt-3 text-poster-md text-ink uppercase">
-              Debt reduced, verified
+              Debt reduction, illustrated
             </h3>
             <p className="mt-2 max-w-md text-poster-sm text-ink-soft">
-              Only the canonical post-state turns this tile green. If the
-              receipt succeeds and debt does not fall, the tile says postcondition
-              failed and the frozen state stays.
+              The before-and-after numbers below are an example, not a receipt.
+              An actual repayment counts only after canonical debt and floor
+              checks. If the receipt succeeds without debt falling, the
+              postcondition fails.
             </p>
           </div>
           <div className="grid grid-cols-1 gap-px border border-ink bg-ink sm:grid-cols-3">

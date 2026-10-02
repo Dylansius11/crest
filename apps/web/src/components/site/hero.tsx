@@ -49,7 +49,7 @@ export function Hero() {
                 className="type-display inline-flex items-center gap-3 border border-paper/70 px-3 py-2 text-poster-sm uppercase"
               >
                 <span className="inline-block size-2 rounded-full bg-flame" aria-hidden />
-                {routeFacts.chain} · block {routeFacts.block} · {evidenceDate}
+                Reviewed route · {routeFacts.chain} · block {routeFacts.block} · {evidenceDate}
               </p>
 
               <h1 className="type-display mt-7 text-[2.75rem] leading-[0.92] sm:text-poster-xl lg:text-[4.25rem] xl:text-[5rem]">
@@ -71,11 +71,10 @@ export function Hero() {
               </h1>
 
               <p data-hero-item="lead" className="mt-7 max-w-lg text-poster-base text-paper">
-                Most borrowing against stock just adds a loan that quietly grows.
-                Crest puts <strong className="font-semibold text-paper">Custos</strong>, a
-                Guardian with three moves and no discretion, on the account. It
-                freezes new debt at your guard and pays the balance down with
-                your own yield, inside caps you set.
+                Crest keeps borrowing in an account you control. You set the
+                debt ceiling and the Guardian. If enabled, <strong className="font-semibold text-paper">Custos</strong> can
+                freeze new borrowing or repay debt from that account&apos;s own
+                reserve and fixed vault. Only you can borrow or change the rules.
               </p>
 
               <div data-hero-item="cta" className="mt-9 flex flex-wrap items-center gap-4">

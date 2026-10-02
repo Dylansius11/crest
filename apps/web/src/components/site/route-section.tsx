@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Cell, CellLabel, Fact } from "@/components/ui/cell";
-import { forkProof, routeFacts } from "@/lib/content";
+import { forkProof, marketLltvPercent, oracleFacts, routeFacts } from "@/lib/content";
 
 /**
  * Route section: the receipt, not a pitch. Exact market id, contract names,
@@ -18,7 +18,7 @@ export function RouteSection() {
             account.
           </h2>
         </div>
-        <Badge tone="verified" data-reveal="chip">Gate passed · full route</Badge>
+        <Badge tone="warn" data-reveal="chip">Mainnet fork only · testnet unavailable</Badge>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -30,8 +30,17 @@ export function RouteSection() {
               <Fact label="Collateral">{routeFacts.collateral} Stock Token</Fact>
               <Fact label="Loan token">{routeFacts.loanToken}</Fact>
               <Fact label="Oracle">{routeFacts.oracle}</Fact>
-              <Fact label="LLTV">{(Number("625000000000000000") / 1e18) * 100}%</Fact>
+              <Fact label="Morpho LLTV">{marketLltvPercent.toFixed(1)}%</Fact>
+              <Fact label="Morpho oracle value">{oracleFacts.morphoValue} USDG / AAPL</Fact>
+              <Fact label="Feed-only reference">{oracleFacts.feedOnlyValue} USDG / AAPL</Fact>
             </dl>
+            <p className="mt-4 max-w-prose text-poster-sm text-ink-soft">
+              Recorded at block {oracleFacts.observedBlock}. Morpho&apos;s oracle is
+              the value used for debt capacity and liquidation. The feed-only
+              reference is a divergence check, not a second multiplier. This
+              market&apos;s oracle includes the Stock Token UI multiplier beyond
+              the feed ratio; applying it again here would overstate collateral.
+            </p>
           </div>
         </Cell>
 
@@ -58,13 +67,12 @@ export function RouteSection() {
         <div className="grid gap-6 p-6 md:grid-cols-[1fr_auto] md:items-center">
           <div>
             <h3 className="type-display text-poster-md text-ink">
-              The lifecycle ran on a live fork before the gate opened
+              The lifecycle passed on a pinned fork
             </h3>
             <p className="mt-2 max-w-2xl text-poster-sm text-ink-soft">
               Supply, owner borrow-and-deploy, Guardian strategy repayment, and
-              owner exit executed at Robinhood block {forkProof.block}. Both
-              lifecycles had to pass. Nothing on this page describes a
-              simulation of that run; it is the recorded run.
+              owner exit were exercised against Robinhood state at block {forkProof.block}.
+              This is fork evidence, not a live account or transaction receipt.
             </p>
           </div>
           <dl className="grid grid-cols-2 gap-px border border-ink bg-ink">

@@ -33,9 +33,10 @@ export function PolicyBandSection() {
             </h2>
           </div>
           <p className="max-w-md text-poster-sm text-ink-soft">
-            The Guardian freezes borrowing when the upper guard crosses, then
-            repays from your own reserve and vault. Morpho's hard LLTV sits far
-            above the whole policy band.
+            Illustrative owner policy, not an active account setting. A
+            configured Guardian could freeze at the upper guard and repay only
+            from the account&apos;s own reserve or fixed vault. Morpho&apos;s LLTV
+            is the protocol limit, not an owner target.
           </p>
         </div>
 

@@ -144,6 +144,20 @@ Position screen order:
 10. intervention timeline and transaction evidence;
 11. stress scenarios and limitations.
 
+Owner workspace navigation follows the action sequence rather than a permanent right-hand evidence rail:
+
+1. connect an explicitly selected injected wallet or inspect an address read-only; a wrong network offers a one-click switch to the manifest chain;
+2. show recorded debt, LTV, and withdrawable liquidity at a glance, with unavailable values intact;
+3. choose the manifest collateral and loan-token intent (symbols come from the active manifest, never hard-coded), then deploy and configure through separate owner approvals;
+4. enter and exit: simulate supply or owner-only borrow, and owner repay, strategy, reserve, or collateral withdrawal, or unfreeze, against a live chain read; one sticky transaction panel carries every simulation, signature, and receipt;
+5. expand exact route identity, permissions, provenance, and canonical receipts.
+
+A sandbox route renders a hatched SANDBOX band directly under the header with every manifest disclosure one click away. It never shrinks into a footnote.
+
+The wallet chooser uses EIP-6963 announcements so multiple extensions remain separately selectable.
+The legacy `window.ethereum` provider appears only when no wallet announces itself. Provider
+names are self-attested, so the signer must confirm the extension's actual request.
+
 Landing-page order (marketing surface, same rules, different emphasis):
 
 1. cover: the claim plus the Custos panel, with the observed block and date;
@@ -163,7 +177,7 @@ Never place “Borrow more” above the risk/liquidity summary. It is always an 
 
 Hero and dashboard centrepiece. One panel, in this order:
 
-1. identity strip: `Custos` with the live-state dot, and the role label `Crest Guardian`;
+1. identity strip: `Custos` with a static identity mark and the role label `Crest Guardian`; show a live-state indicator only after a fresh runtime observation proves it;
 2. one paragraph of what it watches and what it may do;
 3. the band strip it enforces, with zone ticks and the Morpho LLTV terminal marker;
 4. the callable surface, one row per selector, each row stating the outcome it can produce;
@@ -242,7 +256,7 @@ Required:
 - stale/degraded indicator;
 - a realized section below, never blended into the estimate.
 
-The spread may be drawn as a two-sided bar once both rates are observed: earn side in brand blue, pay side in flame, net printed beneath. An inverted spread is stated in words, not hidden by color.
+The spread may be drawn as a two-sided bar once both rates are observed: earn side in brand blue, pay side in flame. Print a net spread only when the rate windows and conventions are comparable; otherwise disclose why no net value is shown. An inverted spread is stated in words, not hidden by color.
 
 Never make a giant negative “loan APY” the primary metric.
 
@@ -381,7 +395,7 @@ Every owner transaction preview shows:
 - chain/environment/account;
 - Crest Account, Morpho, and vault addresses;
 - selector and exact route;
-- token/amount and share bounds;
+- token/amount and share bounds (vault share minimums and maximums derive from a simulated preview with a stated 50 bps margin; withdrawals name the owner wallet as the only receiver);
 - current/resulting debt and LTV;
 - caps/floors affected;
 - simulation block/gas;
@@ -393,6 +407,12 @@ High-risk owner actions — raising debt or strategy caps, lowering floors, chan
 
 | State | UI treatment | Recovery |
 |---|---|---|
+| Sandbox route (46630) | Hatched SANDBOX band with all disclosures; owner signing enabled | None needed; never label it reviewed or live mainnet |
+| Signing-disabled route | Readable evidence page, no transaction controls | Owner funds and approves a canary separately |
+| Wrong network | Stop note with one-click switch to the manifest chain | Switch or add the chain in the wallet |
+| Assessment missing or stale (over 10 min) | Borrow closed with the reason | Wait for a fresh monitor poll |
+| Assessment DEGRADED on sandbox | Reason codes plus an explicit owner acknowledgement before a borrow can be simulated | Acknowledge, or wait for healthy inputs |
+| Assessment DEGRADED on reviewed route | Borrow closed | Wait for healthy inputs |
 | Market unsupported | Route blocked with gate reason | Select verified route |
 | Vault unsupported | Yield disabled; reserve-only available | Verify another same-asset vault later |
 | Rate stale/spread below floor | No new borrow recommendation | Refresh or wait |
