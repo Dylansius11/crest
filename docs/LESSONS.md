@@ -25,6 +25,12 @@ Rules for this file:
 
 ---
 
+## 2026-10-02 — Ticker, vault TVL, and borrowable liquidity are different proofs (Technical)
+
+- Robinhood documents `/rhj/assets[].id` as the onchain `uid()` shared across chains for one asset. At Robinhood testnet block `127410311`, all five faucet Stock Token `uid()` values (TSLA, AMZN, NFLX, PLTR, AMD) differed from their same-ticker issuer-registry IDs, and the registry listed no 46630 deployment. A faucet transfer and verified `Stock` implementation alone do not establish registered-asset identity.
+- Factory `CreateVaultV2` events revealed two exact-Paxos-USDG Vault V2 contracts absent from the explorer's source-verified vault search. The `testLPVault` had 63 idle USDG and simulated a 0.1 USDG withdrawal for an existing holder, but also allocated to a `FakeWBTC`-collateral market; another TSLA market had 110.239151 USDG of *borrowable* liquidity backed by a publicly settable `MockFeed` and a fixed `MockIRM`.
+- Rule: compare onchain UID to the issuer's stable ID before using a testnet ticker; enumerate vault factories rather than trusting token names or verified-source search; gate the lending market and vault independently, keeping `totalAssets`, current normal-exit capacity, and market free liquidity separate.
+
 ## 2026-10-01 — A same-core fork route does not establish oracle trust (Technical)
 
 - A TLS-authenticated official testnet RPC through the SNI-preserving proxy returned chain 46630 and let Foundry replay a finalized TSLA-labeled/Paxos test USDG Morpho market and USDG Vault V2. The fork proved 0.1 USDG borrow/deposit, Guardian strategy repayment, and owner exit; the market had only 1 USDG shared free liquidity at the evidence block.
