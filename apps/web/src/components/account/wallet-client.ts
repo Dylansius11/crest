@@ -2,6 +2,7 @@ import { createPublicClient, http } from "viem";
 
 import { robinhoodChainOf } from "@crest/chain";
 
+import { headLagError } from "../../lib/chain-head";
 import { activeManifest } from "../../lib/manifest";
 
 export const activeChain = robinhoodChainOf(activeManifest.network.chainId);
@@ -11,6 +12,15 @@ export const activeChain = robinhoodChainOf(activeManifest.network.chainId);
  * hostname cannot silently break, or impersonate, the read path. The server forwards to `CREST_RPC_UPSTREAM`.
  */
 export const publicClient = createPublicClient({ chain: activeChain, transport: http("/rpc", { retryCount: 2 }) });
+
+/** The latest block, refused when it lags or leads this clock beyond budget; every owner simulation pins to it. */
+export async function freshHead() {
+  const block = await publicClient.getBlock({ blockTag: "latest" });
+  if (block.number === null || block.hash === null) throw new Error("RPC did not return a pinnable block");
+  const lag = headLagError(block.timestamp, Date.now());
+  if (lag !== null) throw new Error(lag);
+  return { number: block.number, hash: block.hash, timestamp: block.timestamp };
+}
 
 export type Eip1193Provider = {
   request(args: { method: string; params?: unknown[] | object }): Promise<unknown>;

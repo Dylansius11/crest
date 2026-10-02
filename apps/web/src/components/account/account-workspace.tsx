@@ -21,7 +21,7 @@ import { compilePolicy, routeContextOf, toConfigurationCall } from "@crest/polic
 
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Cell } from "@/components/ui/cell";
-import { borrowGate } from "@/lib/borrow-gate";
+import { borrowGate, borrowSignatureBlock } from "@/lib/borrow-gate";
 import type { BorrowGate } from "@/lib/borrow-gate";
 import { activeManifest, activeTokens } from "@/lib/manifest";
 import type { RouteToken } from "@/lib/manifest";
@@ -38,7 +38,7 @@ import type { PolicyFormValues } from "./policy-editor";
 import { assertStagedPolicyResponse } from "./policy-stage";
 import { SandboxNotice } from "./sandbox-notice";
 import { TransactionPanel } from "./transaction-panel";
-import { activeChain, providerOf, publicClient, selectProvider, switchToActiveChain } from "./wallet-client";
+import { activeChain, freshHead, providerOf, publicClient, selectProvider, switchToActiveChain } from "./wallet-client";
 import type { Eip1193Provider } from "./wallet-client";
 import { WalletPicker } from "./wallet-picker";
 import type { DiscoveredWallet } from "./wallet-discovery";
@@ -133,6 +133,8 @@ type PreparedAction = {
   policyHash?: Hex;
   expectedPolicyNonce?: bigint;
   allowance?: { token: Address; amount: bigint };
+  /** Borrowed assets of a prepared borrow, rechecked against the live gate at signature time. */
+  borrowAssets?: bigint;
 };
 type PreTransactionState = { policyNonce: bigint; debt: bigint; strategy: bigint };
 
@@ -463,8 +465,7 @@ export function AccountWorkspace() {
     setTransaction({ phase: "simulating", action: next.action, detail: "Checking registered bytecode, direct onchain ownership, simulation, gas, and a canonical block.", recipient: next.to, calldata: next.data, selector: next.selector });
     revealTransaction();
     try {
-      const block = await publicClient.getBlock({ blockTag: "latest" });
-      if (block.number === null || block.hash === null) throw new Error("RPC did not return a simulation block");
+      const block = await freshHead();
       const verified = await verifyAccount(block.number);
       if (next.expectedPolicyNonce !== undefined && preTransactionState.current?.policyNonce !== next.expectedPolicyNonce - 1n) throw new Error("Staged policy nonce no longer follows the onchain account; compile again");
       await publicClient.call({ account: verified.owner, to: next.to, data: next.data, blockNumber: block.number });
@@ -621,7 +622,7 @@ export function AccountWorkspace() {
       const bound = gate.kind === "acknowledge"
         ? "Only the onchain debt ceiling and Morpho LLTV bound this degraded sandbox borrow."
         : gate.capacityAssets === null ? "Only the onchain debt ceiling and Morpho LLTV bound this borrow." : "The recorded owner capacity also bounds this borrow.";
-      void simulatePrepared({ action: "borrow-and-deploy", data, selector: slice(data, 0, 4), to: selectedAddress, detail: `Borrow ${formatUnits(assets, loanToken.decimals)} ${loanToken.symbol} and deposit it into the fixed vault for at least ${minShares} shares (preview ${preview}, less ${SHARE_MARGIN_BPS} bps). ${bound}` });
+      void simulatePrepared({ action: "borrow-and-deploy", borrowAssets: assets, data, selector: slice(data, 0, 4), to: selectedAddress, detail: `Borrow ${formatUnits(assets, loanToken.decimals)} ${loanToken.symbol} and deposit it into the fixed vault for at least ${minShares} shares (preview ${preview}, less ${SHARE_MARGIN_BPS} bps). ${bound}` });
     } catch (error) {
       setTransaction({ phase: "blocked", action: "borrow-and-deploy", detail: error instanceof Error ? error.message : "Borrow input is invalid." });
     }
@@ -677,9 +678,13 @@ export function AccountWorkspace() {
         setTransaction((current) => ({ ...current, phase: "blocked", detail: "The wallet no longer exposes the recorded owner address." }));
         return;
       }
-      const block = await publicClient.getBlock({ blockTag: "latest" });
-      if (block.number === null) throw new Error("RPC did not return a pre-signature block");
+      const block = await freshHead();
       await verifyAccount(block.number);
+      const borrowBlock = prepared.borrowAssets === undefined ? null : borrowSignatureBlock(gate, degradedAcknowledged, prepared.borrowAssets);
+      if (borrowBlock !== null) {
+        setTransaction((current) => ({ ...current, phase: "blocked", detail: borrowBlock }));
+        return;
+      }
       if (prepared.expectedPolicyNonce !== undefined && preTransactionState.current?.policyNonce !== prepared.expectedPolicyNonce - 1n) throw new Error("Onchain policy nonce changed after staging; compile again");
       await publicClient.call({ account: wallet.address, to: prepared.to, data: prepared.data, blockNumber: block.number });
       setTransaction((current) => ({ ...current, phase: "pending", detail: "Wallet signature requested. No transaction has been broadcast yet." }));
@@ -748,7 +753,7 @@ export function AccountWorkspace() {
         setTransaction((current) => ({ ...current, phase: "reconciliation-failed", hash: broadcastHash, detail: `Receipt reconciliation failed: ${errorText(error)}. The submitted hash needs explicit review before another owner action.` }));
       }
     }
-  }, [prepared, refreshBalances, refreshLiveState, selectedAddress, transaction.gas, transaction.phase, verifyAccount, wallet]);
+  }, [degradedAcknowledged, gate, prepared, refreshBalances, refreshLiveState, selectedAddress, transaction.gas, transaction.phase, verifyAccount, wallet]);
 
   const inventory = useMemo(() => [
     {
@@ -774,7 +779,8 @@ export function AccountWorkspace() {
   const busy = transaction.phase === "pending" || transaction.phase === "simulating";
   const preparedBlockedReason = transaction.action === "configure"
     ? configurationBlockedReason
-    : transaction.action !== null && EXIT_SIDE[transaction.action] ? exitBlockedReason : actionBlockedReason;
+    : transaction.action !== null && EXIT_SIDE[transaction.action] ? exitBlockedReason
+    : actionBlockedReason ?? (prepared?.borrowAssets === undefined ? null : borrowSignatureBlock(gate, degradedAcknowledged, prepared.borrowAssets));
 
   return (
     <main className="min-h-screen bg-paper text-ink">

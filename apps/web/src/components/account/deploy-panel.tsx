@@ -11,7 +11,7 @@ import { Cell, Fact } from "@/components/ui/cell";
 import { activeManifest } from "@/lib/manifest";
 import { isOwnerSigningEnabled } from "@/lib/transaction-route";
 import type { RecordedRegistry, WalletState } from "./types";
-import { activeChain, providerOf, publicClient } from "./wallet-client";
+import { activeChain, freshHead, providerOf, publicClient } from "./wallet-client";
 
 type DeployPhase = "idle" | "simulating" | "signature-ready" | "pending" | "registration-ready" | "registered" | "failed" | "reverted";
 type DeployPreview = { data: Hex; gas: bigint; feeWei: bigint; blockNumber: bigint; blockHash: Hex };
@@ -58,8 +58,7 @@ export function DeployPanel({ wallet, registry, onRegistered }: {
       const provider = providerOf();
       const walletChain = await provider?.request({ method: "eth_chainId" });
       if (typeof walletChain !== "string" || Number.parseInt(walletChain, 16) !== activeManifest.network.chainId) throw new Error(`Wallet is not on ${activeManifest.network.name} ${activeManifest.network.chainId}`);
-      const block = await publicClient.getBlock({ blockTag: "latest" });
-      if (block.number === null || block.hash === null) throw new Error("RPC did not return a simulation block");
+      const block = await freshHead();
       const [chainId, morphoCode, vaultCode, loanCode, collateralCode] = await Promise.all([
         publicClient.getChainId(),
         publicClient.getCode({ address: getAddress(morpho.address), blockNumber: block.number }),
@@ -144,8 +143,7 @@ export function DeployPanel({ wallet, registry, onRegistered }: {
       ]);
       if (typeof chain !== "string" || Number.parseInt(chain, 16) !== activeManifest.network.chainId
         || !Array.isArray(active) || !active.some((address) => typeof address === "string" && address.toLowerCase() === owner.toLowerCase())) throw new Error("Wallet account or chain changed after simulation");
-      const block = await publicClient.getBlock({ blockTag: "latest" });
-      if (block.number === null) throw new Error("RPC cannot pin the pre-signature simulation");
+      const block = await freshHead();
       await publicClient.call({ account: owner, data: preview.data, blockNumber: block.number });
       setPhase("pending");
       setDetail("Owner signature requested. No account is registered until a finalized deployment receipt is verified.");

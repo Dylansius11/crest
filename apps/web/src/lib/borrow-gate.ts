@@ -4,6 +4,9 @@
  */
 export const MAX_ASSESSMENT_AGE_MS = 10 * 60_000;
 
+/** A record dated further ahead than this is untrusted: a skewed clock must not keep an assessment fresh forever. */
+export const MAX_CLOCK_SKEW_MS = 60_000;
+
 /** States in which the risk engine leaves owner borrowing available. */
 const HEALTHY: Record<string, true> = { NORMAL: true, HARVESTABLE: true, UPSIZE_AVAILABLE: true };
 
@@ -32,6 +35,9 @@ export function borrowGate({ trust, frozen, assessment, nowMs }: BorrowGateInput
   if (Number.isNaN(created) || nowMs - created > MAX_ASSESSMENT_AGE_MS) {
     return { kind: "blocked", reason: `The recorded assessment is stale (older than ${MAX_ASSESSMENT_AGE_MS / 60_000} minutes). Wait for a fresh monitor poll.` };
   }
+  if (created - nowMs > MAX_CLOCK_SKEW_MS) {
+    return { kind: "blocked", reason: "The recorded assessment is dated ahead of this clock. Check the monitor and browser clocks before borrowing." };
+  }
   if (HEALTHY[assessment.status] === true) {
     return { kind: "open", capacityAssets: assessment.ownerBorrowCapacityAssets === null ? null : BigInt(assessment.ownerBorrowCapacityAssets) };
   }
@@ -41,4 +47,15 @@ export function borrowGate({ trust, frozen, assessment, nowMs }: BorrowGateInput
       : { kind: "blocked", reason: "The recorded assessment is DEGRADED. A reviewed route never borrows on degraded input." };
   }
   return { kind: "blocked", reason: `The recorded assessment is ${assessment.status}. Borrowing stays closed until the account returns to a healthy state.` };
+}
+
+/**
+ * Re-applies the gate to an already prepared borrow at signature time. A borrow prepared under an open or
+ * acknowledged gate stops being signable the moment the recorded state, its age, or the acknowledgement changes.
+ */
+export function borrowSignatureBlock(gate: BorrowGate, acknowledged: boolean, assets: bigint): string | null {
+  if (gate.kind === "blocked") return gate.reason;
+  if (gate.kind === "acknowledge") return acknowledged ? null : "The DEGRADED acknowledgement was withdrawn. Acknowledge the reason codes again before signing.";
+  if (gate.capacityAssets !== null && assets > gate.capacityAssets) return "The prepared borrow now exceeds the recorded owner capacity. Prepare it again.";
+  return null;
 }

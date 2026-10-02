@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { MAX_ASSESSMENT_AGE_MS, borrowGate } from "./borrow-gate";
+import { MAX_ASSESSMENT_AGE_MS, MAX_CLOCK_SKEW_MS, borrowGate, borrowSignatureBlock } from "./borrow-gate";
 
 const now = Date.parse("2026-10-02T12:00:00Z");
 const fresh = new Date(now - 60_000).toISOString();
@@ -30,6 +30,14 @@ describe("owner borrow gate", () => {
     expect(borrowGate({ trust: "sandbox", frozen: false, assessment: assessment("NORMAL", { createdAt: "not a date" }), nowMs: now }).kind).toBe("blocked");
   });
 
+  test("an assessment dated ahead of this clock beyond the skew allowance is untrusted, not fresh forever", () => {
+    const ahead = new Date(now + MAX_CLOCK_SKEW_MS + 1).toISOString();
+    const withinSkew = new Date(now + MAX_CLOCK_SKEW_MS).toISOString();
+    expect(borrowGate({ trust: "sandbox", frozen: false, assessment: assessment("NORMAL", { createdAt: ahead }), nowMs: now }).kind).toBe("blocked");
+    expect(borrowGate({ trust: "sandbox", frozen: false, assessment: assessment("DEGRADED", { createdAt: ahead }), nowMs: now }).kind).toBe("blocked");
+    expect(borrowGate({ trust: "sandbox", frozen: false, assessment: assessment("NORMAL", { createdAt: withinSkew }), nowMs: now }).kind).toBe("open");
+  });
+
   test("a healthy assessment opens borrowing bounded by the recorded owner capacity", () => {
     expect(borrowGate({ trust: "reviewed", frozen: false, assessment: assessment("UPSIZE_AVAILABLE"), nowMs: now })).toEqual({ kind: "open", capacityAssets: 5_000_000n });
   });
@@ -47,5 +55,15 @@ describe("owner borrow gate", () => {
     for (const status of ["PROTECT", "EXIT_YIELD", "CRITICAL", "SOMETHING_NEW"]) {
       expect(borrowGate({ trust: "sandbox", frozen: false, assessment: assessment(status), nowMs: now }).kind).toBe("blocked");
     }
+  });
+});
+
+describe("borrow signature recheck", () => {
+  test("a prepared borrow is unsignable once the gate closes, the acknowledgement is withdrawn, or capacity shrinks below it", () => {
+    expect(borrowSignatureBlock({ kind: "blocked", reason: "CRITICAL" }, true, 1n)).toBe("CRITICAL");
+    expect(borrowSignatureBlock({ kind: "acknowledge", reasonCodes: ["unreadable"] }, false, 1n)).toContain("acknowledgement was withdrawn");
+    expect(borrowSignatureBlock({ kind: "acknowledge", reasonCodes: ["unreadable"] }, true, 1n)).toBeNull();
+    expect(borrowSignatureBlock({ kind: "open", capacityAssets: 9n }, false, 10n)).toContain("exceeds");
+    expect(borrowSignatureBlock({ kind: "open", capacityAssets: 10n }, false, 10n)).toBeNull();
   });
 });

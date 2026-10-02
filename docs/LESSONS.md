@@ -25,6 +25,18 @@ Rules for this file:
 
 ---
 
+## 2026-10-02 — The web suite ran outside `pnpm verify` (Technical)
+
+- `apps/web` had vitest files for the borrow gate and formatting but no `test` script, so turbo's `test` task skipped the package and `pnpm verify` stayed green whatever those files asserted.
+- Turbo runs a task only in packages that define the matching script; a test file alone does not register a package.
+- Rule: every package with test files declares `"test": "vitest run"`, and a new package's tests are confirmed in the `pnpm verify` output before it is called covered.
+
+## 2026-10-02 — Next dev never hydrates when opened on 127.0.0.1 (Technical)
+
+- The owner workspace served static HTML on `http://127.0.0.1:3000` but no click handler ran; the same build on `http://localhost:3000` hydrated and connected the wallet.
+- Next 16 dev blocks cross-origin dev resources and the HMR socket unless the origin is allowed, and `127.0.0.1` is a different origin from `localhost`.
+- Rule: browser checks against the dev server use `http://localhost:3000`; a page that renders but ignores input is checked for blocked dev-origin requests before the component is debugged.
+
 ## 2026-10-02 — Only a fresh-database rehearsal exercises first activation (Technical)
 
 - The full 46630 fork rehearsal on an empty database hit, in order: no route rows (enrollment foreign-key failure), a monitor that refused the `pending_policy` account before running the indexer that is the only writer of `active`, and a Guardian submit gate pinned to chain 4663. Every unit and integration suite passed throughout, because each fixture inserted route rows and an already-active account itself.

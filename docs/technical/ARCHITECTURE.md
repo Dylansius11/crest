@@ -326,6 +326,7 @@ Rules:
 - stale/paused/conflicting/illiquid input is `degraded`; the engine re-applies the policy's own freshness budgets, requires every onchain input at the pinned block (`block_skew`), and checks account, market, vault, feed, and policy-nonce identity;
 - Morpho's oracle value drives LTV, health, and capacity; Crest's feed-only value is disclosed beside it, and a gap above `maxOracleDivergenceBps` or with no known composition is `oracle_divergence`;
 - degraded input sets owner-borrow capacity to zero and may trigger freeze/exit; each degraded oracle, vault, or lifecycle source freezes only when its policy trigger is on, while head, account, market, and position always do;
+- on 46630 SANDBOX only, the owner may explicitly acknowledge the displayed DEGRADED reasons to prepare a borrow despite the engine's zero offchain capacity; this never changes the engine output or authorizes Custos, and onchain debt ceiling, freeze, Morpho LLTV, and exact pre-signature simulation still apply. Reviewed routes never borrow on DEGRADED input;
 - Guardian repayment uses only current withdrawable/simulated assets;
 - scenarios are adverse by schema and cannot increase capacity;
 - all outputs cite inputs and stable reason codes, and carry the engine version, input hash, policy nonce and hash, and scenario set version.
@@ -340,6 +341,8 @@ MVP owner-borrow capacity is the minimum of:
 - remaining Crest strategy cap;
 - remaining fixed-vault deposit room under every absolute and relative cap on the liquidity adapter's ids (Vault V2 `maxDeposit` always returns zero, and a configured deposit gate counts as no room);
 - zero when borrowing is frozen, net spread is below policy floor, rates cannot be netted, or any required source is degraded, including `oracle_divergence`, `block_skew`, and a policy-nonce `conflict`.
+
+The 46630 owner-signing SANDBOX exception does not treat zero degraded risk capacity as a positive recommendation: it bypasses that offchain owner-borrow gate only after explicit acknowledgement. This exception cannot activate on 4663, grant Guardian debt authority, or make stale/missing assessments signable.
 
 Repayment capacity is separately bounded by current debt, per-action cap, idle reserve above floor, and currently withdrawable strategy assets above the strategy floor plus one vault share's value of rounding. A repayment is planned only from the account's own reads at the pinned block under the policy nonce the contract holds; a stale, skewed, foreign, drifted, or superseded source leaves only a freeze. Both owner-borrow debt rooms hold back one Morpho borrow share's value for share rounding, and a strategy that cannot currently withdraw what it holds is degraded input.
 
