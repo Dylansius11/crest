@@ -223,17 +223,13 @@ export function createEnrollment(options: EnrollmentOptions): Enrollment {
     owner: Address, account: Address, nonce: bigint, compiled: CompiledPolicy, signature: string | undefined, blockNumber: bigint,
   ): Promise<void> {
     const denied = new EnrollmentError(401, "owner signature does not authorize this policy staging request");
-    if (signature === undefined || !/^0x(?:[0-9a-fA-F]{2})*$/.test(signature)) throw denied;
+    // Shorter than a compact (EIP-2098) signature cannot authorize anyone; longer forms (ERC-1271/6492) go to verification.
+    if (signature === undefined || !/^0x(?:[0-9a-fA-F]{2}){64,}$/.test(signature)) throw denied;
     const message = policyStagingMessage({
       chainId, account, policyNonce: nonce, policyHash: compiled.policyHash, contentHash: compiled.contentHash,
     });
-    let authorized: boolean;
-    try {
-      authorized = await reader.verifyOwnerMessage(owner, message, signature as Hex, blockNumber);
-    } catch {
-      throw denied;
-    }
-    if (!authorized) throw denied;
+    // An RPC failure is unreadable infrastructure (503 via enrollmentFailure), never a refused signature.
+    if (!await reader.verifyOwnerMessage(owner, message, signature as Hex, blockNumber)) throw denied;
   }
 
   return {
@@ -285,18 +281,18 @@ export function createEnrollment(options: EnrollmentOptions): Enrollment {
       const code = await reader.getCode(accountAddress, receipt.blockNumber);
       if (code === "0x") throw new EnrollmentError(422, "no contract code exists at the claimed account");
 
+      // Read failures propagate as unreadable infrastructure; only a value that was read can be refused.
       const [onchainOwner, onchainMorpho, onchainNonce] = await Promise.all([
-        reader.readOwner(accountAddress, receipt.blockNumber).catch(() => null),
-        reader.readMorpho(accountAddress, receipt.blockNumber).catch(() => null),
-        reader.readPolicyNonce(accountAddress, receipt.blockNumber).catch(() => null),
+        reader.readOwner(accountAddress, receipt.blockNumber),
+        reader.readMorpho(accountAddress, receipt.blockNumber),
+        reader.readPolicyNonce(accountAddress, receipt.blockNumber),
       ]);
-      if (onchainOwner === null || onchainOwner.toLowerCase() !== ownerAddress.toLowerCase()) {
+      if (onchainOwner.toLowerCase() !== ownerAddress.toLowerCase()) {
         throw new EnrollmentError(422, "account owner() does not match the claimed owner");
       }
-      if (onchainMorpho === null || onchainMorpho.toLowerCase() !== morpho.toLowerCase()) {
+      if (onchainMorpho.toLowerCase() !== morpho.toLowerCase()) {
         throw new EnrollmentError(422, "account morpho() is not the manifest Morpho deployment");
       }
-      if (onchainNonce === null) throw new EnrollmentError(422, "account policyNonce() is unreadable");
       if (onchainNonce !== 0n) {
         throw new EnrollmentError(409, "account was configured before enrollment; its first policy cannot be reconstructed safely");
       }
@@ -386,15 +382,14 @@ export function createEnrollment(options: EnrollmentOptions): Enrollment {
       }
 
       const [onchainOwner, onchainNonce, code] = await Promise.all([
-        reader.readOwner(accountAddress, finalized).catch(() => null),
-        reader.readPolicyNonce(accountAddress, finalized).catch(() => null),
-        reader.getCode(accountAddress, finalized).catch(() => null),
+        reader.readOwner(accountAddress, finalized),
+        reader.readPolicyNonce(accountAddress, finalized),
+        reader.getCode(accountAddress, finalized),
       ]);
-      if (onchainOwner === null || onchainOwner.toLowerCase() !== ownerAddress.toLowerCase()) {
+      if (onchainOwner.toLowerCase() !== ownerAddress.toLowerCase()) {
         throw new EnrollmentError(422, "account owner() does not match the claimed owner");
       }
-      if (onchainNonce === null) throw new EnrollmentError(422, "account policyNonce() is unreadable");
-      if (code === null || code === "0x") throw new EnrollmentError(422, "no contract code exists at the registered account");
+      if (code === "0x") throw new EnrollmentError(422, "no contract code exists at the registered account");
       if (keccak256(code).toLowerCase() !== `0x${account.codeHash}`.toLowerCase()) {
         throw new EnrollmentError(422, "onchain account code no longer matches the registered code hash");
       }

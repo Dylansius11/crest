@@ -530,8 +530,14 @@ export function AccountWorkspace() {
       const provider = providerOf();
       if (!provider) throw new Error("Reconnect the owner wallet to sign the staging message");
       const head = await freshHead();
-      const onchainNonce = await publicClient.readContract({ address: selectedAddress, abi: ACCOUNT_READ_ABI, functionName: "policyNonce", blockNumber: head.number });
-      const message = policyStagingMessage({ chainId: activeManifest.network.chainId, account: selectedAddress, policyNonce: onchainNonce + 1n, policyHash: policy.policy.policyHash, contentHash: policy.policy.contentHash });
+      // The API verifies consent against the finalized nonce; refuse before signing while the last change is unfinalized.
+      const finalized = await publicClient.getBlock({ blockTag: "finalized" });
+      const readNonce = (blockNumber: bigint) => publicClient.readContract({ address: selectedAddress, abi: ACCOUNT_READ_ABI, functionName: "policyNonce", blockNumber });
+      const [headNonce, finalizedNonce] = await Promise.all([readNonce(head.number), readNonce(finalized.number)]);
+      if (headNonce !== finalizedNonce) {
+        throw new Error(`Policy nonce ${headNonce} is not finalized yet (finalized nonce ${finalizedNonce}). Stage the next policy after the chain finalizes that change.`);
+      }
+      const message = policyStagingMessage({ chainId: activeManifest.network.chainId, account: selectedAddress, policyNonce: finalizedNonce + 1n, policyHash: policy.policy.policyHash, contentHash: policy.policy.contentHash });
       const ownerSignature = await createWalletClient({ chain: activeChain, transport: custom(provider) }).signMessage({ account: wallet.address, message });
       if (requestId !== policyRequest.current) return;
       const { intents, ...typedDraft } = draft;

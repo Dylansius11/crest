@@ -436,6 +436,20 @@ describe("owner policy staging", () => {
     await expect(service(fakeReader(), db).stagePolicy(account, { owner, policy: draft, intents })).rejects.toMatchObject({ status: 422 });
   });
 
+  test("reports a pruned-state read as unreadable rather than refusing the owner, code, or signature", async () => {
+    const pruned = async (): Promise<never> => { throw new Error("historical state 6f08 is not available"); };
+    for (const reader of [
+      fakeReader({ readOwner: pruned }),
+      fakeReader({ getCode: pruned }),
+      fakeReader({ verifyOwnerMessage: pruned }),
+    ]) {
+      const { db, calls } = fakeDatabase();
+      await expect(service(reader, db).stagePolicy(account, { owner, policy: draft, intents, ownerSignature }))
+        .rejects.toThrow("historical state 6f08 is not available");
+      expect(calls.some((text) => text.includes("insert into policies"))).toBe(false);
+    }
+  });
+
   test("rejects an invalid account path parameter", async () => {
     const { db } = fakeDatabase();
     await expect(service(fakeReader(), db).stagePolicy("0x1234", { owner, policy: draft, intents })).rejects.toMatchObject({ status: 400 });

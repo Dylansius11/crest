@@ -25,6 +25,12 @@ Rules for this file:
 
 ---
 
+## 2026-10-02 — Owner consent must bind the nonce at the same block tag on both sides (Technical)
+
+- In the live 46630 canary, staging policy nonce 2 right after the nonce 1 configure failed with 401: the web signed head `policyNonce + 1` (2) while the API verified finalized `policyNonce + 1` (1), because 46630 finality trailed the head by roughly 20 to 30 minutes. Later attempts failed as "owner does not match" and "no contract code" because the API mapped pruned-state RPC errors (`historical state ... is not available`) to refusals, and the runtime relay had been started with 8 retries instead of the proxy default of 60.
+- A signature over a nonce is only valid if signer and verifier read that nonce at the same block tag. Robinhood testnet pools mix archive and pruned backends, so a finalized-block read can fail transiently.
+- Rule: read consent-bound state at the verifier's block tag, refuse before signing while head and finalized disagree, let read failures surface as 503 unreadable, and run the runtime relay with the default retry budget.
+
 ## 2026-10-02 — An Anvil fork of 46630 stops mining once upstream prunes the fork-base state (Technical)
 
 - About 25 minutes into a UI rehearsal, the `:8546` fork froze at block 127528964 and `evm_mine` failed with `failed to get storage for 0x0000F90827F1C53a10cb7A02335B175320002935 ... historical state ... is not available`, while the upstream relay kept advancing.
