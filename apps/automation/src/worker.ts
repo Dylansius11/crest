@@ -9,6 +9,7 @@ import { automationRuns, automationTriggers, claimGuardianTrigger, closeGuardian
   networks, policies, recordGuardianAttempt, recordGuardianReconciliation, createDatabase } from "@crest/db";
 import { canonicalJson } from "@crest/domain";
 import { morphoRouteOf } from "@crest/morpho";
+import { guardianRuntimeSigningAllowed } from "./authority.ts";
 import { decodeGuardianReceipt } from "./reconcile.ts";
 import { verifyGuardianPostconditions } from "./postconditions.ts";
 import { buildGuardianCall } from "./simulate.ts";
@@ -40,6 +41,7 @@ export async function executeGuardianOnce(
   db: Database, rpc: PublicClient, manifest: DeploymentManifest,
   input: { triggerId: string; account: Address; guardian: Address; loadSigner: () => PrivateKeyAccount },
 ): Promise<Result> {
+  if (!guardianRuntimeSigningAllowed(manifest)) throw new Error("Custos runtime signing is disabled outside the 46630 sandbox");
   if (await rpc.getChainId() !== manifest.network.chainId) throw new Error("Custos chain does not match the deployment manifest");
   const claim = await claimGuardianTrigger(db, {
     triggerId: input.triggerId, chainId: BigInt(manifest.network.chainId),

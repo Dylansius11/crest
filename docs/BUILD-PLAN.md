@@ -346,7 +346,7 @@ The demo proves useful autonomous downside management without autonomous debt cr
 **Steps**
 
 - [ ] Reverify route, code hashes, liquidity, rates, and lifecycle state.
-- [ ] Run contract security/authority review and spec consistency review.
+- [x] Run contract security/authority review and spec consistency review.
 - [ ] Deploy/verify source with small limits.
 - [ ] Execute canary owner supply → borrow-and-deploy → Guardian freeze → bounded repay → owner close.
 - [ ] Record exact hashes, blocks, policy, shares, debt, floors, and environment.

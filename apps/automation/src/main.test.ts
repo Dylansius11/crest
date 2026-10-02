@@ -48,3 +48,19 @@ test("doctor cannot attest an unregistered account without database evidence", (
   expect(result.stderr).toContain("DATABASE_URL");
   expect(result.stderr).not.toContain("example.invalid");
 }, 30_000);
+
+test("run refuses the reviewed mainnet before contacting RPC or claiming a trigger", () => {
+  const result = spawnSync(process.execPath, [script, "run", "--once", "--trigger-id", "0x01"], {
+    cwd, encoding: "utf8", env: { ...process.env,
+      DEPLOYMENT_MANIFEST_PATH: fileURLToPath(new URL("../../../config/deployment-manifest.json", import.meta.url)),
+      ROBINHOOD_CHAIN_RPC_URL: "https://example.invalid", DATABASE_URL: "postgresql://example.invalid/db",
+      GUARDIAN_EXPECTED_CHAIN_ID: "4663",
+      GUARDIAN_EXPECTED_ADDRESS: "0x1111111111111111111111111111111111111111",
+      GUARDIAN_ALLOWED_ACCOUNT: "0x2222222222222222222222222222222222222222",
+      GUARDIAN_PRIVATE_KEY: "configured-but-not-loaded",
+    },
+  });
+  expect(result.status).toBe(1);
+  expect(result.stderr).toContain("runtime signing is disabled");
+  expect(result.stderr).not.toContain("example.invalid");
+}, 30_000);

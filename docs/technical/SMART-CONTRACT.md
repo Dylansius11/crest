@@ -350,22 +350,23 @@ No swap, collateral movement, or external receiver.
 
 ## 9. Errors
 
+The compiled account declares these custom errors; OpenZeppelin, Morpho, and vault calls may also revert:
+
 ```solidity
 error Unauthorized();
+error InvalidConfiguration();
+error LtvPolicyInvalid();
 error BorrowingIsFrozen();
-error MarketMismatch(bytes32 expected, bytes32 actual);
-error VaultMismatch(address expected, address actual);
-error VaultAssetMismatch(address expected, address actual);
+error ActivePositionOrBalance();
+error RepayAmountZero();
+error InsufficientVaultShares(uint256 minimum, uint256 actual);
+error ExcessiveVaultShares(uint256 maximum, uint256 actual);
 error CollateralCapExceeded(uint256 cap, uint256 resulting);
-error DebtCeilingExceeded(uint256 ceiling, uint256 resulting);
+error DebtCeilingExceeded(uint256 cap, uint256 resulting);
 error StrategyCapExceeded(uint256 cap, uint256 resulting);
 error ReserveFloorViolation(uint256 floor, uint256 resulting);
 error StrategyFloorViolation(uint256 floor, uint256 resulting);
-error LtvPolicyInvalid();
-error RepayAmountZero();
-error InsufficientVaultShares(uint256 minimum, uint256 actual);
-error ActivePositionOrBalance();
-error InvalidConfiguration();
+error VaultAssetMismatch(address expected, address actual);
 error PostconditionFailed();
 ```
 
@@ -422,7 +423,7 @@ event VaultLiquidityRouteBound(address indexed adapter, bytes32 dataHash);
 Reject:
 
 - zero Morpho/token/oracle/IRM/vault/Guardian where required;
-- derived market ID mismatch or unsupported market;
+- derived market ID mismatch or uncreated Morpho market; a manifest-qualified route is required by the deployment/client and monitor, not authenticated by `configure`;
 - `yieldVault.asset() != loanToken`;
 - invalid LTV ordering or `criticalLtvWad >= market.lltv`;
 - zero repayment cap while Guardian is enabled;
@@ -431,7 +432,7 @@ Reject:
 - vault with incompatible interface/behavior;
 - Guardian equal to owner; renouncing ownership is also disabled.
 
-Live liquidity, APY, curator quality, and offchain freshness are onboarding/action gates, not immutable contract facts.
+Live liquidity, APY, curator quality, route qualification, and offchain freshness are deployment/onboarding/action gates, not immutable contract facts. The owner may select another created Morpho market and compatible vault only after closing all supported positions and balances. The contract enforces the exact stored route during every operation and forbids market/vault changes while any supported balance or position is active; clients and Custos reject routes not present in the active manifest.
 
 ## 12. Security controls
 
@@ -506,16 +507,16 @@ Collateral sale/unwind remains a separate later contract with fixed venue adapte
 
 ## 16. Deployment gate
 
-Before testnet funding or owner signatures, qualify the exact 46630 route and deploy a new `CrestAccount` bound to that network's verified Morpho contract. The existing 4663 pinned fork and manifest do not satisfy this gate:
+The reviewed 4663 manifest and pinned fork remain archived evidence, not authority for mainnet runtime signing. The owner explicitly permits **46630 SANDBOX** testnet signatures with visible disclosures despite the route's unverified oracle provenance, missing loan feed, and idle-only vault. This exception is not a qualified production route or proof of yield. Before *reviewed* route promotion, the exact market, vault, independent oracle inputs, fork lifecycle, code hashes and canary must pass independent qualification. The sandbox deployment still binds its own 46630 manifest's addresses and onchain code:
 
-- manifest evidence is genuinely finalized, strictly prior to the validation block, no more than 256 blocks old, and matches canonical `blockhash`;
-- exact Morpho market and vault route verified from current sources and bytecode;
-- unit/fuzz/invariant suite passes;
-- pinned fork completes supply → owner borrow-and-deploy → Guardian freeze → strategy repay → owner exit;
-- independent review confirms Guardian call graph and vault receiver;
-- source/bytecode verification succeeds;
-- small-value canary proves debt decrease and policy constraints;
-- dashboard labels projected versus realized economics correctly.
+- finalized evidence must precede the validation head and match the canonical hash; on Robinhood 4663/46630, finalized blocks are older than the 256-block EVM `blockhash` window, so the script verifies historical canonical hashes through `eth_getBlockByNumber` and verifies finalized height through the RPC; other chains require evidence within 256 blocks and a matching onchain `blockhash`;
+- exact market and vault route address, code hash, asset and liquidity adapter must match the chain-bound manifest; offchain route qualification cannot be replaced by `configure`;
+- unit/fuzz/invariant suite and a pinned fork prove supply → owner borrow-and-deploy → Guardian freeze → bounded repayment → owner exit;
+- independent review confirms Guardian call graph and fixed redemption receiver;
+- source/bytecode verification and a small-value canonical testnet canary prove debt decrease and policy constraints before promotion;
+- dashboard labels projected versus realized economics and sandbox versus reviewed evidence separately.
+
+`DeployCrestAccount.s.sol` requires `CREST_BROADCAST=true` and the selected broadcaster to equal the owner. It permits 4663 broadcast only under the **explicit operator override** `CREST_ALLOW_MAINNET_BROADCAST=true`; that capability is not a mainnet release authorization. Custos runtime signing and the owner browser remain disabled on 4663.
 
 ## 17. Sources
 

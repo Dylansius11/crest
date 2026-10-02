@@ -25,8 +25,8 @@ const guardian = signer.address;
 const account = getAddress("0x2222222222222222222222222222222222222222");
 const block = { number: 100n, hash: `0x${"a1".repeat(32)}` as Hex, timestamp: BigInt(Math.floor(Date.now() / 1000)) };
 const policyHash = `0x${"11".repeat(32)}` as Hex;
-const manifestPath = fileURLToPath(new URL("../../../config/deployment-manifest.json", import.meta.url));
-const manifest = await loadDeploymentManifest(manifestPath);
+const mainnetManifest = await loadDeploymentManifest(fileURLToPath(new URL("../../../config/deployment-manifest.json", import.meta.url)));
+const manifest = await loadDeploymentManifest(fileURLToPath(new URL("../../../config/deployment-manifest.46630.json", import.meta.url)));
 const claim = { runId: "11111111-1111-4111-8111-111111111111", triggerId: "trigger-1", actionKind: "freeze",
   requestedAssets: null, policyNonce: 7n, policyHash, marketId: manifest.market.id,
   accountCodeHash: `0x${"0f".repeat(32)}`, accountId: "22222222-2222-4222-8222-222222222222" };
@@ -37,7 +37,7 @@ const before: GuardianState = {
   reserveFloorAssets: 10n, strategyFloorAssets: 10n, maxRepayPerActionAssets: 25n,
 };
 const rpc = {
-  getChainId: vi.fn(async () => 4663), estimateGas: vi.fn(async () => 100_000n),
+  getChainId: vi.fn(async () => 46630), estimateGas: vi.fn(async () => 100_000n),
   estimateFeesPerGas: vi.fn(async () => ({ maxFeePerGas: 2n, maxPriorityFeePerGas: 1n })),
   getTransactionCount: vi.fn(async () => 1),
   sendRawTransaction: vi.fn(async ({ serializedTransaction }: { serializedTransaction: Hex }) => keccak256(serializedTransaction)),
@@ -62,6 +62,15 @@ beforeEach(() => {
 });
 
 describe("Custos one-shot execution", () => {
+  test("mainnet refuses signing before claiming a trigger or loading a key", async () => {
+    await expect(executeGuardianOnce(database, client, mainnetManifest, {
+      triggerId: claim.triggerId, account, guardian,
+      loadSigner: () => { throw new Error("mainnet loaded a signer"); },
+    })).rejects.toThrow("runtime signing is disabled");
+    expect(repository.claimGuardianTrigger).not.toHaveBeenCalled();
+    expect(rpc.sendRawTransaction).not.toHaveBeenCalled();
+  });
+
   test("persists the signed hash before broadcasting, then declines a duplicate trigger", async () => {
     let recordedHash: Hex | undefined;
     repository.recordGuardianAttempt.mockImplementation(async (_db, input) => {

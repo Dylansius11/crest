@@ -8,7 +8,7 @@ import { crestAccountAbi } from "@crest/contracts";
 import { loadDeploymentManifest } from "@crest/contracts/manifest/file";
 import { createDatabase, crestAccounts } from "@crest/db";
 
-import { verifyGuardianAuthority } from "./authority.ts";
+import { guardianRuntimeSigningAllowed, verifyGuardianAuthority } from "./authority.ts";
 import { readGuardianState } from "./state.ts";
 import { exactRoute, executeGuardianOnce, reconcileGuardianRun } from "./worker.ts";
 
@@ -67,7 +67,8 @@ if (command === "doctor") {
       { account, chainId, owner, guardian: state.guardian, borrowingFrozen: state.frozen },
       { expectedGuardian, allowedAccount: account }, manifest.network.chainId,
       { accountCodeHashMatches: code.status === "normal",
-        routeQualified: manifest.gate.outcome === "full_route" && state.marketId.toLowerCase() === manifest.market.id.toLowerCase() },
+        routeQualified: manifest.gate.outcome === "full_route" && state.marketId.toLowerCase() === manifest.market.id.toLowerCase(),
+        runtimeSigningAllowed: guardianRuntimeSigningAllowed(manifest) },
     );
     console.log(JSON.stringify({ service: "crest-guardian", command: "doctor", ...report }, null, 2));
     if (report.status === "failed") process.exitCode = 1;
@@ -92,12 +93,15 @@ if (command === "doctor") {
   const chainId = Number(required("GUARDIAN_EXPECTED_CHAIN_ID"));
   const account = getAddress(required("GUARDIAN_ALLOWED_ACCOUNT"));
   const guardian = getAddress(required("GUARDIAN_EXPECTED_ADDRESS"));
-  if (command === "run") required("GUARDIAN_PRIVATE_KEY");
   const manifest = await loadDeploymentManifest();
   robinhoodChainOf(chainId);
+  if (command === "run" && !guardianRuntimeSigningAllowed(manifest)) {
+    throw new Error("Custos runtime signing is disabled outside the 46630 sandbox");
+  }
   if (manifest.network.chainId !== chainId || manifest.gate.outcome !== "full_route") {
     throw new Error("Custos requires GUARDIAN_EXPECTED_CHAIN_ID to match an exact qualified deployment manifest");
   }
+  if (command === "run") required("GUARDIAN_PRIVATE_KEY");
   const rpc = createRobinhoodClient(rpcUrl, manifest.network.chainId);
   const { db, client } = createDatabase(databaseUrl);
   try {

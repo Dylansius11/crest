@@ -262,6 +262,8 @@ Ellipses are schema examples only. A shipped manifest contains current verified 
 
 The verifier recomputes market ID, confirms code and vault asset, and reads current market/vault state.
 
+For deployment, pass an **absolute** `DEPLOYMENT_MANIFEST_PATH` for the selected chain and set `CREST_BROADCAST=true` only for an intended owner-signed run. `DeployCrestAccount.s.sol` also accepts `CREST_ALLOW_MAINNET_BROADCAST=true` as an explicit operator override for 4663; this override is **not** authorization to execute mainnet in the testnet-first release. The browser and Custos signer remain disabled on 4663. On 46630 the manifest is a labeled SANDBOX, not reviewed evidence; keep that disclosure on every owner-signing surface.
+
 ## 10. Fork setup (verified runbook)
 
 Robinhood Chain RPC access has two verified defects; both are already handled by tooling in this repository, so
