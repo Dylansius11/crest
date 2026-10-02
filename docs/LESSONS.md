@@ -25,6 +25,12 @@ Rules for this file:
 
 ---
 
+## 2026-10-02 — An onchain policy hash cannot authenticate an offchain draft (Technical)
+
+- `policyHashOf(config)` hashes only the contract's configuration, while `contentHash` includes typed intents, spread, freshness, and trigger settings. Two drafts can therefore share an onchain hash but disagree on offchain Guardian behavior. The API previously accepted a public owner-address string as staging authority, letting another caller reserve the next unique policy nonce.
+- A matching canonical `PolicyConfigured` event proves which onchain configuration was accepted, not who submitted the offchain policy or whether its additional terms had owner consent.
+- Rule: require an owner-verified EIP-191 signature binding chain, account, next nonce, policy hash, and content hash before persisting a draft. Permit a newly signed owner draft to replace only a still-pending row; never infer offchain consent solely from the onchain event hash.
+
 ## 2026-10-02 — The web suite ran outside `pnpm verify` (Technical)
 
 - `apps/web` had vitest files for the borrow gate and formatting but no `test` script, so turbo's `test` task skipped the package and `pnpm verify` stayed green whatever those files asserted.

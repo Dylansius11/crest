@@ -1,13 +1,15 @@
 import { fileURLToPath } from "node:url";
 
 import type { SQL } from "drizzle-orm";
-import { encodeDeployData, getAddress, keccak256 } from "viem";
+import { encodeDeployData, getAddress, keccak256, recoverMessageAddress } from "viem";
 import type { Abi, Hex } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
 import { describe, expect, test } from "vitest";
 
 import { crestAccountAbi, crestAccountCreationBytecode } from "@crest/contracts";
 import { isRecord } from "@crest/contracts/manifest";
 import { loadDeploymentManifest } from "@crest/contracts/manifest/file";
+import { compilePolicy, policyStagingMessage, routeContextOf } from "@crest/policy";
 
 import { createApp } from "./app.ts";
 import { createEnrollment } from "./enrollment.ts";
@@ -18,7 +20,8 @@ const manifest = await loadDeploymentManifest(
 );
 const chainId = manifest.network.chainId;
 const morpho = getAddress(manifest.contracts.morpho?.address ?? "");
-const owner = getAddress("0x1111111111111111111111111111111111111111");
+const ownerSigner = privateKeyToAccount(`0x${"44".repeat(32)}`);
+const owner = ownerSigner.address;
 const otherOwner = getAddress("0x9999999999999999999999999999999999999999");
 const account = getAddress("0x2222222222222222222222222222222222222222");
 const otherAccount = getAddress("0x8888888888888888888888888888888888888888");
@@ -60,6 +63,16 @@ const intents = [
   { asset: manifest.market.collateralToken, intent: { kind: "PROTECT_AND_BORROW", marketId: manifest.market.id } },
   { asset: manifest.market.loanToken, intent: { kind: "EARN_STABLE", vaultId: `${chainId}:${manifest.vault.address}` } },
 ];
+
+async function stagingSignature(signer = ownerSigner, nonce = 1n, policy = draft, intentList = intents): Promise<Hex> {
+  const result = compilePolicy({ ...policy, intents: intentList }, routeContextOf(manifest, { account, owner }));
+  if (!result.ok) throw new Error(`invalid signed test policy: ${result.issues.join("; ")}`);
+  return signer.signMessage({ message: policyStagingMessage({
+    chainId, account, policyNonce: nonce, policyHash: result.policy.policyHash, contentHash: result.policy.contentHash,
+  }) });
+}
+
+const ownerSignature = await stagingSignature();
 
 const routeRow = {
   marketId: manifest.market.id,
@@ -134,6 +147,8 @@ function fakeReader(overrides: Partial<EnrollmentBlockHashReader> = {}): Enrollm
     readOwner: async () => owner,
     readMorpho: async () => morpho,
     readPolicyNonce: async () => 0n,
+    verifyOwnerMessage: async (address, message, signature) =>
+      (await recoverMessageAddress({ message, signature })).toLowerCase() === address.toLowerCase(),
   };
   return { ...base, ...overrides };
 }
@@ -145,7 +160,7 @@ function service(reader: EnrollmentBlockHashReader, db: EnrollmentDatabase) {
 describe("owner enrollment", () => {
   test("registers a canonically deployed account and stages a pending policy bound to the verified route", async () => {
     const { db, calls } = fakeDatabase();
-    const result = await service(fakeReader(), db).register({ transactionHash, account, owner, policy: draft, intents });
+    const result = await service(fakeReader(), db).register({ transactionHash, account, owner, policy: draft, intents, ownerSignature });
 
     expect(result.evidence).toBe("canonical-deployment");
     expect(result.chainId).toBe(chainId);
@@ -174,9 +189,26 @@ describe("owner enrollment", () => {
     expect(calls.some((text) => text.includes("insert into policies"))).toBe(true);
   });
 
+  test("missing or foreign staging consent cannot persist a policy during registration", async () => {
+    const missing = fakeDatabase();
+    await expect(service(fakeReader(), missing.db).register({ transactionHash, account, owner, policy: draft, intents }))
+      .rejects.toMatchObject({ status: 401 });
+    expect(missing.calls).toEqual([]);
+
+    const foreign = fakeDatabase();
+    const wrongSignature = await stagingSignature(privateKeyToAccount(`0x${"55".repeat(32)}`));
+    await expect(service(fakeReader(), foreign.db).register({
+      transactionHash, account, owner, policy: draft, intents, ownerSignature: wrongSignature,
+    })).rejects.toMatchObject({ status: 401 });
+    expect(foreign.calls).toEqual([]);
+    await expect(service(fakeReader(), foreign.db).register({
+      transactionHash, account, owner, policy: draft, intents, ownerSignature: "0x12",
+    })).rejects.toMatchObject({ status: 401 });
+  });
+
   test("never interpolates the caller's address, hash, or payload into SQL text", async () => {
     const { db, calls } = fakeDatabase();
-    await service(fakeReader(), db).register({ transactionHash, account, owner, policy: draft, intents });
+    await service(fakeReader(), db).register({ transactionHash, account, owner, policy: draft, intents, ownerSignature });
 
     for (const text of calls) {
       expect(text).not.toContain(account.slice(2));
@@ -321,7 +353,7 @@ describe("owner enrollment", () => {
   test("refuses to stage a policy against a route that is not registered in the database", async () => {
     const { db } = fakeDatabase({ route: [] });
     await expect(
-      service(fakeReader(), db).register({ transactionHash, account, owner, policy: draft, intents }),
+      service(fakeReader(), db).register({ transactionHash, account, owner, policy: draft, intents, ownerSignature }),
     ).rejects.toMatchObject({ status: 409 });
   });
 
@@ -344,7 +376,7 @@ describe("owner enrollment", () => {
 describe("owner policy staging", () => {
   test("stages the next policy nonce for an already registered account", async () => {
     const { db, calls, params } = fakeDatabase();
-    const result = await service(fakeReader({ readPolicyNonce: async () => 3n }), db).stagePolicy(account, { owner, policy: draft, intents });
+    const result = await service(fakeReader({ readPolicyNonce: async () => 3n }), db).stagePolicy(account, { owner, policy: draft, intents, ownerSignature: await stagingSignature(ownerSigner, 4n) });
 
     expect(result.evidence).toBe("canonical-deployment");
     expect(result.account).toBe(account);
@@ -356,12 +388,36 @@ describe("owner policy staging", () => {
 
   test("returns the already staged identical policy without inserting again", async () => {
     const { db, calls } = fakeDatabase({ existing: [{ id: registeredRow.id, status: "pending", policyNonce: "1" }] });
-    const result = await service(fakeReader(), db).stagePolicy(account, { owner, policy: draft, intents });
+    const result = await service(fakeReader(), db).stagePolicy(account, { owner, policy: draft, intents, ownerSignature });
 
     expect(result.policy.status).toBe("pending");
     expect(result.policy.policyNonce).toBe("1");
     expect(calls.some((text) => text.includes("insert into policies"))).toBe(false);
   });
+
+  test("missing or wrong-owner consent cannot stage, including against an existing pending nonce", async () => {
+    const missing = fakeDatabase();
+    await expect(service(fakeReader(), missing.db).stagePolicy(account, { owner, policy: draft, intents }))
+      .rejects.toMatchObject({ status: 401 });
+    const wrongSignature = await stagingSignature(privateKeyToAccount(`0x${"55".repeat(32)}`));
+    const foreign = fakeDatabase();
+    await expect(service(fakeReader(), foreign.db).stagePolicy(account, {
+      owner, policy: draft, intents, ownerSignature: wrongSignature,
+    })).rejects.toMatchObject({ status: 401 });
+    expect(foreign.calls.some((text) => text.includes("insert into policies"))).toBe(false);
+  });
+  test("signature for another nonce or another typed draft cannot stage a policy", async () => {
+    const next = { ...draft, minimumNetSpreadBps: "200" };
+    for (const [reader, body] of [
+      [fakeReader({ readPolicyNonce: async () => 1n }), { owner, policy: draft, intents, ownerSignature }],
+      [fakeReader(), { owner, policy: next, intents, ownerSignature }],
+    ] as const) {
+      const { db, calls } = fakeDatabase();
+      await expect(service(reader, db).stagePolicy(account, body)).rejects.toMatchObject({ status: 401 });
+      expect(calls.some((text) => text.includes("insert into policies"))).toBe(false);
+    }
+  });
+
 
   test("refuses to stage a policy for an unregistered account", async () => {
     const { db } = fakeDatabase({ registered: [] });
@@ -425,7 +481,7 @@ describe("enrollment route surface", () => {
     const staged = await app.request(`/v1/accounts/${account}/policies`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ owner, policy: draft, intents }),
+      body: JSON.stringify({ owner, policy: draft, intents, ownerSignature }),
     });
     expect(staged.status).toBe(200);
     await expect(staged.json()).resolves.toMatchObject({ account, policy: { status: "pending" } });

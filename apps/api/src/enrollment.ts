@@ -6,7 +6,7 @@ import { z } from "zod";
 import { crestAccountAbi, crestAccountCreationBytecode } from "@crest/contracts";
 import type { DeploymentManifest } from "@crest/contracts/manifest";
 import { hashSchema } from "@crest/domain";
-import { compilePolicy, routeContextOf, toConfigurationCall } from "@crest/policy";
+import { compilePolicy, policyStagingMessage, routeContextOf, toConfigurationCall } from "@crest/policy";
 import type { CompiledPolicy } from "@crest/policy";
 
 /**
@@ -29,7 +29,7 @@ const ACCOUNT_READ_ABI = parseAbi([
   "function policyNonce() view returns (uint64)",
 ]);
 
-export type EnrollmentStatus = 400 | 404 | 409 | 415 | 422 | 503;
+export type EnrollmentStatus = 400 | 401 | 404 | 409 | 415 | 422 | 503;
 
 /** A refusal the route can render verbatim; the message never carries chain data a caller did not supply. */
 export class EnrollmentError extends Error {
@@ -57,6 +57,7 @@ export interface EnrollmentBlockHashReader {
   readOwner(address: Address, blockNumber: bigint): Promise<Address>;
   readMorpho(address: Address, blockNumber: bigint): Promise<Address>;
   readPolicyNonce(address: Address, blockNumber: bigint): Promise<bigint>;
+  verifyOwnerMessage(address: Address, message: string, signature: Hex, blockNumber: bigint): Promise<boolean>;
 }
 
 export interface EnrollmentDatabase {
@@ -120,6 +121,7 @@ const registerBodySchema = z.strictObject({
   account: z.string(),
   owner: z.string(),
   policy: policyObject.optional(),
+  ownerSignature: z.string().optional(),
   intents: intentsList.optional(),
 }).superRefine((value, context) => {
   if ((value.policy === undefined) !== (value.intents === undefined)) {
@@ -131,6 +133,7 @@ const stageBodySchema = z.strictObject({
   owner: z.string(),
   policy: policyObject,
   intents: intentsList,
+  ownerSignature: z.string().optional(),
 });
 
 export interface Enrollment {
@@ -173,6 +176,8 @@ export function createEnrollmentChainReader(client: PublicClient): EnrollmentBlo
       client.readContract({ address, abi: ACCOUNT_READ_ABI, functionName: "morpho", blockNumber }),
     readPolicyNonce: (address, blockNumber) =>
       client.readContract({ address, abi: ACCOUNT_READ_ABI, functionName: "policyNonce", blockNumber }),
+    verifyOwnerMessage: (address, message, signature, blockNumber) =>
+      client.verifyMessage({ address, message, signature, blockNumber }),
   };
 }
 
@@ -214,11 +219,28 @@ export function createEnrollment(options: EnrollmentOptions): Enrollment {
     return compiled.policy;
   }
 
+  async function requireOwnerConsent(
+    owner: Address, account: Address, nonce: bigint, compiled: CompiledPolicy, signature: string | undefined, blockNumber: bigint,
+  ): Promise<void> {
+    const denied = new EnrollmentError(401, "owner signature does not authorize this policy staging request");
+    if (signature === undefined || !/^0x(?:[0-9a-fA-F]{2})*$/.test(signature)) throw denied;
+    const message = policyStagingMessage({
+      chainId, account, policyNonce: nonce, policyHash: compiled.policyHash, contentHash: compiled.contentHash,
+    });
+    let authorized: boolean;
+    try {
+      authorized = await reader.verifyOwnerMessage(owner, message, signature as Hex, blockNumber);
+    } catch {
+      throw denied;
+    }
+    if (!authorized) throw denied;
+  }
+
   return {
     async register(body) {
       const parsed = registerBodySchema.safeParse(body);
       if (!parsed.success) throw new EnrollmentError(400, describeIssues(parsed.error));
-      const { transactionHash, account, owner, policy, intents } = parsed.data;
+      const { transactionHash, account, owner, policy, intents, ownerSignature } = parsed.data;
 
       const accountAddress = requireAddress(account, "account");
       const ownerAddress = requireAddress(owner, "owner");
@@ -280,6 +302,13 @@ export function createEnrollment(options: EnrollmentOptions): Enrollment {
       }
 
       const codeHash = keccak256(code);
+      let compiled: CompiledPolicy | null = null;
+      let route: RouteIdentity | null = null;
+      if (policy !== undefined && intents !== undefined) {
+        compiled = compileFor(accountAddress, ownerAddress, policy, intents);
+        await requireOwnerConsent(ownerAddress, accountAddress, onchainNonce + 1n, compiled, ownerSignature, receipt.blockNumber);
+        route = await resolveRoute(db, chainId, compiled);
+      }
       const timestamp = now();
 
       const ownerId = await upsertOwner(db, ownerAddress, timestamp);
@@ -296,10 +325,7 @@ export function createEnrollment(options: EnrollmentOptions): Enrollment {
       }
 
       let staged: EnrollmentPolicyView | null = null;
-      if (policy !== undefined && intents !== undefined) {
-        // The first owner policy must be staged before its configure transaction.
-        const compiled = compileFor(accountAddress, ownerAddress, policy, intents);
-        const route = await resolveRoute(db, chainId, compiled);
+      if (compiled !== null && route !== null) {
         const policyRow = await insertPolicy(db, {
           accountId: accountRow.id,
           nonce: onchainNonce + 1n,
@@ -330,7 +356,7 @@ export function createEnrollment(options: EnrollmentOptions): Enrollment {
     async stagePolicy(address, body) {
       const parsed = stageBodySchema.safeParse(body);
       if (!parsed.success) throw new EnrollmentError(400, describeIssues(parsed.error));
-      const { owner, policy, intents } = parsed.data;
+      const { owner, policy, intents, ownerSignature } = parsed.data;
 
       const accountAddress = requireAddress(address, "account");
       const ownerAddress = requireAddress(owner, "owner");
@@ -374,6 +400,7 @@ export function createEnrollment(options: EnrollmentOptions): Enrollment {
       }
 
       const compiled = compileFor(accountAddress, ownerAddress, policy, intents);
+      await requireOwnerConsent(ownerAddress, accountAddress, onchainNonce + 1n, compiled, ownerSignature, finalized);
       const route = await resolveRoute(db, chainId, compiled);
       const timestamp = now();
 
@@ -381,6 +408,7 @@ export function createEnrollment(options: EnrollmentOptions): Enrollment {
         select id, status, policy_nonce as "policyNonce"
         from policies
         where crest_account_id = ${account.id}
+          and policy_nonce = ${(onchainNonce + 1n).toString()}
           and content_hash = ${bytes(compiled.contentHash)}
           and status in ('pending', 'active')
         order by policy_nonce desc
@@ -565,8 +593,18 @@ async function insertPolicy(
       ${input.compiled.route.market.lltv.toString()},
       ${input.timestamp.toISOString()}
     )
-    on conflict (crest_account_id, policy_nonce) do update set drafted_at = policies.drafted_at
-    where policies.content_hash = excluded.content_hash
+    on conflict (crest_account_id, policy_nonce) do update set
+      schema_version = excluded.schema_version,
+      typed_json = excluded.typed_json,
+      content_hash = excluded.content_hash,
+      policy_hash = excluded.policy_hash,
+      source = excluded.source,
+      market_id = excluded.market_id,
+      vault_deployment_id = excluded.vault_deployment_id,
+      loan_token_id = excluded.loan_token_id,
+      market_lltv_wad = excluded.market_lltv_wad,
+      drafted_at = excluded.drafted_at
+    where policies.status = 'pending'
     returning status, policy_nonce as "policyNonce"
   `);
   const row = rows[0];

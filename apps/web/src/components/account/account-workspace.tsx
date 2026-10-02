@@ -17,7 +17,7 @@ import {
 } from "viem";
 import type { Address, Hex } from "viem";
 
-import { compilePolicy, routeContextOf, toConfigurationCall } from "@crest/policy";
+import { compilePolicy, policyStagingMessage, routeContextOf, toConfigurationCall } from "@crest/policy";
 
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Cell } from "@/components/ui/cell";
@@ -525,12 +525,19 @@ export function AccountWorkspace() {
         return;
       }
       const call = toConfigurationCall(policy.policy);
-      setTransaction({ phase: "simulating", action: "configure", detail: "Staging the exact typed owner policy before any wallet signature.", recipient: call.to, calldata: call.data, selector: call.selector });
+      setTransaction({ phase: "simulating", action: "configure", detail: "Sign the staging message in your wallet. It is not a transaction: it moves no funds and creates no debt.", recipient: call.to, calldata: call.data, selector: call.selector });
+      const provider = providerOf();
+      if (!provider) throw new Error("Reconnect the owner wallet to sign the staging message");
+      const head = await freshHead();
+      const onchainNonce = await publicClient.readContract({ address: selectedAddress, abi: ACCOUNT_READ_ABI, functionName: "policyNonce", blockNumber: head.number });
+      const message = policyStagingMessage({ chainId: activeManifest.network.chainId, account: selectedAddress, policyNonce: onchainNonce + 1n, policyHash: policy.policy.policyHash, contentHash: policy.policy.contentHash });
+      const ownerSignature = await createWalletClient({ chain: activeChain, transport: custom(provider) }).signMessage({ account: wallet.address, message });
+      if (requestId !== policyRequest.current) return;
       const { intents, ...typedDraft } = draft;
       const response = await fetch(`/v1/accounts/${selectedAddress}/policies`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ owner: wallet.address, policy: typedDraft, intents }),
+        body: JSON.stringify({ owner: wallet.address, policy: typedDraft, intents, ownerSignature }),
       });
       if (requestId !== policyRequest.current) return;
       if (!response.ok) {

@@ -8,7 +8,7 @@ import { crestAccount } from "@crest/contracts";
 import { loadDeploymentManifest } from "@crest/contracts/manifest/file";
 import { marketIdOf } from "@crest/morpho";
 
-import { compilePolicy, DEFAULT_FRESHNESS, routeContextOf, toConfigurationCall } from "./index.ts";
+import { compilePolicy, DEFAULT_FRESHNESS, policyStagingMessage, routeContextOf, toConfigurationCall } from "./index.ts";
 import type { CompiledPolicy } from "./index.ts";
 
 const manifest = await loadDeploymentManifest(fileURLToPath(new URL("../../../config/deployment-manifest.json", import.meta.url)));
@@ -73,6 +73,23 @@ describe("verified route context", () => {
 
   test("refuses a manifest whose market id does not derive from its parameters", () => {
     expect(() => routeContextOf({ ...manifest, market: { ...manifest.market, lltv: "860000000000000000" } }, { account: ACCOUNT, owner: OWNER })).toThrow(/market id/);
+  });
+});
+
+describe("owner policy staging message", () => {
+  test("binds a checksummed account, chain, nonce and both distinct hashes to a draft-only signature", () => {
+    expect(policyStagingMessage({
+      chainId: 46630, account: "0x52908400098527886e0f7030069857d2e4169ee7",
+      policyNonce: 7n, policyHash: `0x${"11".repeat(32)}`, contentHash: `0x${"22".repeat(32)}`,
+    })).toBe([
+      "Crest policy staging",
+      "Chain: 46630",
+      "Account: 0x52908400098527886E0F7030069857D2E4169EE7",
+      "Policy nonce: 7",
+      `Policy hash: 0x${"11".repeat(32)}`,
+      `Content hash: 0x${"22".repeat(32)}`,
+      "This signature stages a draft only. It moves no funds and creates no debt.",
+    ].join("\n"));
   });
 });
 

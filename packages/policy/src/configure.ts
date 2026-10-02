@@ -1,4 +1,4 @@
-import { encodeAbiParameters, encodeFunctionData, keccak256, parseAbi, toFunctionSelector } from "viem";
+import { encodeAbiParameters, encodeFunctionData, getAddress, keccak256, parseAbi, toFunctionSelector } from "viem";
 import type { Address, Hex } from "viem";
 
 import type { MarketParams } from "@crest/morpho";
@@ -42,6 +42,21 @@ export interface PreparedOwnerTransaction {
 
 export function policyHashOf(config: PolicyConfig): Hex {
   return keccak256(encodeAbiParameters(CONFIGURE_ABI[0].inputs, [config]));
+}
+
+/** EIP-191 owner consent to stage this exact offchain draft, not to transact or activate it. */
+export function policyStagingMessage(input: {
+  chainId: number; account: Address; policyNonce: bigint; policyHash: Hex; contentHash: Hex;
+}): string {
+  return [
+    "Crest policy staging",
+    `Chain: ${input.chainId}`,
+    `Account: ${getAddress(input.account)}`,
+    `Policy nonce: ${input.policyNonce}`,
+    `Policy hash: ${input.policyHash}`,
+    `Content hash: ${input.contentHash}`,
+    "This signature stages a draft only. It moves no funds and creates no debt.",
+  ].join("\n");
 }
 
 /** The one owner call that activates a compiled policy. It is addressed only to the account the policy was compiled for. */

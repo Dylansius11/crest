@@ -1,8 +1,9 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { fileURLToPath } from "node:url";
 
-import { encodeDeployData, getAddress, keccak256 } from "viem";
+import { encodeDeployData, getAddress, keccak256, recoverMessageAddress } from "viem";
 import type { Abi, Address, Hex } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 
 import { crestAccountAbi, crestAccountCreationBytecode } from "@crest/contracts";
@@ -10,7 +11,7 @@ import { computeManifestIntegrity } from "@crest/contracts/manifest";
 import { loadDeploymentManifest } from "@crest/contracts/manifest/file";
 import { createDatabase } from "@crest/db";
 import { marketIdOf } from "@crest/morpho";
-import { compilePolicy, routeContextOf } from "@crest/policy";
+import { compilePolicy, policyStagingMessage, routeContextOf } from "@crest/policy";
 
 import { createEnrollment } from "./enrollment.ts";
 import type { EnrollmentBlockHashReader } from "./enrollment.ts";
@@ -50,7 +51,8 @@ const manifestWithoutIntegrity = {
 };
 const manifest = { ...manifestWithoutIntegrity, integrity: { algorithm: "sha256", digest: computeManifestIntegrity(manifestWithoutIntegrity) } };
 
-const owner = getAddress(`0x${randomBytes(20).toString("hex")}`);
+const ownerSigner = privateKeyToAccount(`0x${"66".repeat(32)}`);
+const owner = ownerSigner.address;
 const account = getAddress(`0x${randomBytes(20).toString("hex")}`);
 const guardian = getAddress(`0x${randomBytes(20).toString("hex")}`);
 const blockHash = `0x${"ab".repeat(32)}` as Hex;
@@ -84,6 +86,15 @@ const compilation = compilePolicy({ ...draft, intents }, route);
 if (!compilation.ok) throw new Error(compilation.issues.join("; "));
 const compiled = compilation.policy;
 
+async function signedDraft(policy: typeof draft, nonce: bigint, signer = ownerSigner): Promise<Hex> {
+  const result = compilePolicy({ ...policy, intents }, route);
+  if (!result.ok) throw new Error(result.issues.join("; "));
+  return signer.signMessage({ message: policyStagingMessage({
+    chainId: manifest.network.chainId, account, policyNonce: nonce,
+    policyHash: result.policy.policyHash, contentHash: result.policy.contentHash,
+  }) });
+}
+
 const transactionHash = `0x${randomBytes(32).toString("hex")}` as Hex;
 const deploymentInput = encodeDeployData({
   abi: crestAccountAbi as Abi,
@@ -113,6 +124,8 @@ function readerWithCode(deployedCode: Hex): EnrollmentBlockHashReader {
     readOwner: async () => owner,
     readMorpho: async () => morpho,
     readPolicyNonce: async () => 0n,
+    verifyOwnerMessage: async (address, message, signature) =>
+      (await recoverMessageAddress({ message, signature })).toLowerCase() === address.toLowerCase(),
   };
 }
 
@@ -161,8 +174,18 @@ const enrollment = createEnrollment({
     await client.end();
   });
 
+  test("rejects unsigned and foreign-signed drafts before writing account or policy rows", async () => {
+    await expect(enrollment.register({ transactionHash, account, owner, policy: draft, intents }))
+      .rejects.toMatchObject({ status: 401 });
+    await expect(enrollment.register({
+      transactionHash, account, owner, policy: draft, intents,
+      ownerSignature: await signedDraft(draft, 1n, privateKeyToAccount(`0x${"77".repeat(32)}`)),
+    })).rejects.toMatchObject({ status: 401 });
+    expect(await client`select id from crest_accounts where address = ${bytes(account)}`).toHaveLength(0);
+  });
+
   test("registers a real deployment once and stages a policy the monitor can recompile", async () => {
-    const registered = await enrollment.register({ transactionHash, account, owner, policy: draft, intents });
+    const registered = await enrollment.register({ transactionHash, account, owner, policy: draft, intents, ownerSignature: await signedDraft(draft, 1n) });
     expect(registered.account.status).toBe("pending_policy");
     expect(registered.policy?.policyNonce).toBe("1");
 
@@ -203,7 +226,7 @@ const enrollment = createEnrollment({
   });
 
   test("is idempotent: a replay inserts no second owner, account, or policy", async () => {
-    await enrollment.register({ transactionHash, account, owner, policy: draft, intents });
+    await enrollment.register({ transactionHash, account, owner, policy: draft, intents, ownerSignature: await signedDraft(draft, 1n) });
 
     const owners = await client`select id from owners where address = ${bytes(owner)}`;
     const accounts = await client`select id from crest_accounts where chain_id = ${manifest.network.chainId} and address = ${bytes(account)}`;
@@ -224,13 +247,43 @@ const enrollment = createEnrollment({
 
   test("stages the next policy nonce only once per identical draft", async () => {
     const staging = createEnrollment({ manifest, reader: { ...readerWithCode(code), readPolicyNonce: async () => 1n }, db });
-    const first = await staging.stagePolicy(account, { owner, policy: { ...draft, debtCeilingAssets: "2000000000" }, intents });
-    expect(["pending", "active"]).toContain(first.policy.status);
-    const replay = await staging.stagePolicy(account, { owner, policy: { ...draft, debtCeilingAssets: "2000000000" }, intents });
+    const next = { ...draft, debtCeilingAssets: "2000000000" };
+    const ownerSignature = await signedDraft(next, 2n);
+    const first = await staging.stagePolicy(account, { owner, policy: next, intents, ownerSignature });
+    expect(first.policy.status).toBe("pending");
+    const replay = await staging.stagePolicy(account, { owner, policy: next, intents, ownerSignature });
     expect(replay.policy.policyNonce).toBe(first.policy.policyNonce);
 
     const [accountRow] = await client`select id from crest_accounts where chain_id = ${manifest.network.chainId} and address = ${bytes(account)}`;
     const staged = await client`select id from policies where crest_account_id = ${accountRow?.id} and content_hash = ${bytes(first.policy.contentHash)}`;
     expect(staged).toHaveLength(1);
+  });
+
+  test("owner-signed restaging replaces a pending candidate without changing its nonce", async () => {
+    const staging = createEnrollment({ manifest, reader: { ...readerWithCode(code), readPolicyNonce: async () => 1n }, db });
+    const replacement = { ...draft, debtCeilingAssets: "2100000000" };
+    const signed = await signedDraft(replacement, 2n);
+    const result = await staging.stagePolicy(account, { owner, policy: replacement, intents, ownerSignature: signed });
+    expect(result.policy.status).toBe("pending");
+    expect(result.policy.policyNonce).toBe("2");
+    const [row] = await client`select encode(content_hash, 'hex') as content_hash, encode(policy_hash, 'hex') as policy_hash,
+      count(*) over ()::int as candidate_count from policies where crest_account_id in (select id from crest_accounts where address = ${bytes(account)}) and policy_nonce = 2`;
+    expect(row?.candidate_count).toBe(1);
+    expect(`0x${row?.content_hash}`).toBe(result.policy.contentHash);
+    expect(`0x${row?.policy_hash}`).toBe(result.policy.policyHash);
+  });
+
+  test("owner-signed restaging never overwrites an active policy", async () => {
+    const [current] = await client`update policies set status = 'active', effective_block_number = 150,
+      effective_block_hash = ${bytes(blockHash)}, activated_at = now()
+      where crest_account_id in (select id from crest_accounts where address = ${bytes(account)}) and policy_nonce = 2
+      returning id, encode(content_hash, 'hex') as content_hash`;
+    const staging = createEnrollment({ manifest, reader: { ...readerWithCode(code), readPolicyNonce: async () => 1n }, db });
+    const replacement = { ...draft, debtCeilingAssets: "2200000000" };
+    await expect(staging.stagePolicy(account, {
+      owner, policy: replacement, intents, ownerSignature: await signedDraft(replacement, 2n),
+    })).rejects.toMatchObject({ status: 409 });
+    const [stillActive] = await client`select id, status, encode(content_hash, 'hex') as content_hash from policies where id = ${current?.id}`;
+    expect(stillActive).toEqual({ id: current?.id, status: "active", content_hash: current?.content_hash });
   });
 });
