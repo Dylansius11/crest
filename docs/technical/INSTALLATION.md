@@ -388,8 +388,9 @@ CREST_PROXY_PORT=8604 CREST_PROXY_CACHE=off node scripts/rpc-retry-proxy.ts
 TLS still validates the real hostname. `CREST_PROXY_CACHE=off` is mandatory here: the fork proxy caches block-pinned reads, which would hide a reorged block or receipt from the canonical-receipt checks. The browser never talks to the RPC directly; it reads through the web app's same-origin `/rpc` rewrite, while the wallet signs through its own configured RPC.
 
 `@crest/monitor` requires `ROBINHOOD_CHAIN_RPC_URL`, `DATABASE_URL`, and `CREST_ACCOUNT_ADDRESS`; the address must
-already have an active registry row and a registered owner policy. The indexer activates that policy only when
-its `policy_hash` matches a canonical `PolicyConfigured` event on the active manifest route. The poll indexes events and
+already be enrolled (`pending_policy` or `active`) with a staged owner policy. The indexer activates the account and
+that policy only when its `policy_hash` matches a canonical `PolicyConfigured` event on the active manifest route; no
+assessment is written until both are active. The poll indexes events and
 reads the account, market, vault, oracle, rates, and lifecycle, then stores immutable snapshots, an assessment,
 and at most one idempotent Guardian trigger. No account is fabricated or registered by a read-only poll. Use
 `pnpm --filter @crest/monitor start` for continuous polling (`MONITOR_INTERVAL_MS`, default 60000 ms); `--once`

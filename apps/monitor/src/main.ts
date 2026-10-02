@@ -29,6 +29,7 @@ const manifest = await loadDeploymentManifest();
 const scenarios = parseScenarioSet(JSON.parse(await readFile(fileURLToPath(new URL("../../../config/scenarios.v2.json", import.meta.url)), "utf8")));
 const rpc = createRobinhoodClient(rpcUrl, manifest.network.chainId);
 const { db, client: sqlClient } = createDatabase(databaseUrl);
+const INDEXABLE_STATUS: Record<string, boolean> = { pending_policy: true, active: true };
 
 try {
   do {
@@ -41,7 +42,9 @@ try {
       eq(crestAccounts.chainId, BigInt(manifest.network.chainId)),
       eq(crestAccounts.address, Buffer.from(accountAddress.slice(2), "hex")),
     ));
-    if (!registered || registered.status !== "active") throw new Error("Crest Account has no active registry row");
+    // The indexer is what activates a pending account from its canonical PolicyConfigured; loadMonitoredPolicy
+    // below still requires an active account and policy before any assessment is written.
+    if (!registered || !INDEXABLE_STATUS[registered.status]) throw new Error("Crest Account has no enrolled registry row");
     const code = await readCodeHash(rpc, block, accountAddress, `0x${Buffer.from(registered.codeHash).toString("hex")}` as Hex);
     if (code.status !== "normal") throw new Error("Crest Account bytecode disagrees with the registry");
     const route = await observeRoute(manifest, {
