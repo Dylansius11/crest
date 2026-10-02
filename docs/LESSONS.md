@@ -25,6 +25,12 @@ Rules for this file:
 
 ---
 
+## 2026-10-02 — An LLM anchors on any numeric limit it is shown (Technical)
+
+- The policy draft facts include `maximumCriticalLtvPercent: 76` so the model can respect it. GPT-OSS 120B at low effort counted bands down from it: across vague, "as much as possible", and 84%-request prompts with no current policy, 6 of 11 baseline drafts ended at critical LTV 76 (46/56/66/76, 50/60/70/76), and the "hard limit, not a target" wording did not stop it. Stating that the limit is validation only, fixing 25/35/45/55 bands unless the owner writes percentages, resetting (not clamping) an over-limit request, and naming 1 collateral / 10 loan token placeholders produced 12 of 12 expected drafts with explicit owner numbers kept.
+- Soft words such as "conservative" do not move a model off a concrete number in its context; a concrete default does.
+- Rule: give a model a concrete default for every limit-bound field, and measure prompt changes against the live model with repeated runs before shipping. Code-side bounds stay the authority.
+
 ## 2026-10-02 — Supabase pooler connections are plaintext unless the URL asks for TLS (Technical)
 
 - Postgres.js connected to the Supabase session pooler with no `sslmode` and the pooler accepted it, so the hosted database traffic was unencrypted until `?sslmode=` was added. With `sslmode=verify-full`, the connection fails `SELF_SIGNED_CERT_IN_CHAIN` until `NODE_EXTRA_CA_CERTS` points at the Supabase Root 2021 CA, whose SHA-256 matches Supabase's published `prod-ca-2021.crt`.
