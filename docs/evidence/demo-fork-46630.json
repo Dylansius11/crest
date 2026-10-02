@@ -1,0 +1,527 @@
+{
+  "evidenceClass": "forked",
+  "trust": "sandbox",
+  "chainId": "46630",
+  "account": "0xB912697D34F7b2D55D6aEad3FaF5C8A540c8d1C0",
+  "database": "crest_demo",
+  "fork": {
+    "relay": "http://127.0.0.1:8604",
+    "blockNumber": "127531816",
+    "blockHash": "0xeb5aeeff569a834a27de6fa8a24ce16dd5b94cdc702ee8a0318139ea22482d3d",
+    "timestamp": "1790934714"
+  },
+  "manifestIntegrityDigest": "sha256:0e4501106d67b70b2e31b610bc120b58a79235554f003e98faa55f64621c4f8b",
+  "inventory": {
+    "faucetOwner": "0x712683F374Cd524F6336E87D577Fc39d1102930A",
+    "faucetTSLA": "5000000000000000000",
+    "faucetUSDG": "100000000",
+    "faucetETH": "10000000000000000"
+  },
+  "forkOwner": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+  "route": {
+    "market": "0x165f9db8f5e1d9982a35dfaadb3f944cf747970c8f819f16f10105f5c7eb6e04",
+    "vault": "0x70F514670d554f3388e15eBce2c7Aa37307A21Bc",
+    "disclosures": [
+      "No primary source publishes a qualifiable 46630 route: the Robinhood /rhj/assets registry lists zero 46630 deployments, Chainlink lists no Robinhood testnet feeds, and Morpho lists only the Robinhood mainnet deployment.",
+      "Collateral is the faucet TSLA test token; its uid() differs from the issuer registry TSLA asset ID, so it is not a registered Robinhood Stock Token.",
+      "The market oracle VigilOracle reads a MockFeed whose set() and setAt() are callable by anyone: any account can move the price, liquidate the position, or make price() revert as stale.",
+      "The market IRM is MockIRM with a fixed per-second rate, not AdaptiveCurveIrm.",
+      "The vault is idle-only (no liquidity adapter) with zero timelock: its owner/curator can change adapters, caps, or gates instantly; idle USDG earns no yield, so no APY or carry claim is made.",
+      "Test USDG and test TSLA have no monetary value."
+    ]
+  },
+  "policyHash": "0x06b88c2fa18d8e7185c1480ba6af1b8560ce34a423bfc29e0dff26413558eefc",
+  "transactions": {
+    "forkOnlyFundTSLA": {
+      "hash": "0x49905c8bc413b08eb056b0dddd96aed3ba2d094bb6ae307966dce64eade746c0",
+      "blockNumber": "127531819",
+      "blockHash": "0x779c98a8d938121c486084c19918dc21f5ab3bb1ef679b7bda0b85d5d8e2ee93",
+      "gasUsed": "60571",
+      "status": "success"
+    },
+    "forkOnlyFundUSDG": {
+      "hash": "0xf8013fa39b733d913763baa0b070bb9d90407c20480ec9bfb2b2a24863bc49d9",
+      "blockNumber": "127531823",
+      "blockHash": "0x5d106b2a495fedac2bbb32e802dbf0be2076cc9d70aedb4ff85e9d6bfe3e87fe",
+      "gasUsed": "48266",
+      "status": "success"
+    },
+    "deploy": {
+      "hash": "0x7f1de60ad4df3ddf7a6b8cd725f0b4d03e4cb963d546db4316f053dd28832e3b",
+      "blockNumber": "127531827",
+      "blockHash": "0xa45cd8a6fe2d0f599d29531a8fde8fec8fb6e8b5f31372018c160aee207fd62f",
+      "gasUsed": "4358752",
+      "status": "success"
+    },
+    "configure": {
+      "hash": "0x0019439bdfc0163d713f61efeddec4cb51704752868735de8f9c43429ffddda6",
+      "blockNumber": "127531856",
+      "blockHash": "0x445a89001fc813612d57d2c0c781b9820d00709bb69eb3881b0858d4a0341a28",
+      "gasUsed": "477286",
+      "status": "success"
+    },
+    "approveCollateral": {
+      "hash": "0x65f8e9aca049e24cb41be4054259b66a24c9150da7df7423f4923201cd40d044",
+      "blockNumber": "127531859",
+      "blockHash": "0x47cb527ad35e91657ef3b53d9bf0d1be07d29290fdc6d8ed6c3b6a852ac3f32e",
+      "gasUsed": "60588",
+      "status": "success"
+    },
+    "supplyCollateral": {
+      "hash": "0x90f9c2f2b0ea7a6b9aba57d3b691fd6d62c930e842eaf9edb6c8cdec918e4722",
+      "blockNumber": "127531863",
+      "blockHash": "0x4d6d58a798f31533e8fc51798013ee1fdff43204ad7902c7ab2f0f599fc86a6e",
+      "gasUsed": "162969",
+      "status": "success"
+    },
+    "borrowAndDeploy": {
+      "hash": "0x2dc9efc8f891074c49b195b87606378a59b37387e125217d717ac60418970f03",
+      "blockNumber": "127531867",
+      "blockHash": "0x6b9d710c89ba13b681bdbe722e788381725d5f30bb17d6f7d7084bdde2343ea5",
+      "gasUsed": "399171",
+      "status": "success"
+    },
+    "guardianFreeze": {
+      "hash": "0x918259db3533b165b12c6f30caa3bbe76227c3f058f3e02e965a039f8f30bb19",
+      "blockNumber": "127531912",
+      "blockHash": "0x882dc4cf8402f0a6d44ac3795de20626517ce415499c93deb8ef372bd93fa112",
+      "gasUsed": "32846",
+      "status": "success"
+    },
+    "forkOnlyMockFeedDrop": {
+      "hash": "0x05d62442a46631e6a6c0f9301e1d0dd4164b5b96c7f2d67b9334932219b2a003",
+      "blockNumber": "127531939",
+      "blockHash": "0x28c4464d1a1dac924e564624694f0132b2d73656f6068617f4a695224e62e5c7",
+      "gasUsed": "36833",
+      "status": "success"
+    },
+    "guardianStrategyRepay": {
+      "hash": "0xe604e6f177105aa2f46f4c8c58b08be5255db857935fd7bfdf57821f1b8e347b",
+      "blockNumber": "127531982",
+      "blockHash": "0x26daa19eee763776a1744bc5ba1ea047e5665429461b255c0a482d6bbd9c8f7f",
+      "gasUsed": "295861",
+      "status": "success"
+    },
+    "approveOwnerRepay": {
+      "hash": "0x6c811b20a6687e5f0806ec7b4cab0af51f3eb38fdf6eb50f2c85cda7d5c9e318",
+      "blockNumber": "127532013",
+      "blockHash": "0x8dad05b9072b4a1e757746ca86cd9b95b1859ad80f457ed18cba552ea7c3df63",
+      "gasUsed": "57976",
+      "status": "success"
+    },
+    "ownerRepay": {
+      "hash": "0x52a5ee1a0a58a4b94f6427f7df2bfd1dc0807b14d63b4526e2441bc2023687a9",
+      "blockNumber": "127532017",
+      "blockHash": "0x68ba788980405550aaaf740e16973ddb2e8c96804fdf7569313dbc12582d1a91",
+      "gasUsed": "167741",
+      "status": "success"
+    },
+    "withdrawStrategy": {
+      "hash": "0xacf8037f8b7d8184b47a17b517a8c2575d8959f16ca8e6a6ff451456cb885a85",
+      "blockNumber": "127532021",
+      "blockHash": "0x8d1349e9c76384c7f1ac51db169a14a8fc2a5be4e3b81db165a2afcdca9c8efa",
+      "gasUsed": "129302",
+      "status": "success"
+    },
+    "withdrawCollateral": {
+      "hash": "0x6a6e9666a49b7412632dfe591880abc51bb459bca68a93c29e9616b4bf1b1b50",
+      "blockNumber": "127532022",
+      "blockHash": "0xe1c9c49e5e72b65f855fa17d4a7d772cd777d9333e16db15b29201784058935f",
+      "gasUsed": "112533",
+      "status": "success"
+    }
+  },
+  "reverts": {
+    "guardianBorrow": {
+      "name": "OwnableUnauthorizedAccount",
+      "selector": "0x118cdaa7"
+    },
+    "ownerOverCeiling": {
+      "name": "DebtCeilingExceeded",
+      "selector": "0x9b8508a3"
+    }
+  },
+  "assessments": {
+    "degraded": {
+      "status": "DEGRADED",
+      "ltv": "57794036522937729",
+      "morphoHealth": "14880428011957198804",
+      "policyHealth": "6921129307887069211",
+      "ownerBorrowCapacity": "0",
+      "recommendedAction": "freeze",
+      "reasonCodes": [
+        "unreadable"
+      ],
+      "rates": {
+        "borrowStatus": "unknown",
+        "borrowReasons": [
+          "unreadable"
+        ],
+        "vaultStatus": "unknown",
+        "vaultReasons": [
+          "unreadable"
+        ]
+      }
+    },
+    "protectBefore": {
+      "status": "PROTECT",
+      "ltv": "300751939849624061",
+      "morphoHealth": "2859499428100114379",
+      "policyHealth": "1329999734000053199",
+      "ownerBorrowCapacity": "0",
+      "recommendedAction": "repay_strategy",
+      "reasonCodes": [
+        "unreadable"
+      ],
+      "rates": {
+        "borrowStatus": "unknown",
+        "borrowReasons": [
+          "unreadable"
+        ],
+        "vaultStatus": "unknown",
+        "vaultReasons": [
+          "unreadable"
+        ]
+      }
+    },
+    "protectAfter": {
+      "status": "DEGRADED",
+      "ltv": "100000000000000000",
+      "morphoHealth": "8600000000000000000",
+      "policyHealth": "4000000000000000000",
+      "ownerBorrowCapacity": "0",
+      "recommendedAction": "none",
+      "reasonCodes": [
+        "unreadable"
+      ],
+      "rates": {
+        "borrowStatus": "unknown",
+        "borrowReasons": [
+          "unreadable"
+        ],
+        "vaultStatus": "unknown",
+        "vaultReasons": [
+          "unreadable"
+        ]
+      }
+    }
+  },
+  "guardian": {
+    "freeze": {
+      "triggerId": "0x35c601cb34e414599bc6510c9f839401d4e4b6600b7d33f8106e1a7582961ea1",
+      "runId": "0e09d023-5079-430f-8028-f0b79090758b",
+      "startStatus": "pending",
+      "status": "verified",
+      "transaction": {
+        "hash": "0x918259db3533b165b12c6f30caa3bbe76227c3f058f3e02e965a039f8f30bb19",
+        "blockNumber": "127531912",
+        "blockHash": "0x882dc4cf8402f0a6d44ac3795de20626517ce415499c93deb8ef372bd93fa112",
+        "gasUsed": "32846",
+        "status": "success"
+      },
+      "postconditionChecks": [
+        {
+          "kind": "frozen",
+          "passed": true,
+          "expected": {
+            "frozen": true,
+            "success": true,
+            "postState": {
+              "vault": "0x70F514670d554f3388e15eBce2c7Aa37307A21Bc",
+              "account": "0xB912697D34F7b2D55D6aEad3FaF5C8A540c8d1C0",
+              "guardian": "0x4fd1139714C571Fc49BF26fFaA0375Adb137f271",
+              "marketId": "0x165f9db8f5e1d9982a35dfaadb3f944cf747970c8f819f16f10105f5c7eb6e04",
+              "policyHash": "0x06b88c2fa18d8e7185c1480ba6af1b8560ce34a423bfc29e0dff26413558eefc",
+              "policyNonce": "1"
+            },
+            "crestEvent": {
+              "kind": "freeze",
+              "actor": "0x4fd1139714C571Fc49BF26fFaA0375Adb137f271"
+            }
+          },
+          "actual": {
+            "frozen": true,
+            "success": true,
+            "postState": {
+              "vault": "0x70F514670d554f3388e15eBce2c7Aa37307A21Bc",
+              "account": "0xB912697D34F7b2D55D6aEad3FaF5C8A540c8d1C0",
+              "guardian": "0x4fd1139714C571Fc49BF26fFaA0375Adb137f271",
+              "marketId": "0x165f9db8f5e1d9982a35dfaadb3f944cf747970c8f819f16f10105f5c7eb6e04",
+              "policyHash": "0x06b88c2fa18d8e7185c1480ba6af1b8560ce34a423bfc29e0dff26413558eefc",
+              "policyNonce": "1"
+            },
+            "crestEvent": {
+              "kind": "freeze",
+              "actor": "0x4fd1139714C571Fc49BF26fFaA0375Adb137f271",
+              "assets": null,
+              "debtAfter": null,
+              "debtBefore": null
+            }
+          },
+          "blockNumber": "127531912"
+        }
+      ]
+    },
+    "strategyRepay": {
+      "triggerId": "0x6f74827464f119aad2fb52f473ece49ee7bf38dcb4dcf0cdc6159628c381e8b0",
+      "runId": "a838dd60-54c2-4a68-83cf-4f10be440888",
+      "startStatus": "pending",
+      "status": "verified",
+      "transaction": {
+        "hash": "0xe604e6f177105aa2f46f4c8c58b08be5255db857935fd7bfdf57821f1b8e347b",
+        "blockNumber": "127531982",
+        "blockHash": "0x26daa19eee763776a1744bc5ba1ea047e5665429461b255c0a482d6bbd9c8f7f",
+        "gasUsed": "295861",
+        "status": "success"
+      },
+      "postconditionChecks": [
+        {
+          "kind": "debt_decreased",
+          "passed": true,
+          "expected": {
+            "success": true,
+            "debtAfter": "<10000002",
+            "postState": {
+              "vault": "0x70F514670d554f3388e15eBce2c7Aa37307A21Bc",
+              "account": "0xB912697D34F7b2D55D6aEad3FaF5C8A540c8d1C0",
+              "guardian": "0x4fd1139714C571Fc49BF26fFaA0375Adb137f271",
+              "marketId": "0x165f9db8f5e1d9982a35dfaadb3f944cf747970c8f819f16f10105f5c7eb6e04",
+              "policyHash": "0x06b88c2fa18d8e7185c1480ba6af1b8560ce34a423bfc29e0dff26413558eefc",
+              "policyNonce": "1"
+            },
+            "crestEvent": {
+              "kind": "repay_strategy",
+              "actor": "0x4fd1139714C571Fc49BF26fFaA0375Adb137f271"
+            }
+          },
+          "actual": {
+            "success": true,
+            "debtAfter": "3325000",
+            "postState": {
+              "vault": "0x70F514670d554f3388e15eBce2c7Aa37307A21Bc",
+              "account": "0xB912697D34F7b2D55D6aEad3FaF5C8A540c8d1C0",
+              "guardian": "0x4fd1139714C571Fc49BF26fFaA0375Adb137f271",
+              "marketId": "0x165f9db8f5e1d9982a35dfaadb3f944cf747970c8f819f16f10105f5c7eb6e04",
+              "policyHash": "0x06b88c2fa18d8e7185c1480ba6af1b8560ce34a423bfc29e0dff26413558eefc",
+              "policyNonce": "1"
+            },
+            "crestEvent": {
+              "kind": "repay_strategy",
+              "actor": "0x4fd1139714C571Fc49BF26fFaA0375Adb137f271",
+              "assets": "6675002",
+              "debtAfter": "3325000",
+              "debtBefore": "10000002"
+            },
+            "debtBefore": "10000002"
+          },
+          "blockNumber": "127531982"
+        },
+        {
+          "kind": "repay_beneficiary_fixed",
+          "passed": true,
+          "expected": {
+            "assets": ">0",
+            "success": true,
+            "postState": {
+              "vault": "0x70F514670d554f3388e15eBce2c7Aa37307A21Bc",
+              "account": "0xB912697D34F7b2D55D6aEad3FaF5C8A540c8d1C0",
+              "guardian": "0x4fd1139714C571Fc49BF26fFaA0375Adb137f271",
+              "marketId": "0x165f9db8f5e1d9982a35dfaadb3f944cf747970c8f819f16f10105f5c7eb6e04",
+              "policyHash": "0x06b88c2fa18d8e7185c1480ba6af1b8560ce34a423bfc29e0dff26413558eefc",
+              "policyNonce": "1"
+            },
+            "crestEvent": {
+              "kind": "repay_strategy",
+              "actor": "0x4fd1139714C571Fc49BF26fFaA0375Adb137f271"
+            },
+            "beneficiary": "0xB912697D34F7b2D55D6aEad3FaF5C8A540c8d1C0"
+          },
+          "actual": {
+            "assets": "6675002",
+            "success": true,
+            "postState": {
+              "vault": "0x70F514670d554f3388e15eBce2c7Aa37307A21Bc",
+              "account": "0xB912697D34F7b2D55D6aEad3FaF5C8A540c8d1C0",
+              "guardian": "0x4fd1139714C571Fc49BF26fFaA0375Adb137f271",
+              "marketId": "0x165f9db8f5e1d9982a35dfaadb3f944cf747970c8f819f16f10105f5c7eb6e04",
+              "policyHash": "0x06b88c2fa18d8e7185c1480ba6af1b8560ce34a423bfc29e0dff26413558eefc",
+              "policyNonce": "1"
+            },
+            "crestEvent": {
+              "kind": "repay_strategy",
+              "actor": "0x4fd1139714C571Fc49BF26fFaA0375Adb137f271",
+              "assets": "6675002",
+              "debtAfter": "3325000",
+              "debtBefore": "10000002"
+            },
+            "beneficiary": "0xB912697D34F7b2D55D6aEad3FaF5C8A540c8d1C0"
+          },
+          "blockNumber": "127531982"
+        },
+        {
+          "kind": "strategy_floor_held",
+          "passed": true,
+          "expected": {
+            "success": true,
+            "postState": {
+              "vault": "0x70F514670d554f3388e15eBce2c7Aa37307A21Bc",
+              "account": "0xB912697D34F7b2D55D6aEad3FaF5C8A540c8d1C0",
+              "guardian": "0x4fd1139714C571Fc49BF26fFaA0375Adb137f271",
+              "marketId": "0x165f9db8f5e1d9982a35dfaadb3f944cf747970c8f819f16f10105f5c7eb6e04",
+              "policyHash": "0x06b88c2fa18d8e7185c1480ba6af1b8560ce34a423bfc29e0dff26413558eefc",
+              "policyNonce": "1"
+            },
+            "crestEvent": {
+              "kind": "repay_strategy",
+              "actor": "0x4fd1139714C571Fc49BF26fFaA0375Adb137f271"
+            },
+            "strategyAssets": ">=0"
+          },
+          "actual": {
+            "success": true,
+            "postState": {
+              "vault": "0x70F514670d554f3388e15eBce2c7Aa37307A21Bc",
+              "account": "0xB912697D34F7b2D55D6aEad3FaF5C8A540c8d1C0",
+              "guardian": "0x4fd1139714C571Fc49BF26fFaA0375Adb137f271",
+              "marketId": "0x165f9db8f5e1d9982a35dfaadb3f944cf747970c8f819f16f10105f5c7eb6e04",
+              "policyHash": "0x06b88c2fa18d8e7185c1480ba6af1b8560ce34a423bfc29e0dff26413558eefc",
+              "policyNonce": "1"
+            },
+            "crestEvent": {
+              "kind": "repay_strategy",
+              "actor": "0x4fd1139714C571Fc49BF26fFaA0375Adb137f271",
+              "assets": "6675002",
+              "debtAfter": "3325000",
+              "debtBefore": "10000002"
+            },
+            "strategyAssets": "3324998",
+            "strategyFloorAssets": "0"
+          },
+          "blockNumber": "127531982"
+        },
+        {
+          "kind": "vault_receiver_fixed",
+          "passed": true,
+          "expected": {
+            "owner": "0xB912697D34F7b2D55D6aEad3FaF5C8A540c8d1C0",
+            "assets": ">0",
+            "success": true,
+            "receiver": "0xB912697D34F7b2D55D6aEad3FaF5C8A540c8d1C0",
+            "postState": {
+              "vault": "0x70F514670d554f3388e15eBce2c7Aa37307A21Bc",
+              "account": "0xB912697D34F7b2D55D6aEad3FaF5C8A540c8d1C0",
+              "guardian": "0x4fd1139714C571Fc49BF26fFaA0375Adb137f271",
+              "marketId": "0x165f9db8f5e1d9982a35dfaadb3f944cf747970c8f819f16f10105f5c7eb6e04",
+              "policyHash": "0x06b88c2fa18d8e7185c1480ba6af1b8560ce34a423bfc29e0dff26413558eefc",
+              "policyNonce": "1"
+            },
+            "crestEvent": {
+              "kind": "repay_strategy",
+              "actor": "0x4fd1139714C571Fc49BF26fFaA0375Adb137f271"
+            }
+          },
+          "actual": {
+            "owner": "0xB912697D34F7b2D55D6aEad3FaF5C8A540c8d1C0",
+            "assets": "6675002",
+            "success": true,
+            "receiver": "0xB912697D34F7b2D55D6aEad3FaF5C8A540c8d1C0",
+            "postState": {
+              "vault": "0x70F514670d554f3388e15eBce2c7Aa37307A21Bc",
+              "account": "0xB912697D34F7b2D55D6aEad3FaF5C8A540c8d1C0",
+              "guardian": "0x4fd1139714C571Fc49BF26fFaA0375Adb137f271",
+              "marketId": "0x165f9db8f5e1d9982a35dfaadb3f944cf747970c8f819f16f10105f5c7eb6e04",
+              "policyHash": "0x06b88c2fa18d8e7185c1480ba6af1b8560ce34a423bfc29e0dff26413558eefc",
+              "policyNonce": "1"
+            },
+            "crestEvent": {
+              "kind": "repay_strategy",
+              "actor": "0x4fd1139714C571Fc49BF26fFaA0375Adb137f271",
+              "assets": "6675002",
+              "debtAfter": "3325000",
+              "debtBefore": "10000002"
+            }
+          },
+          "blockNumber": "127531982"
+        }
+      ]
+    }
+  },
+  "downside": {
+    "before": {
+      "position": {
+        "debtAssets": "10000002",
+        "vaultShares": "10000000000000000000",
+        "withdrawableAssets": "10000000",
+        "collateralAssets": "500000000000000000"
+      },
+      "assessment": {
+        "status": "PROTECT",
+        "ltv": "300751939849624061",
+        "morphoHealth": "2859499428100114379",
+        "policyHealth": "1329999734000053199",
+        "ownerBorrowCapacity": "0",
+        "recommendedAction": "repay_strategy",
+        "reasonCodes": [
+          "unreadable"
+        ],
+        "rates": {
+          "borrowStatus": "unknown",
+          "borrowReasons": [
+            "unreadable"
+          ],
+          "vaultStatus": "unknown",
+          "vaultReasons": [
+            "unreadable"
+          ]
+        }
+      }
+    },
+    "after": {
+      "position": {
+        "debtAssets": "3325000",
+        "vaultShares": "3324998000000000000",
+        "withdrawableAssets": "3324998",
+        "collateralAssets": "500000000000000000"
+      },
+      "assessment": {
+        "status": "DEGRADED",
+        "ltv": "100000000000000000",
+        "morphoHealth": "8600000000000000000",
+        "policyHealth": "4000000000000000000",
+        "ownerBorrowCapacity": "0",
+        "recommendedAction": "none",
+        "reasonCodes": [
+          "unreadable"
+        ],
+        "rates": {
+          "borrowStatus": "unknown",
+          "borrowReasons": [
+            "unreadable"
+          ],
+          "vaultStatus": "unknown",
+          "vaultReasons": [
+            "unreadable"
+          ]
+        }
+      }
+    },
+    "repaidAssets": "6675002",
+    "policyPostconditions": {
+      "guardianRepayWithinCap": true,
+      "debtWithinCeiling": true,
+      "strategyFloorHeld": true
+    }
+  },
+  "ownerExit": {
+    "debtAssets": "0",
+    "vaultShares": "0",
+    "withdrawableAssets": "0",
+    "collateralAssets": "0"
+  },
+  "notLive": [
+    "Every transaction occurred on a 46630 Anvil fork, never testnet.",
+    "The owner is the Anvil dev account funded by fork impersonation; the live canary owner is 0x712683F374Cd524F6336E87D577Fc39d1102930A.",
+    "MockFeed price was changed only on the fork by its public set(int256) method.",
+    "Current Morpho API rates on 46630 were unreadable; no APY or carry is claimed."
+  ]
+}

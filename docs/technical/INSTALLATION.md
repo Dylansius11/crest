@@ -427,6 +427,35 @@ assumed. `--doh` resolves HTTPS hosts over Cloudflare DNS-over-HTTPS for network
 
 Guardian defaults off. Starting it requires an explicit command and allowlisted account.
 
+### Fork-only Task 10 rehearsal
+
+Run the cache-free 46630 relay on `:8604` as described above. Start Anvil with
+`anvil --fork-url http://127.0.0.1:8604 --port 8545 --slots-in-an-epoch 1 --no-rate-limit --retries 10`.
+Start the local `supabase_db_crest` Postgres container and run these commands from the repository root in a
+Bash terminal. Use a fresh database; migrations must run in filename order.
+
+```bash
+export DEPLOYMENT_MANIFEST_PATH="$(node -p "require('node:path').resolve('config/deployment-manifest.46630.json')")"
+docker exec supabase_db_crest psql -U postgres -c "create database crest_demo"
+for file in supabase/migrations/*.sql; do docker exec -i supabase_db_crest psql -U postgres -d crest_demo -v ON_ERROR_STOP=1 < "$file" || exit 1; done
+DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/crest_demo pnpm --filter @crest/api route:register
+API_PORT=8788 DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/crest_demo ROBINHOOD_CHAIN_RPC_URL=http://127.0.0.1:8545 pnpm --filter @crest/api start
+# In a second terminal, with the API still running:
+pnpm smoke:demo
+```
+
+The manifest path must be absolute for both API commands, not cwd-relative. The runner fixes
+its own database, fork RPC, API, and manifest to these isolated resources; it verifies the 46630
+Anvil client, relay-backed fork, an empty `crest_demo`, registered API, and sandbox trust before signing.
+It impersonates the **live canary wallet only on the fork** to transfer test TSLA/USDG to Anvil's
+known local development owner, which signs the first policy staging consent and deploys the account.
+Anvil interval-mines every second so the 120-second head-lag guard remains meaningful. The isolated
+Custos process uses its repository-root `.env` key only for `run`, never for monitor/doctor/reconcile; an
+exported empty `GUARDIAN_PRIVATE_KEY` is removed from the child environment. All recorded hashes and the fork-only
+MockFeed change land in `docs/evidence/demo-fork-46630.json`, with `evidenceClass: "forked"` and `notLive`
+disclosures. A rerun against the populated database fails clearly; use a **new** fork and freshly migrated
+database for each rehearsal. Nothing in this command sends a live 46630 transaction or replaces Task 11.
+
 ## 13. CI order
 
 ```text

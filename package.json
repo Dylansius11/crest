@@ -21,6 +21,7 @@
     "manifest:verify": "node scripts/verify-deployment-manifest.ts",
     "manifest:test": "node scripts/verify-deployment-manifest.test.ts",
     "smoke:adapters": "node scripts/smoke-adapters.ts",
+    "smoke:demo": "node scripts/smoke-demo.ts",
     "verify": "pnpm generate && pnpm typecheck && pnpm test"
   },
   "devDependencies": {

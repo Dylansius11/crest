@@ -326,16 +326,20 @@ A first-time judge can distinguish owner versus Guardian authority, projected ve
 
 **Steps**
 
-- [ ] Inventory wallet and select one executable plus unsupported intents.
-- [ ] Open exact route evidence.
-- [ ] Configure target band, caps, floors, net-spread minimum, and Guardian.
-- [ ] Owner signs small supply and borrow-and-deploy.
-- [ ] Observe exact debt, shares, withdrawable liquidity, and current rates.
-- [ ] Attempt forbidden borrow and capture revert.
-- [ ] Trigger a labeled fork collateral-drop or spread-degradation scenario.
-- [ ] Guardian freezes and repays from fixed strategy.
-- [ ] Capture receipt, debt before/after, LTV/health change, and floor/cap results.
-- [ ] Show upside capacity waiting for owner approval.
+- [x] Inventory wallet and select one executable plus unsupported intents (fork impersonation funds the Anvil demo owner).
+- [x] Open exact SANDBOX route evidence and disclosures.
+- [x] Configure target band, caps, floors, net-spread minimum, and Guardian from a signed fork-owner policy.
+- [x] Owner signs small supply and borrow-and-deploy on the 46630 Anvil fork only.
+- [x] Observe exact debt, shares, withdrawable liquidity, and current rates as unknown/unreadable, with no APY claim.
+- [x] Attempt Guardian borrow and owner over-ceiling borrow; capture both revert names and selectors.
+- [x] Trigger a labeled fork-only MockFeed collateral drop.
+- [x] Guardian freezes and repays from the fixed strategy; both Custos runs reconcile as verified.
+- [x] Capture receipts, debt before/after, LTV/health change, persisted strategy-floor checks, and bounded-repay/debt-cap checks.
+- [x] Show zero upside capacity with exact degraded reason codes; any new borrow still requires owner approval.
+
+These checkboxes record only the Anvil 46630 fork rehearsal in `docs/evidence/demo-fork-46630.json`.
+The owner was Anvil's funded development account; no live-chain transaction, independently trusted oracle,
+current APY, or Task 11 testnet canary is established by this evidence.
 
 **Acceptance**
 
