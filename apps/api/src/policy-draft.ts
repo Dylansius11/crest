@@ -59,7 +59,7 @@ All amounts are decimal strings in human token units, never base units.
 - strategyFloor: loan tokens the Guardian must leave in the vault when it repays from it. Never above maxStrategy.
 - maxRepay: most loan tokens one Guardian repayment may use. Above zero.
 - harvestThreshold: smallest realized vault surplus worth one repayment. Above zero.
-- lowerLtv, targetLtv, upperLtv, criticalLtv: loan value over collateral value in percentage points, strictly increasing so lowerLtv < targetLtv < upperLtv < criticalLtv. criticalLtv must not exceed maximumCriticalLtvPercent, which sits ten points below the Morpho LLTV. A higher value is rejected, never rounded down.
+- lowerLtv, targetLtv, upperLtv, criticalLtv: loan value over collateral value in percentage points, strictly increasing so lowerLtv < targetLtv < upperLtv < criticalLtv. criticalLtv must not exceed maximumCriticalLtvPercent, which sits ten points below the Morpho LLTV. A higher value is rejected, never rounded down. The ceiling is a hard limit, not a target: use it only when the owner explicitly asks for that much, and keep the gap between upperLtv and criticalLtv near ten points.
 - minimumNetSpreadBps: smallest projected vault yield minus borrow cost, in whole basis points, that justifies new borrowing.
 - maxOracleDivergenceBps: largest accepted gap between the Morpho oracle and the Crest feed-only price, in whole basis points from 0 to 10000. Lower is stricter.
 - freezeOnOracleDegraded, freezeOnVaultDegraded, freezeOnLifecycleDegraded: always true. Degraded data must never keep borrowing open.
