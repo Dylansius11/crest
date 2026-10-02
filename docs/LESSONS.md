@@ -25,6 +25,12 @@ Rules for this file:
 
 ---
 
+## 2026-10-02 — Robinhood testnet Blockscout cannot verify solc 0.8.37; Sourcify can (Technical)
+
+- Blockscout's `/api/v2/smart-contracts/verification/config` on `explorer.testnet.chain.robinhood.com` lists solc only up to `v0.8.36+commit.8a079791`, so the pinned `v0.8.37+commit.f401782d` Crest Account cannot be source-verified there. Sourcify lists chain 46630 as supported, and `forge verify-contract --verifier sourcify --chain-id 46630` returned creation and runtime `match` for `0xaD8A…2c75`.
+- The explorer hostname also resolves to a local filter host on this network; it is reachable only with `--resolve` to the DoH-resolved Cloudflare origin.
+- Rule: verify Crest deployments on Sourcify and record Blockscout as unavailable until it ships 0.8.37; never downgrade the compiler pin just to satisfy an explorer, because that changes the deployed bytecode.
+
 ## 2026-10-02 — Owner consent must bind the nonce at the same block tag on both sides (Technical)
 
 - In the live 46630 canary, staging policy nonce 2 right after the nonce 1 configure failed with 401: the web signed head `policyNonce + 1` (2) while the API verified finalized `policyNonce + 1` (1), because 46630 finality trailed the head by roughly 20 to 30 minutes. Later attempts failed as "owner does not match" and "no contract code" because the API mapped pruned-state RPC errors (`historical state ... is not available`) to refusals, and the runtime relay had been started with 8 retries instead of the proxy default of 60.

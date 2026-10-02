@@ -349,14 +349,16 @@ The demo proves useful autonomous downside management without autonomous debt cr
 
 **Steps**
 
-- [ ] Reverify route, code hashes, liquidity, rates, and lifecycle state.
+- [x] Reverify route, code hashes, liquidity, rates, and lifecycle state.
 - [x] Run contract security/authority review and spec consistency review.
-- [ ] Deploy/verify source with small limits.
-- [ ] Execute canary owner supply → borrow-and-deploy → Guardian freeze → bounded repay → owner close.
-- [ ] Record exact hashes, blocks, policy, shares, debt, floors, and environment.
+- [x] Deploy/verify source with small limits.
+- [x] Execute canary owner supply → borrow-and-deploy → Guardian freeze → bounded repay → owner close.
+- [x] Record exact hashes, blocks, policy, shares, debt, floors, and environment.
 - [x] Test Guardian revocation, owner unfreeze, and process recovery.
-- [ ] Run focused Foundry, package, database, API, browser, and canary checks.
+- [x] Run focused Foundry, package, database, API, browser, and canary checks.
 - [x] Confirm no Post-MVP A/B authority entered release.
+
+The live canary ran on canonical Robinhood Chain Testnet 46630 (SANDBOX route) and is recorded in [`docs/evidence/canary-live-46630.json`](./evidence/canary-live-46630.json). Account [`0xaD8A3272c6E68cF819fe1E3b2aEFD0f8Fd5b2c75`](https://explorer.testnet.chain.robinhood.com/address/0xaD8A3272c6E68cF819fe1E3b2aEFD0f8Fd5b2c75) was deployed by the owner's MetaMask in block 127605219 and verified on Sourcify (creation and runtime `match`); Blockscout cannot verify it because the explorer lists solc only up to 0.8.36. `verify-deployment-manifest --manifest config/deployment-manifest.46630.json` passed online against the live relay; the monitor recorded rates, the USDG feed, and lifecycle inputs as `unreadable`, so every borrow was a degraded sandbox borrow with the owner acknowledgement. Sequence: owner supplied 1 TSLA and borrowed 10 USDG into the vault; Custos froze borrowing (tx `0x97928bd2…edf02`, block 127616213, reconcile verified); the owner tightened the LTV bands at policy nonce 2 without moving any price; the monitor assessed PROTECT at 2.796% LTV and Custos repaid 6.421094 USDG from the strategy (tx `0xe512f21c…ce90a`, block 127634675, debt 10.000047 → 3.578953); the owner repaid the rest, withdrew 3.578906 USDG of strategy and 1 TSLA, and unfroze (block 127636280), leaving zero collateral, debt, shares, and idle USDG. Checks: `forge test` 56 passed with the two pinned-fork suites skipped, `pnpm verify` green (including the database tests), and the browser path was the real owner workspace.
 
 Revocation and recovery evidence comes from an Anvil fork of 46630, not canonical testnet. Process recovery: Custos `run --once` left run `172193ff-cac4-49ed-892a-c584106fcb7e` pending (tx `0x56a336…fa6f`), a second run on the same trigger returned `no_trigger`, and two reconciles in fresh processes both returned verified with one `transaction_attempts` row. The Guardian's `unfreezeBorrowing` reverted `OwnableUnauthorizedAccount`; the owner unfroze in tx `0x65eb0f640d8ad02b187f95bb6ed62decd0e20477a321e4ec81fba27f9fe45a75` (block 127528937). `setGuardian(0x0)` in tx `0xdcd32489db39b6626a69993813da75a60144cbbe3babdc54d73af5ba5a337a04` (block 127528942) advanced `policyNonce` 1→2; the old key's `freezeBorrowing` reverted `Unauthorized()`, Custos returned `no_trigger` on the monitor's next freeze trigger, and `doctor` failed its guardian check. `CrestAccount` exposes no envelope, permit, swap, sale, multicall, or delegatecall surface.
 
