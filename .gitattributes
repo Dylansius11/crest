@@ -1,0 +1,3 @@
+# Upload and build ignore files keep LF on every checkout; CRLF broke .dockerignore negations on Windows.
+.dockerignore text eol=lf
+.vercelignore text eol=lf
