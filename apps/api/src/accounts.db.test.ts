@@ -72,8 +72,23 @@ suite("recorded account evidence over real PostgreSQL", () => {
         provenance: { kind: "http", url: "https://api.morpho.org/borrow", fetchedAt: "2026-10-02T05:45:37.700Z" } },
       vault: { status: "unknown", reasons: ["unreadable"], value: null, provenance: { kind: "http", url: "https://api.morpho.org/vault", fetchedAt: "2026-10-02T05:45:37.702Z" } },
     };
-    await client`insert into risk_assessments (id, crest_account_id, policy_id, account_snapshot_id, position_snapshot_id, strategy_position_snapshot_id, risk_engine_version, status, owner_borrow_capacity_assets, repay_capacity_assets, estimated_annual_carry_assets, estimated_spread_bps, recommended_action, input_json, canonical_input_hash, created_at)
-      values (${randomUUID()}, ${id.account}, ${id.policy}, ${id.snapshot}, ${id.position}, ${id.strategy}, 'crest-risk/1', 'NORMAL', 100000, 0, -120000, -12, 'none', ${JSON.stringify({ rates })}::jsonb, ${fill("1", 32)}, now())`;
+    const head = { status: "normal", reasons: [], value: {}, provenance: { kind: "onchain", chainId: 4663, block: { hash: "0xaa", number: { $bigint: "100" }, timestamp: { $bigint: "1790920292" } } } };
+    const lifecycle = { status: "degraded", reasons: ["unreadable"], inputs: { quote: { status: "unknown", reasons: ["unreadable"], value: null, provenance: { kind: "http", url: "https://api.robinhood.com/quote", fetchedAt: "2026-10-02T05:39:58.590Z" } } } };
+    const assessmentId = randomUUID();
+    await client`insert into risk_assessments (id, crest_account_id, policy_id, account_snapshot_id, position_snapshot_id, strategy_position_snapshot_id, risk_engine_version, status, policy_health_wad, owner_borrow_capacity_assets, repay_capacity_assets, estimated_annual_carry_assets, estimated_spread_bps, recommended_action, input_json, canonical_input_hash, created_at)
+      values (${assessmentId}, ${id.account}, ${id.policy}, ${id.snapshot}, ${id.position}, ${id.strategy}, 'crest-risk/1', 'NORMAL', 800000000000000000, 100000, 400000, -120000, -12, 'none', ${JSON.stringify({ head, rates, lifecycle })}::jsonb, ${fill("1", 32)}, now())`;
+    const triggerId = `0x${"44".repeat(32)}`;
+    const runId = randomUUID();
+    await client`insert into automation_triggers (id, idempotency_key, assessment_id, policy_id, action_kind, requested_assets, status, reason_codes, detected_at)
+      values (${triggerId}, ${fill("5", 64)}, ${assessmentId}, ${id.policy}, 'repay_strategy', 250000, 'completed', ${["protect"]}::text[], now())`;
+    await client`insert into automation_runs (id, trigger_id, status, guardian_address, selector, observed_policy_nonce, retry_count, started_at)
+      values (${runId}, ${triggerId}, 'completed', ${fill("f", 20)}, 'repayFromStrategy(uint256)', 1, 0, now())`;
+    await client`insert into transaction_attempts (run_id, attempt_number, chain_id, crest_account_id, from_address, to_address, calldata_hash, decoded_operation, simulation_block_number, simulation_block_hash, simulation_success, transaction_hash, submission_status)
+      values (${runId}, 1, 4663, ${id.account}, ${fill("f", 20)}, ${bytes(accountAddress)}, ${fill("6", 64)}, 'repayFromStrategy(uint256)', 100, ${hashA}, true, ${fill("7", 64)}, 'confirmed')`;
+    for (const [kind, passed] of [["debt_decreased", true], ["strategy_floor_held", false]] as const) {
+      await client`insert into postcondition_checks (run_id, kind, passed, expected_json, actual_json, checked_block_number, checked_block_hash, checked_at)
+        values (${runId}, ${kind}, ${passed}, '{}'::jsonb, '{}'::jsonb, 100, ${hashA}, now())`;
+    }
     for (const [index, amount, canonical] of [[0, 80, true], [1, 20, true], [2, 900, false]] as const) {
       await client`insert into realized_strategy_events (crest_account_id, kind, transaction_hash, log_index, assets_before, assets_after, debt_before_assets, debt_after_assets, debt_repaid_assets, block_number, block_hash, block_time, canonical, observed_at)
         values (${id.account}, 'repay', ${fill(String(index + 2), 32)}, ${index}, 2000, 1000, ${amount + 1}, 1, ${amount}, 100, ${hashA}, now(), ${canonical}, now())`;
@@ -86,7 +101,17 @@ suite("recorded account evidence over real PostgreSQL", () => {
       quotedVaultAssets: "650000", withdrawableVaultAssets: "400000",
     });
     expect(result?.snapshot).toMatchObject({ reserveFloorAssets: "0", strategyFloorAssets: "0", maxRepayPerActionAssets: "1000000" });
-    expect(result?.assessment).toMatchObject({ status: "NORMAL", recommendedAction: "none", projectedCarryAssets: "-120000", projectedSpreadBps: "-12" });
+    expect(result?.assessment).toMatchObject({ status: "NORMAL", recommendedAction: "none", policyHealthWad: "800000000000000000", repayCapacityAssets: "400000", projectedCarryAssets: "-120000", projectedSpreadBps: "-12" });
+    // Every recorded input keeps its own status and origin, in screen order; absent inputs are omitted, never invented.
+    expect(result?.assessment?.provenance).toEqual([
+      { input: "head", status: "normal", reasons: [], source: "block 100", blockNumber: "100", observedAt: new Date(1790920292 * 1000).toISOString() },
+      { input: "rates.borrow", status: "normal", reasons: [], source: "https://api.morpho.org/borrow", blockNumber: null, observedAt: "2026-10-02T05:45:37.700Z" },
+      { input: "rates.vault", status: "unknown", reasons: ["unreadable"], source: "https://api.morpho.org/vault", blockNumber: null, observedAt: "2026-10-02T05:45:37.702Z" },
+      { input: "lifecycle.quote", status: "unknown", reasons: ["unreadable"], source: "https://api.robinhood.com/quote", blockNumber: null, observedAt: "2026-10-02T05:39:58.590Z" },
+    ]);
+    // A failed postcondition stays visible beside a confirmed transaction.
+    expect(result?.latestIntervention).toMatchObject({ actionKind: "repay_strategy", requestedAssets: "250000", status: "completed", reasonCodes: ["protect"], forCurrentAssessment: true,
+      run: { status: "completed", failureClass: null, transactionHash: `0x${"77".repeat(32)}`, checks: [{ kind: "debt_decreased", passed: true }, { kind: "strategy_floor_held", passed: false }] } });
     expect(result?.assessment?.rates.borrow).toEqual({ status: "normal", reasons: [], value: "52000000000000000", scale: "1000000000000000000",
       convention: "apy", window: "P1D", source: "https://api.morpho.org/borrow", observedAt: "2026-10-02T05:45:37.700Z" });
     expect(result?.assessment?.rates.vault).toMatchObject({ status: "unknown", reasons: ["unreadable"], value: null, source: "https://api.morpho.org/vault" });

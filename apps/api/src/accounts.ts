@@ -53,15 +53,44 @@ export interface RecordedRate {
   observedAt: string | null;
 }
 
+/** One assessment input exactly as recorded: its status, reasons, and where and when it was read. */
+export interface RecordedInput {
+  input: string;
+  status: string;
+  reasons: string[];
+  source: string | null;
+  blockNumber: string | null;
+  observedAt: string | null;
+}
+
 export interface AccountAssessment {
   status: string;
   createdAt: string;
   reasonCodes: string[];
   recommendedAction: string;
+  policyHealthWad: string | null;
   ownerBorrowCapacityAssets: string | null;
+  repayCapacityAssets: string | null;
   projectedCarryAssets: string | null;
   projectedSpreadBps: string | null;
   rates: { borrow: RecordedRate; vault: RecordedRate };
+  provenance: RecordedInput[];
+}
+
+/** The account's most recent Guardian trigger, its latest run, and that run's postcondition checks. */
+export interface RecordedIntervention {
+  actionKind: string;
+  requestedAssets: string | null;
+  status: string;
+  reasonCodes: string[];
+  detectedAt: string;
+  forCurrentAssessment: boolean;
+  run: {
+    status: string;
+    failureClass: string | null;
+    transactionHash: string | null;
+    checks: { kind: string; passed: boolean }[];
+  } | null;
 }
 
 /** The most recent canonical debt reduction paid from the fixed strategy. */
@@ -80,6 +109,7 @@ export interface AccountPositionResponse {
   assessment: AccountAssessment | null;
   realizedDebtRepaidAssets: string | null;
   latestRepayment: RecordedRepayment | null;
+  latestIntervention: RecordedIntervention | null;
 }
 
 /** Injectable boundary for deterministic route tests. Values are always recorded database evidence. */
@@ -127,8 +157,10 @@ type PositionRow = AccountRow & {
   assessmentCreatedAt: Date | string | null;
   assessmentReasonCodes: string[] | null;
   assessmentRecommendedAction: string | null;
-  assessmentRates: unknown;
+  assessmentInput: unknown;
+  policyHealthWad: string | bigint | null;
   ownerBorrowCapacityAssets: string | bigint | null;
+  repayCapacityAssets: string | bigint | null;
   projectedCarryAssets: string | bigint | null;
   projectedSpreadBps: string | bigint | null;
   realizedDebtRepaidAssets: string | bigint | null;
@@ -137,6 +169,16 @@ type PositionRow = AccountRow & {
   repaymentRepaid: string | bigint | null;
   repaymentBlockNumber: string | bigint | null;
   repaymentTransactionHash: string | null;
+  interventionActionKind: string | null;
+  interventionRequestedAssets: string | bigint | null;
+  interventionStatus: string | null;
+  interventionReasonCodes: string[] | null;
+  interventionDetectedAt: Date | string | null;
+  interventionForCurrentAssessment: boolean | null;
+  runStatus: string | null;
+  runFailureClass: string | null;
+  runTransactionHash: string | null;
+  runChecks: unknown;
 };
 
 /** Reads only canonical same-block observations from the reviewed route. */
@@ -260,8 +302,10 @@ export function createRecordedAccountReader(
           assessment.created_at as "assessmentCreatedAt",
           assessment.reason_codes as "assessmentReasonCodes",
           assessment.recommended_action as "assessmentRecommendedAction",
-          assessment.input_json -> 'rates' as "assessmentRates",
+          assessment.input_json as "assessmentInput",
+          assessment.policy_health_wad as "policyHealthWad",
           assessment.owner_borrow_capacity_assets as "ownerBorrowCapacityAssets",
+          assessment.repay_capacity_assets as "repayCapacityAssets",
           assessment.estimated_annual_carry_assets as "projectedCarryAssets",
           assessment.estimated_spread_bps as "projectedSpreadBps",
           realized.debt_repaid_assets as "realizedDebtRepaidAssets",
@@ -269,7 +313,17 @@ export function createRecordedAccountReader(
           latest.debt_after_assets as "repaymentDebtAfter",
           latest.debt_repaid_assets as "repaymentRepaid",
           latest.block_number as "repaymentBlockNumber",
-          encode(latest.transaction_hash, 'hex') as "repaymentTransactionHash"
+          encode(latest.transaction_hash, 'hex') as "repaymentTransactionHash",
+          intervention.action_kind as "interventionActionKind",
+          intervention.requested_assets as "interventionRequestedAssets",
+          intervention.status as "interventionStatus",
+          intervention.reason_codes as "interventionReasonCodes",
+          intervention.detected_at as "interventionDetectedAt",
+          intervention.assessment_id = assessment.id as "interventionForCurrentAssessment",
+          run.status as "runStatus",
+          run.failure_class as "runFailureClass",
+          run.transaction_hash as "runTransactionHash",
+          run.checks as "runChecks"
         from account c
         left join coherent_snapshot s on true
         left join lateral (
@@ -302,6 +356,25 @@ export function createRecordedAccountReader(
           order by e.block_number desc, e.log_index desc
           limit 1
         ) latest on true
+        left join lateral (
+          select t.id, t.assessment_id, t.action_kind, t.requested_assets, t.status, t.reason_codes, t.detected_at
+          from automation_triggers t
+          join risk_assessments ra on ra.id = t.assessment_id and ra.crest_account_id = c.id
+          order by t.detected_at desc
+          limit 1
+        ) intervention on true
+        left join lateral (
+          select r.status, r.failure_class,
+            (select encode(x.transaction_hash, 'hex') from transaction_attempts x
+              where x.run_id = r.id and x.transaction_hash is not null
+              order by x.attempt_number desc limit 1) as transaction_hash,
+            (select coalesce(json_agg(json_build_object('kind', k.kind, 'passed', k.passed) order by k.kind), '[]'::json)
+              from postcondition_checks k where k.run_id = r.id) as checks
+          from automation_runs r
+          where r.trigger_id = intervention.id
+          order by r.started_at desc
+          limit 1
+        ) run on true
       `);
       const row = rows[0];
       return row ? toPosition(row) : null;
@@ -350,16 +423,20 @@ function toPosition(row: PositionRow): AccountPositionResponse {
     strategyFloorAssets: decimal(required(row.strategyFloorAssets)),
     maxRepayPerActionAssets: decimal(required(row.maxRepayPerActionAssets)),
   };
-  const rates = typeof row.assessmentRates === "string" ? JSON.parse(row.assessmentRates) : row.assessmentRates;
+  const input = typeof row.assessmentInput === "string" ? JSON.parse(row.assessmentInput) : row.assessmentInput;
+  const rates = field(input, "rates");
   const assessment = row.assessmentStatus === null ? null : {
     createdAt: timestamp(required(row.assessmentCreatedAt)),
     status: row.assessmentStatus,
     reasonCodes: row.assessmentReasonCodes ?? [],
     recommendedAction: required(row.assessmentRecommendedAction),
+    policyHealthWad: nullableDecimal(row.policyHealthWad),
     ownerBorrowCapacityAssets: nullableDecimal(row.ownerBorrowCapacityAssets),
+    repayCapacityAssets: nullableDecimal(row.repayCapacityAssets),
     projectedCarryAssets: nullableDecimal(row.projectedCarryAssets),
     projectedSpreadBps: nullableDecimal(row.projectedSpreadBps),
     rates: { borrow: recordedRate(rates, "borrow"), vault: recordedRate(rates, "vault") },
+    provenance: recordedInputs(input),
   };
   const latestRepayment = row.repaymentBlockNumber === null ? null : {
     debtBeforeAssets: decimal(required(row.repaymentDebtBefore)),
@@ -367,6 +444,20 @@ function toPosition(row: PositionRow): AccountPositionResponse {
     debtRepaidAssets: decimal(required(row.repaymentRepaid)),
     blockNumber: decimal(row.repaymentBlockNumber),
     transactionHash: `0x${required(row.repaymentTransactionHash)}`,
+  };
+  const latestIntervention = row.interventionActionKind === null ? null : {
+    actionKind: row.interventionActionKind,
+    requestedAssets: nullableDecimal(row.interventionRequestedAssets),
+    status: required(row.interventionStatus),
+    reasonCodes: row.interventionReasonCodes ?? [],
+    detectedAt: timestamp(required(row.interventionDetectedAt)),
+    forCurrentAssessment: row.interventionForCurrentAssessment === true,
+    run: row.runStatus === null ? null : {
+      status: row.runStatus,
+      failureClass: row.runFailureClass,
+      transactionHash: row.runTransactionHash === null ? null : `0x${row.runTransactionHash}`,
+      checks: recordedChecks(row.runChecks),
+    },
   };
 
   return {
@@ -376,6 +467,7 @@ function toPosition(row: PositionRow): AccountPositionResponse {
     assessment,
     realizedDebtRepaidAssets: nullableDecimal(row.realizedDebtRepaidAssets),
     latestRepayment,
+    latestIntervention,
   };
 }
 
@@ -398,26 +490,75 @@ function bigintText(value: unknown): string | null {
   return typeof digits === "string" && /^-?\d+$/.test(digits) ? digits : null;
 }
 
-/** Reads one rate observation from the immutable assessment input; anything unrecognized stays unknown. */
-function recordedRate(rates: unknown, side: "borrow" | "vault"): RecordedRate {
-  const observation = field(rates, side);
-  const status = text(field(observation, "status"));
-  if (status === null) return UNRECORDED_RATE;
-  const reasons = field(observation, "reasons");
-  const value = field(observation, "value");
+/** Every observation the engine consumed, in screen order; lifecycle signals appear one per input. */
+const INPUT_PATHS: readonly (readonly string[])[] = [
+  ["head"], ["account"], ["market"], ["position"],
+  ["oracle", "marketPrice"], ["oracle", "collateralFeed"], ["oracle", "loanFeed"],
+  ["vault"], ["strategy"],
+  ["rates", "borrow"], ["rates", "vault"], ["rates", "fees"], ["rates", "vaultIncentives"], ["rates", "marketIncentives"],
+];
+
+function at(value: unknown, path: readonly string[]): unknown {
+  return path.reduce<unknown>((node, key) => field(node, key), value);
+}
+
+function reasonList(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((reason): reason is string => typeof reason === "string") : [];
+}
+
+/** Source and time of one observation: an HTTP URL and fetch time, or an onchain block. */
+function origin(observation: unknown) {
   const provenance = field(observation, "provenance");
   const block = field(provenance, "block");
   const blockNumber = bigintText(field(block, "number"));
   const blockTime = bigintText(field(block, "timestamp"));
   return {
+    source: text(field(provenance, "url")) ?? (blockNumber === null ? null : `block ${blockNumber}`),
+    blockNumber,
+    observedAt: text(field(provenance, "fetchedAt")) ?? (blockTime === null ? null : new Date(Number(blockTime) * 1000).toISOString()),
+  };
+}
+
+function recordedInputs(input: unknown): RecordedInput[] {
+  const lifecycleInputs = field(field(input, "lifecycle"), "inputs");
+  const lifecyclePaths = typeof lifecycleInputs === "object" && lifecycleInputs !== null
+    ? Object.keys(lifecycleInputs).sort().map((key) => ["lifecycle", "inputs", key])
+    : [];
+  return [...INPUT_PATHS, ...lifecyclePaths].flatMap((path) => {
+    const observation = at(input, path);
+    const status = text(field(observation, "status"));
+    if (status === null) return [];
+    const { source, blockNumber, observedAt } = origin(observation);
+    return [{ input: path.filter((key) => key !== "inputs").join("."), status, reasons: reasonList(field(observation, "reasons")), source, blockNumber, observedAt }];
+  });
+}
+
+function recordedChecks(value: unknown): { kind: string; passed: boolean }[] {
+  const checks = typeof value === "string" ? JSON.parse(value) : value;
+  if (!Array.isArray(checks)) return [];
+  return checks.flatMap((check) => {
+    const kind = text(field(check, "kind"));
+    const passed = field(check, "passed");
+    return kind !== null && typeof passed === "boolean" ? [{ kind, passed }] : [];
+  });
+}
+
+/** Reads one rate observation from the immutable assessment input; anything unrecognized stays unknown. */
+function recordedRate(rates: unknown, side: "borrow" | "vault"): RecordedRate {
+  const observation = field(rates, side);
+  const status = text(field(observation, "status"));
+  if (status === null) return UNRECORDED_RATE;
+  const value = field(observation, "value");
+  const { source, observedAt } = origin(observation);
+  return {
     status,
-    reasons: Array.isArray(reasons) ? reasons.filter((reason): reason is string => typeof reason === "string") : [],
+    reasons: reasonList(field(observation, "reasons")),
     value: bigintText(field(value, "value")),
     scale: bigintText(field(value, "scale")),
     convention: text(field(value, "convention")),
     window: text(field(value, "window")),
-    source: text(field(provenance, "url")) ?? (blockNumber === null ? null : `block ${blockNumber}`),
-    observedAt: text(field(provenance, "fetchedAt")) ?? (blockTime === null ? null : new Date(Number(blockTime) * 1000).toISOString()),
+    source,
+    observedAt,
   };
 }
 
