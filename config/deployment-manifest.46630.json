@@ -1,0 +1,287 @@
+{
+  "schemaVersion": 1,
+  "network": {
+    "name": "Robinhood Chain Testnet",
+    "chainId": 46630,
+    "rpcUrl": "https://rpc.testnet.chain.robinhood.com",
+    "explorerUrl": "https://explorer.testnet.chain.robinhood.com"
+  },
+  "trust": {
+    "level": "sandbox",
+    "disclosures": [
+      "No primary source publishes a qualifiable 46630 route: the Robinhood /rhj/assets registry lists zero 46630 deployments, Chainlink lists no Robinhood testnet feeds, and Morpho lists only the Robinhood mainnet deployment.",
+      "Collateral is the faucet TSLA test token; its uid() differs from the issuer registry TSLA asset ID, so it is not a registered Robinhood Stock Token.",
+      "The market oracle VigilOracle reads a MockFeed whose set() and setAt() are callable by anyone: any account can move the price, liquidate the position, or make price() revert as stale.",
+      "The market IRM is MockIRM with a fixed per-second rate, not AdaptiveCurveIrm.",
+      "The vault is idle-only (no liquidity adapter) with zero timelock: its owner/curator can change adapters, caps, or gates instantly; idle USDG earns no yield, so no APY or carry claim is made.",
+      "Test USDG and test TSLA have no monetary value."
+    ]
+  },
+  "evidence": {
+    "retrievedAt": "2026-10-02T04:30:00Z",
+    "block": {
+      "number": "127414784",
+      "hash": "0x6ce23e0d7d93e26936e953d198dad051d01d6eabe01c9e61006147493b24a5e8",
+      "timestamp": "2026-10-02T04:08:03.000Z",
+      "l1BlockNumber": "11826496",
+      "finality": "finalized"
+    }
+  },
+  "sources": [
+    {
+      "name": "Robinhood Chain testnet connection parameters",
+      "url": "https://docs.robinhood.com/chain/connecting/",
+      "retrievedAt": "2026-10-02T04:30:00Z"
+    },
+    {
+      "name": "Robinhood Stock Token issuer registry (zero 46630 deployments)",
+      "url": "https://api.robinhood.com/rhj/assets",
+      "retrievedAt": "2026-10-02T03:54:37Z",
+      "note": "Faucet TSLA uid() 0x...aa1fee9afa45465cbc65157b4edf63f5 differs from registry TSLA id 0x...cfece3244ea34bb29414dd9488b32d9f at testnet block 127410311."
+    },
+    {
+      "name": "Chainlink Robinhood network directory (mainnet only)",
+      "url": "https://github.com/smartcontractkit/documentation/blob/main/src/features/data/chains.ts",
+      "retrievedAt": "2026-10-02T04:30:00Z",
+      "note": "feeds-robinhood-testnet.json returns 404."
+    },
+    {
+      "name": "Morpho deployment addresses (Robinhood mainnet only)",
+      "url": "https://docs.morpho.org/get-started/resources/addresses/",
+      "retrievedAt": "2026-10-02T04:30:00Z"
+    },
+    {
+      "name": "Pinned Robinhood testnet state",
+      "url": "https://rpc.testnet.chain.robinhood.com/rpc",
+      "retrievedAt": "2026-10-02T04:30:00Z",
+      "blockNumber": "127414784",
+      "note": "TLS-authenticated official RPC through the SNI-preserving retry proxy; market, oracle, feed, IRM, vault, idle, allocation, cap, gate, fee, and max-function reads at the finalized evidence block. Code hashes from eth_getProof at latest."
+    },
+    {
+      "name": "Vault V2 factory enumeration",
+      "url": "https://explorer.testnet.chain.robinhood.com/api/v2/smart-contracts/0x7884dDF7F683006DF79040EE311b87B3148E1418",
+      "retrievedAt": "2026-10-02T04:30:00Z",
+      "blockNumber": "127414784",
+      "note": "isVaultV2(vault) is true; runtime code is identical to the explorer-verified VaultV2 0xA630E3995B74C9Dc50Bf05eF6bbBD1D7C67b9D41."
+    }
+  ],
+  "contracts": {
+    "morpho": {
+      "address": "0x99607363652591ffF66BA23EF8D91563CA48038b",
+      "codeHash": "0xa48c3a10af6aa234acaa4a778bcdcb7dafae168aae04b7b2db1fc2740d14c06e",
+      "source": "https://explorer.testnet.chain.robinhood.com/api/v2/smart-contracts/0x99607363652591ffF66BA23EF8D91563CA48038b",
+      "contractName": "Morpho",
+      "proxyType": null
+    },
+    "loanToken": {
+      "address": "0x7E955252E15c84f5768B83c41a71F9eba181802F",
+      "codeHash": "0x864cc9ad53b338b82da1f7cab85ab0b3d5c8861acb422b6fec63cf36234f36a6",
+      "source": "https://explorer.testnet.chain.robinhood.com/api/v2/smart-contracts/0x7E955252E15c84f5768B83c41a71F9eba181802F",
+      "contractName": "ERC1967Proxy",
+      "proxyType": "eip1967",
+      "implementation": "0xF0863D7A29a55d0c4263c11bFac754312ff078DF",
+      "decimals": 6,
+      "symbol": "USDG"
+    },
+    "collateralToken": {
+      "address": "0xC9f9c86933092BbbfFF3CCb4b105A4A94bf3Bd4E",
+      "codeHash": "0x2f367e6a678e7b30ab613d5963e541e6f4d3ca586de76e2f441fbfeb1a27c440",
+      "source": "https://explorer.testnet.chain.robinhood.com/api/v2/smart-contracts/0xC9f9c86933092BbbfFF3CCb4b105A4A94bf3Bd4E",
+      "contractName": "BeaconProxy",
+      "proxyType": "beacon",
+      "implementation": "0xBd14156E05c6AF28ad39aA53a2AB8eB9CDf657DA",
+      "decimals": 18,
+      "symbol": "TSLA"
+    },
+    "oracle": {
+      "address": "0x79DA01DB22808E3A7397B788F171a7647b1bEf8f",
+      "codeHash": "0x557e3eea3cb2bb46a1909a7d6d28684b7d7128b6aaebebec3874f2c53322a77c",
+      "source": "https://explorer.testnet.chain.robinhood.com/api/v2/smart-contracts/0x79DA01DB22808E3A7397B788F171a7647b1bEf8f",
+      "contractName": "VigilOracle",
+      "proxyType": null
+    },
+    "irm": {
+      "address": "0xc15Db6c9c5B7bAd92C088E0918D5C720A5c44630",
+      "codeHash": "0x1f59385d033475eac93a96e17b902d360346c83f2065e5c2522957817806e4e6",
+      "source": "https://explorer.testnet.chain.robinhood.com/api/v2/smart-contracts/0xc15Db6c9c5B7bAd92C088E0918D5C720A5c44630",
+      "contractName": "MockIRM",
+      "proxyType": null
+    },
+    "vault": {
+      "address": "0x70F514670d554f3388e15eBce2c7Aa37307A21Bc",
+      "codeHash": "0x657a7b615a5ece4a3a677af64d1ef99f4284f7f995d0463b7a51b78b3d373709",
+      "source": "https://explorer.testnet.chain.robinhood.com/api/v2/smart-contracts/0xA630E3995B74C9Dc50Bf05eF6bbBD1D7C67b9D41",
+      "contractName": "VaultV2",
+      "proxyType": null
+    },
+    "collateralFeed": {
+      "address": "0x87AE97DD57686e9FBc85cE9D33cc39b6594C49C3",
+      "codeHash": "0xf10ac52358aa044148981e905ef6a6f562c3d3d2b8d00cf9ef071aee32d0b5a8",
+      "source": "https://explorer.testnet.chain.robinhood.com/api/v2/smart-contracts/0x87AE97DD57686e9FBc85cE9D33cc39b6594C49C3",
+      "contractName": "MockFeed",
+      "proxyType": null
+    }
+  },
+  "market": {
+    "id": "0x165f9db8f5e1d9982a35dfaadb3f944cf747970c8f819f16f10105f5c7eb6e04",
+    "derivedId": "0x165f9db8f5e1d9982a35dfaadb3f944cf747970c8f819f16f10105f5c7eb6e04",
+    "loanToken": "0x7E955252E15c84f5768B83c41a71F9eba181802F",
+    "collateralToken": "0xC9f9c86933092BbbfFF3CCb4b105A4A94bf3Bd4E",
+    "oracle": "0x79DA01DB22808E3A7397B788F171a7647b1bEf8f",
+    "irm": "0xc15Db6c9c5B7bAd92C088E0918D5C720A5c44630",
+    "lltv": "860000000000000000",
+    "state": {
+      "observedBlockNumber": "127414784",
+      "totalSupplyAssets": "140000010",
+      "totalSupplyShares": "139999996666666",
+      "totalBorrowAssets": "29760859",
+      "totalBorrowShares": "29760859000000",
+      "lastAccrualTimestamp": "1790644533",
+      "fee": "0"
+    },
+    "oracleState": {
+      "price": "346056500000000000000000000",
+      "collateralRound": "13",
+      "collateralAnswer": "36427000000",
+      "collateralUpdatedAt": "1790880251",
+      "loanRound": null,
+      "loanAnswer": null,
+      "loanUpdatedAt": null,
+      "checkedAtBlockTimestamp": "1790914083"
+    },
+    "liquidityAssets": "110239151",
+    "plannedBorrowAssets": "10000000"
+  },
+  "vault": {
+    "address": "0x70F514670d554f3388e15eBce2c7Aa37307A21Bc",
+    "codeHash": "0x657a7b615a5ece4a3a677af64d1ef99f4284f7f995d0463b7a51b78b3d373709",
+    "asset": "0x7E955252E15c84f5768B83c41a71F9eba181802F",
+    "generation": "Morpho Vault V2",
+    "factory": "0x7884dDF7F683006DF79040EE311b87B3148E1418",
+    "governance": {
+      "owner": "0x88337ed70b82994ccda1426f961e69a3b68f5026",
+      "curator": "0x88337ed70b82994ccda1426f961e69a3b68f5026",
+      "timelockSeconds": "0",
+      "adapterRegistry": "0x0000000000000000000000000000000000000000",
+      "liquidityAdapter": "0x0000000000000000000000000000000000000000",
+      "pendingCapExecutableAt": null,
+      "pendingActionsObservedBlockNumber": "127414784"
+    },
+    "fees": {
+      "management": "0",
+      "performance": "0",
+      "maxRatePerSecondWad": "0"
+    },
+    "gates": {
+      "receiveShares": null,
+      "sendShares": null,
+      "receiveAssets": null,
+      "sendAssets": null
+    },
+    "maxFunctions": {
+      "maxDeposit": "0",
+      "maxMint": "0",
+      "maxWithdraw": "0",
+      "maxRedeem": "0",
+      "interpretation": "Vault V2 deliberately returns zero; use fresh withdrawal options plus exact simulation and post-state."
+    },
+    "state": {
+      "observedBlockNumber": "127414784",
+      "totalAssets": "80000000",
+      "totalSupply": "80000000000000000000",
+      "idleAssets": "63000000",
+      "allocatedAssets": "22434235",
+      "sharePriceRay": "1000000000000000000000000000"
+    },
+    "withdrawalOptions": {
+      "observedBlockNumber": "127414784",
+      "liquidityAdapterAvailable": "0",
+      "idleAssets": "63000000",
+      "forceDeallocatable": "8543482",
+      "forceDeallocationPenalty": "0"
+    },
+    "withdrawableAssets": "63000000",
+    "plannedWithdrawalAssets": "10000000",
+    "adapterCap": {
+      "allocatedAssets": "22434235",
+      "absoluteCap": "340282366920938463463374607431768211455",
+      "relativeCapWad": "1000000000000000000"
+    },
+    "downstreamAllocationsObservedBlockNumber": "127414784",
+    "downstreamAllocations": [
+      {
+        "adapter": "0xb5c551832dd705d45bf624a97ec13e611c84b71d",
+        "marketId": "0x54f0f9c9c7428ac75b68019b2d930813e8e9df45675ed8078b5ee99535366200",
+        "collateral": "0x864AcCaAb5a296D445e99EDA92912168F14782F2",
+        "allocatedAssets": "22434235",
+        "absoluteCap": "340282366920938463463374607431768211455",
+        "relativeCapWad": "1000000000000000000",
+        "pendingAbsoluteCap": null,
+        "withdrawableAssets": null,
+        "liquidityRole": "allocated"
+      }
+    ]
+  },
+  "rates": {
+    "marketBorrow": {
+      "value": "0.049999999994064",
+      "convention": "apr-simple",
+      "window": "instant",
+      "source": "https://explorer.testnet.chain.robinhood.com/api/v2/smart-contracts/0xc15Db6c9c5B7bAd92C088E0918D5C720A5c44630",
+      "observedAt": "2026-10-02T04:30:00Z",
+      "blockNumber": "127414784",
+      "status": "normal"
+    },
+    "vault": {
+      "value": "0",
+      "convention": "apr-simple",
+      "window": "instant",
+      "source": "https://explorer.testnet.chain.robinhood.com/api/v2/smart-contracts/0x70F514670d554f3388e15eBce2c7Aa37307A21Bc",
+      "observedAt": "2026-10-02T04:30:00Z",
+      "blockNumber": "127414784",
+      "status": "unknown"
+    }
+  },
+  "forkProof": {
+    "tool": "Foundry 1.8.3",
+    "rpcSource": "https://rpc.testnet.chain.robinhood.com/rpc",
+    "headerNormalization": "Not required: Foundry 1.8.3 consumed the pinned Robinhood testnet header directly.",
+    "blockNumber": "127414784",
+    "blockHash": "0x6ce23e0d7d93e26936e953d198dad051d01d6eabe01c9e61006147493b24a5e8",
+    "morphoLifecycle": "passed",
+    "vaultLifecycle": "passed",
+    "morpho": {
+      "collateralAssets": "1000000000000000000",
+      "borrowAssets": "10000000",
+      "repaidAssets": "10000001",
+      "withdrawnCollateralAssets": "1000000000000000000",
+      "proofTests": [
+        "testSandboxSupplyBorrowGuardianRepayAndOwnerExit"
+      ]
+    },
+    "vault": {
+      "depositAssets": "10000000",
+      "mintedShares": "10000000000000000000",
+      "withdrawAssets": "5000000",
+      "withdrawnShares": "5000000000000000000",
+      "redeemedShares": "5000000000000000000",
+      "redeemedAssets": "5000000",
+      "finalAssetDelta": "0",
+      "finalShares": "0",
+      "assetBalanceRestored": true,
+      "proofTests": [
+        "testSandboxSupplyBorrowGuardianRepayAndOwnerExit"
+      ]
+    }
+  },
+  "gate": {
+    "outcome": "full_route",
+    "marketGate": "passed",
+    "vaultGate": "passed",
+    "reason": "SANDBOX gate only: pinned fork testSandboxSupplyBorrowGuardianRepayAndOwnerExit executed supply, owner borrow-and-deploy, bounded Guardian freeze-and-repay, and owner exit at testnet block 127414784. Contract compatibility, not oracle trust, issuer identity, or yield."
+  },
+  "integrity": {
+    "algorithm": "sha256",
+    "digest": "sha256:0e4501106d67b70b2e31b610bc120b58a79235554f003e98faa55f64621c4f8b"
+  }
+}

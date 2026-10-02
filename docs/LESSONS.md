@@ -25,6 +25,11 @@ Rules for this file:
 
 ---
 
+## 2026-10-02 - A testnet route is a sandbox by construction, and its mock oracle has a clock (Technical)
+
+- Robinhood's issuer registry, Chainlink's network directory, and Morpho's address page publish no 46630 deployments, so no testnet route can pass the reviewed gate. The manifest validator now fixes the trust tier per chain (4663 `reviewed`, 46630 `sandbox` with disclosures). The chosen sandbox oracle, `VigilOracle`, reverts when its session oracle judges the publicly settable `MockFeed` stale (18 h windows anchored to the market calendar), which blocks borrowing and collateral withdrawal with debt but not repayment.
+- Rule: never let a chain ID choose a trust label implicitly; encode the tier in evidence and reject the mismatch. Before any sandbox owner signature, simulate the exact call, because the sandbox price can stop working on a schedule nobody controls.
+
 ## 2026-10-02 — Ticker, vault TVL, and borrowable liquidity are different proofs (Technical)
 
 - Robinhood documents `/rhj/assets[].id` as the onchain `uid()` shared across chains for one asset. At Robinhood testnet block `127410311`, all five faucet Stock Token `uid()` values (TSLA, AMZN, NFLX, PLTR, AMD) differed from their same-ticker issuer-registry IDs, and the registry listed no 46630 deployment. A faucet transfer and verified `Stock` implementation alone do not establish registered-asset identity.

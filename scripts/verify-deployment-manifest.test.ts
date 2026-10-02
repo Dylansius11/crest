@@ -14,6 +14,7 @@ function fixture() {
   const manifest = {
     schemaVersion: 1,
     network: { chainId: 4663, name: "Robinhood Chain" },
+    trust: { level: "reviewed", disclosures: [] as string[] },
     evidence: {
       retrievedAt: "2026-09-14T09:12:04Z",
       block: { number: "62692076", hash: hash("11"), timestamp: "2026-09-14T09:12:04Z", finality: "finalized" },
@@ -76,6 +77,45 @@ test("rejects a vault route without exactly one default liquidity market on the 
   foreign.vault.governance.liquidityAdapter = address("8");
   foreign.integrity.digest = computeManifestIntegrity(foreign);
   assert.deepEqual(validateDeploymentManifest(foreign), ["vault must name exactly one default liquidity market on its liquidity adapter"]);
+});
+
+function sandbox() {
+  const manifest = structuredClone(fixture());
+  manifest.network = { chainId: 46630, name: "Robinhood Chain Testnet" };
+  manifest.trust = { level: "sandbox", disclosures: ["Mock oracle price is publicly settable."] };
+  return manifest;
+}
+
+function sealed<T extends { integrity: { digest: string } }>(manifest: T): T {
+  manifest.integrity.digest = computeManifestIntegrity(manifest);
+  return manifest;
+}
+
+test("a testnet route is only ever a disclosed sandbox", () => {
+  assert.deepEqual(validateDeploymentManifest(sealed(sandbox())), []);
+  const reviewed = sandbox();
+  reviewed.trust.level = "reviewed";
+  assert.deepEqual(validateDeploymentManifest(sealed(reviewed)), ["trust.level must be sandbox on chain 46630"]);
+  const silent = sandbox();
+  silent.trust.disclosures = [];
+  assert.deepEqual(validateDeploymentManifest(sealed(silent)), ["a sandbox route must disclose why it is not reviewed"]);
+});
+
+test("mainnet cannot be downgraded to a sandbox route", () => {
+  const manifest = structuredClone(fixture());
+  manifest.trust.level = "sandbox";
+  assert.deepEqual(validateDeploymentManifest(sealed(manifest)), ["trust.level must be reviewed on chain 4663"]);
+});
+
+test("an idle-only vault names no default liquidity market", () => {
+  const idle = (roles: Array<"default" | "allocated">) => {
+    const manifest = sandbox();
+    manifest.vault.governance.liquidityAdapter = address("0");
+    manifest.vault.downstreamAllocations = roles.map((liquidityRole, index) => ({ adapter: address("9"), marketId: hash(`d${index}`), liquidityRole }));
+    return sealed(manifest);
+  };
+  assert.deepEqual(validateDeploymentManifest(idle(["allocated"])), []);
+  assert.deepEqual(validateDeploymentManifest(idle(["default"])), ["an idle-only vault has no default liquidity market"]);
 });
 
 test("accepts reserve-only evidence when the market passes and vault liquidity fails", () => {

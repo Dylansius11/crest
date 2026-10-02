@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity 0.8.37;
 
-import {Test} from "forge-std/Test.sol";
+import {Test, console2} from "forge-std/Test.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {IMorpho, Id, Market, MarketParams, Position} from "morpho-blue/src/interfaces/IMorpho.sol";
@@ -16,7 +16,7 @@ contract RobinhoodTestnetSandboxTest is Test {
     IERC20 internal constant TSLA = IERC20(0xC9f9c86933092BbbfFF3CCb4b105A4A94bf3Bd4E);
     IERC4626 internal constant VAULT = IERC4626(0x70F514670d554f3388e15eBce2c7Aa37307A21Bc);
     bytes32 internal constant MARKET_ID = 0x165f9db8f5e1d9982a35dfaadb3f944cf747970c8f819f16f10105f5c7eb6e04;
-    uint256 internal constant BLOCK = 127410497;
+    uint256 internal constant BLOCK = 127414784;
     uint256 internal constant COLLATERAL = 1 ether;
     uint256 internal constant BORROW = 10_000_000; // 10 USDG of the 110.239151 USDG free at BLOCK.
     uint256 internal constant GUARDIAN_REPAY = 5_000_000;
@@ -32,8 +32,8 @@ contract RobinhoodTestnetSandboxTest is Test {
         vm.createSelectFork(rpc, BLOCK);
         assertEq(block.chainid, 46630, "fork is not Robinhood testnet");
         assertEq(
-            vm.parseJsonBytes32(vm.rpcJson("eth_getBlockByNumber", "[\"0x7982141\",false]"), ".hash"),
-            0xeac1aaebf99685eebc8bef59fcebc37c1e258903fcbfe25cad0bd8f775e5145a,
+            vm.parseJsonBytes32(vm.rpcJson("eth_getBlockByNumber", "[\"0x7983200\",false]"), ".hash"),
+            0x6ce23e0d7d93e26936e953d198dad051d01d6eabe01c9e61006147493b24a5e8,
             "pinned finalized block hash changed"
         );
         params = MarketParams({
@@ -112,13 +112,23 @@ contract RobinhoodTestnetSandboxTest is Test {
         account.borrowAndDeploy(1, 0);
 
         vm.startPrank(owner);
-        account.withdrawStrategy(account.strategyAssets(), owner, type(uint256).max);
+        uint256 strategyAssets = account.strategyAssets();
+        uint256 sharesBeforeExit = VAULT.balanceOf(address(account));
+        account.withdrawStrategy(strategyAssets, owner, type(uint256).max);
         uint256 remaining = account.currentDebtAssets();
         if (USDG.balanceOf(owner) < remaining) deal(address(USDG), owner, remaining, true);
         USDG.approve(address(account), remaining);
         account.ownerRepay(type(uint256).max);
         account.withdrawCollateral(COLLATERAL, owner);
         vm.stopPrank();
+
+        // Manifest forkProof evidence; values are read from the fork, never typed in.
+        console2.log("mintedShares", shares);
+        console2.log("guardianRepaidAssets", debtBefore - debtAfter);
+        console2.log("ownerWithdrawnStrategyAssets", strategyAssets);
+        console2.log("ownerWithdrawnShares", sharesBeforeExit - VAULT.balanceOf(address(account)));
+        console2.log("finalShares", VAULT.balanceOf(address(account)));
+        console2.log("ownerRepaidAssets", remaining);
 
         assertEq(MORPHO.position(Id.wrap(MARKET_ID), address(account)).borrowShares, 0);
         assertEq(account.currentDebtAssets(), 0);

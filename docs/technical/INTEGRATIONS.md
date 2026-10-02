@@ -19,7 +19,7 @@
 
 ## 2. Robinhood Chain
 
-Robinhood Chain mainnet is EVM/Arbitrum-based, chain ID `4663`; the testnet is chain ID `46630` with ETH gas. The current `deployment-manifest.json` qualifies **mainnet only**, so it cannot authorize testnet execution.
+Robinhood Chain mainnet is EVM/Arbitrum-based, chain ID `4663`; the testnet is chain ID `46630` with ETH gas. Each chain has its own manifest and a fixed trust tier: `config/deployment-manifest.json` is the **reviewed** 4663 route, and `config/deployment-manifest.46630.json` is the **SANDBOX** 46630 route. The validator rejects a 46630 manifest that claims `reviewed`, a 4663 manifest that claims `sandbox`, and a sandbox without disclosures.
 
 Rules:
 
@@ -29,7 +29,7 @@ Rules:
 - record address, code hash, source URL, verification block/hash, and retrieval time;
 - reverify immediately before fork/mainnet demo.
 
-The event-period `deployment-manifest.json` is the reviewed route registry for contracts, apps, fork tests, and the UI.
+The manifests are the route registry for contracts, apps, fork tests, and the UI; `DEPLOYMENT_MANIFEST_PATH` selects the active one. Verify the sandbox with `node scripts/verify-deployment-manifest.ts --manifest config/deployment-manifest.46630.json --rpc <testnet proxy>`; the verifier reports a reverting sandbox oracle as drift and checks the vault's liquidity adapter, and checks the AdaptiveCurveIrm Morpho binding only on the reviewed route.
 
 ### Testnet candidate status (2026-10-01)
 
@@ -61,7 +61,11 @@ No primary source publishes a 46630 route that can pass the reviewed gate: the [
 
 The sandbox route is the TSLA/USDG market `0x165f9db8f5e1d9982a35dfaadb3f944cf747970c8f819f16f10105f5c7eb6e04` on Morpho core [`0x99607363652591ffF66BA23EF8D91563CA48038b`](https://explorer.testnet.chain.robinhood.com/address/0x99607363652591ffF66BA23EF8D91563CA48038b), with faucet TSLA, Paxos test USDG, oracle `0x79DA01DB22808E3A7397B788F171a7647b1bEf8f` (`VigilOracle` reading a publicly settable `MockFeed`), `MockIRM` `0xc15Db6c9c5B7bAd92C088E0918D5C720A5c44630`, and 86% LLTV. The vault is the idle-only Vault V2 [`0x70F514670d554f3388e15eBce2c7Aa37307A21Bc`](https://explorer.testnet.chain.robinhood.com/address/0x70F514670d554f3388e15eBce2c7Aa37307A21Bc) with no liquidity adapter. At finalized block `127410497` (`0xeac1aaebf99685eebc8bef59fcebc37c1e258903fcbfe25cad0bd8f775e5145a`, 03:55:06 UTC), the market had 110.239151 USDG free and the vault held 63 USDG idle; the oracle quoted 346.0565 USDG per TSLA at head block `127417261`.
 
-`contracts/test/RobinhoodTestnetSandbox.t.sol` pins that block and proves, on a fork: configure binds the zero liquidity adapter; supply 1 TSLA; owner borrows and deploys 10 USDG; Guardian cannot borrow; Guardian freezes and repays at most 5 USDG from the vault with no proceeds left in the account; owner borrowing reverts while frozen; owner withdraws the strategy, repays, and recovers the collateral. Trust stays **SANDBOX**: anyone can move the price, liquidate the position, or borrow the market dry, the token is not issuer-registered, and the idle vault earns no yield.
+`contracts/test/RobinhoodTestnetSandbox.t.sol` proves, on a fork: configure binds the zero liquidity adapter; supply 1 TSLA; owner borrows and deploys 10 USDG; Guardian cannot borrow; Guardian freezes and repays at most 5 USDG from the vault with no proceeds left in the account; owner borrowing reverts while frozen; owner withdraws the strategy, repays, and recovers the collateral. Trust stays **SANDBOX**: anyone can move the price, liquidate the position, or borrow the market dry, the token is not issuer-registered, and the idle vault earns no yield.
+
+`config/deployment-manifest.46630.json` records this route at finalized evidence block `127414784` (`0x6ce23e0d7d93e26936e953d198dad051d01d6eabe01c9e61006147493b24a5e8`, 04:08:03 UTC), where the fork proof is now pinned: 110.239151 USDG free, 63 USDG idle, 22.434235 USDG allocated to adapter `0xb5c5…b71d` in the `FakeWBTC` market on core `0x2275…99d3`, oracle price 346.0565 USDG per TSLA, MockIRM 5% simple APR, vault timelock 0, no gates. The recorded lifecycle borrowed 10 USDG, Guardian repaid 5, and the owner repaid 5.000001 and recovered 1 TSLA. The online verifier passed against the TLS-authenticated testnet RPC.
+
+**Oracle liveness.** `VigilOracle.price()` reverts `VigilStale` once its `VigilSessionOracle` judges the `MockFeed` unusable: with TSLA's `marketStaleSeconds` 21600 × `hardStaleMult` 3, the feed must have updated within 18 h of the market's last open while the calendar is open, and within 18 h before `closeAt` while closed. The feed last updated 2026-10-01 18:44:11 UTC, so without a new `set()` the price is expected to become unusable after the 2026-10-02 close [INFERENCE from the source and config, not yet observed]. A reverting price blocks owner borrowing and collateral withdrawal with debt; repayment does not read the oracle. Simulate before every owner signature.
 
 #### Wallet funding observations (2026-10-02)
 

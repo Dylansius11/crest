@@ -24,7 +24,7 @@ Never present planned, forked, simulated, cached, or projected behavior as live.
 | `contracts/src/libraries/VaultV2Liquidity.sol` | Vault V2 adapter and withdrawable-liquidity math | Vault route or liquidity bounds |
 | `contracts/script/DeployCrestAccount.s.sol` | Manifest-checked deployment and route validation | Deployment, evidence, or route gating |
 | `contracts/test/` | Unit, invariant, and pinned-fork proofs | Every permanent behavior change |
-| `config/deployment-manifest.json` + `.schema.json` | The reviewed route registry | Route, block, code hash, liquidity, or rate evidence changes |
+| `config/deployment-manifest.json` (4663, reviewed) + `config/deployment-manifest.46630.json` (46630, SANDBOX) + `.schema.json` | The chain-tagged route registry; `trust.level` is fixed per chain | Route, block, code hash, liquidity, rate, trust, or evidence changes |
 | `scripts/verify-deployment-manifest.ts` (+ `.test.ts`) | Offline and online manifest verification | Manifest shape, gate, or finality rules change |
 | `packages/domain/src/` | Branded identities, units, policy, risk, carry, Guardian states, Zod schemas | Domain vocabulary or generated schema changes |
 | `packages/db/src/` | Drizzle schema, client, integration tests | Persistence changes |
@@ -83,7 +83,7 @@ Rules:
 - Any work that contradicts, extends, or invalidates a document updates that document in the same change, before the commit. Never leave a document describing behavior the code no longer has.
 - Contract or ABI change updates `docs/technical/SMART-CONTRACT.md` and every caller, test, and generated artifact in the same cutover.
 - Boundary or service change updates `docs/technical/ARCHITECTURE.md`; schema change updates `docs/technical/ERD.md`; dependency or version change updates `docs/technical/TECH-STACK.md`; integration status change updates `docs/technical/INTEGRATIONS.md`.
-- Route, block, code hash, liquidity, rate, or gate change updates `config/deployment-manifest.json`, its schema, and the verifier together.
+- Route, block, code hash, liquidity, rate, trust, or gate change updates the affected `config/deployment-manifest*.json`, its schema, and the verifier together.
 - Completing a build-plan checklist item ticks it in `docs/BUILD-PLAN.md` immediately.
 - A newly verified technical fact or durable user preference is appended to `docs/LESSONS.md` using its dated headline and bullet format, before the commit that carries the work.
 - If a document and the code disagree, the reproducible runtime evidence wins and the document is corrected in that same change.
