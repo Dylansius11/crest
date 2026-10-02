@@ -38,10 +38,15 @@ function ssh(command: string, input: "script" | "archive", source?: string | Nod
   return promise;
 }
 
+/**
+ * Exports repository blobs exactly: a Windows checkout's core.autocrlf would otherwise turn every line ending
+ * into CRLF, which breaks .dockerignore negations. Extraction keeps default modes so the image's non-root user
+ * can read the code; ~/crest itself stays mode 700.
+ */
 function upload(release: string): Promise<void> {
-  const archive = spawn("git", ["archive", "--format=tar", release], { stdio: ["ignore", "pipe", "inherit"] });
+  const archive = spawn("git", ["-c", "core.autocrlf=false", "archive", "--format=tar", release], { stdio: ["ignore", "pipe", "inherit"] });
   const target = `crest/releases/${release}`;
-  return ssh(`set -eu; umask 077; rm -rf ${target}; mkdir -p ${target}; tar -x -C ${target}`, "archive", archive.stdout);
+  return ssh(`set -eu; rm -rf ${target}; mkdir -p ${target}; tar -x -C ${target}`, "archive", archive.stdout);
 }
 
 /** Stored before running: executed from stdin, `docker compose` would read the rest of the script as input. */
