@@ -15,7 +15,8 @@
   "dependencies": {
     "@crest/domain": "workspace:*",
     "drizzle-orm": "0.45.2",
-    "postgres": "3.4.9"
+    "postgres": "3.4.9",
+    "viem": "2.56.8"
   },
   "devDependencies": {
     "drizzle-kit": "0.31.10"
