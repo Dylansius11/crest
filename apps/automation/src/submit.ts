@@ -1,5 +1,6 @@
 import { keccak256, toFunctionSelector, type Address, type Hex } from "viem";
 import type { PrivateKeyAccount } from "viem/accounts";
+import { robinhoodChainOf } from "@crest/chain";
 import { GUARDIAN_SELECTORS } from "@crest/contracts";
 import type { buildGuardianCall } from "./simulate.ts";
 
@@ -21,7 +22,8 @@ export async function submitSignedGuardianCall(input: {
   persist: (hash: Hex) => Promise<void>;
   broadcast: (signed: Hex) => Promise<Hex>;
 }): Promise<{ hash: Hex }> {
-  if (input.transaction.chainId !== 4663) throw new Error("Guardian transaction must target Robinhood Chain");
+  // Only a chain with a registered Robinhood route is signable; the caller binds it to the active manifest.
+  robinhoodChainOf(input.transaction.chainId);
   if (input.call.to.toLowerCase() !== input.expectedAccount.toLowerCase()) throw new Error("Guardian target account is not allowlisted");
   const allowed = GUARDIAN_SELECTORS.some((signature) => toFunctionSelector(signature) === input.call.data.slice(0, 10));
   if (!allowed) throw new Error("Guardian calldata selector is not permitted");

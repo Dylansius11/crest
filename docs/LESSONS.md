@@ -25,6 +25,12 @@ Rules for this file:
 
 ---
 
+## 2026-10-02 — Only a fresh-database rehearsal exercises first activation (Technical)
+
+- The full 46630 fork rehearsal on an empty database hit, in order: no route rows (enrollment foreign-key failure), a monitor that refused the `pending_policy` account before running the indexer that is the only writer of `active`, and a Guardian submit gate pinned to chain 4663. Every unit and integration suite passed throughout, because each fixture inserted route rows and an already-active account itself.
+- Fixtures that seed the state a step is supposed to produce hide the transition into that state.
+- Rule: before a live run, rehearse the whole path (route registration, deploy, register, stage, configure, monitor, Custos run and reconcile, owner exit) on a fork against a freshly migrated database. Anvil mines only on transactions, so enable `evm_setIntervalMining` or the 120 s head-lag gate correctly refuses the fork head.
+
 ## 2026-10-02 - An inherited shell environment silently outranks `.env` (Technical)
 
 - The persistent agent shell still exported `NEXT_PUBLIC_ROBINHOOD_CHAIN_ID=4663`, `GUARDIAN_EXPECTED_CHAIN_ID=4663`, and the mainnet `DEPLOYMENT_MANIFEST_PATH` after `.env` moved to 46630. Loaders such as dotenv never overwrite an existing variable, so the web test that asserted the env-selected manifest failed and every service would have started on the wrong route. `DEPLOYMENT_MANIFEST_PATH` also resolves against the process cwd, which is the package directory under `pnpm --filter`.

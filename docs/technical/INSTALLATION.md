@@ -400,7 +400,7 @@ exits on any registry, route, or RPC failure. A read-only monitor must not recei
 and `GUARDIAN_ALLOWED_ACCOUNT`. It checks the active registered account bytecode, exact Morpho/vault/token
 code hashes, vault asset, current policy/route, and qualified manifest at one fresh block; it never loads
 a key or signs. A degraded vault or Morpho read prevents a full-route attestation.
-`run --once` requires `GUARDIAN_EXPECTED_CHAIN_ID` equal to the active manifest chain, `GUARDIAN_PRIVATE_KEY`, and an explicit detected trigger ID. The default is 46630; it signs only the SANDBOX route's full-route manifest and must preserve its disclosures.
+`run --once` requires `GUARDIAN_EXPECTED_CHAIN_ID` equal to the active manifest chain, `GUARDIAN_PRIVATE_KEY`, and an explicit detected trigger ID. The default is 46630; it signs only the SANDBOX route's full-route manifest and must preserve its disclosures. The signer refuses any chain without a registered Robinhood route before persisting a hash. Custos reads only its process environment: load the key with `node --env-file=../../.env src/main.ts run …` from `apps/automation`, and unset an exported empty `GUARDIAN_PRIVATE_KEY` first, because `--env-file` never overrides an existing variable.
 `reconcile --run-id` requires the same route, chain, account, Guardian, RPC and database settings, but
 **not** the key. Keep the key only in the isolated Guardian process, never in the monitor.
 `run` signs at most one action; `pending` or `uncertain` requires operator inspection of the persisted hash

@@ -41,4 +41,18 @@ describe("Custos signed submission", () => {
       broadcast: async () => { throw new Error("must not broadcast"); },
     })).rejects.toThrow("target account");
   });
+
+  test("signs for the sandbox chain and refuses any chain without a registered route before persisting", async () => {
+    const sandbox = await submitSignedGuardianCall({ signer: guardian, call, expectedAccount: target,
+      transaction: { ...transaction, chainId: 46630 },
+      persist: async () => {},
+      broadcast: async (raw: Hex) => { expect(parseTransaction(raw).chainId).toBe(46630); return keccak256(raw); },
+    });
+    expect(sandbox.hash).toMatch(/^0x[0-9a-f]{64}$/);
+    await expect(submitSignedGuardianCall({ signer: guardian, call, expectedAccount: target,
+      transaction: { ...transaction, chainId: 1 },
+      persist: async () => { throw new Error("must not persist"); },
+      broadcast: async () => { throw new Error("must not broadcast"); },
+    })).rejects.toThrow("unsupported Robinhood chain 1");
+  });
 });
