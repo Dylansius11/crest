@@ -36,15 +36,41 @@ export interface AccountSnapshot {
   vaultShares: string | null;
   quotedVaultAssets: string | null;
   withdrawableVaultAssets: string | null;
+  reserveFloorAssets: string;
+  strategyFloorAssets: string;
+  maxRepayPerActionAssets: string;
+}
+
+/** One rate exactly as the assessment consumed it; an unread rate keeps its status and reasons, never a default. */
+export interface RecordedRate {
+  status: string;
+  reasons: string[];
+  value: string | null;
+  scale: string | null;
+  convention: string | null;
+  window: string | null;
+  source: string | null;
+  observedAt: string | null;
 }
 
 export interface AccountAssessment {
   status: string;
   createdAt: string;
   reasonCodes: string[];
+  recommendedAction: string;
   ownerBorrowCapacityAssets: string | null;
   projectedCarryAssets: string | null;
   projectedSpreadBps: string | null;
+  rates: { borrow: RecordedRate; vault: RecordedRate };
+}
+
+/** The most recent canonical debt reduction paid from the fixed strategy. */
+export interface RecordedRepayment {
+  debtBeforeAssets: string;
+  debtAfterAssets: string;
+  debtRepaidAssets: string;
+  blockNumber: string;
+  transactionHash: string;
 }
 
 export interface AccountPositionResponse {
@@ -53,6 +79,7 @@ export interface AccountPositionResponse {
   snapshot: AccountSnapshot | null;
   assessment: AccountAssessment | null;
   realizedDebtRepaidAssets: string | null;
+  latestRepayment: RecordedRepayment | null;
 }
 
 /** Injectable boundary for deterministic route tests. Values are always recorded database evidence. */
@@ -93,13 +120,23 @@ type PositionRow = AccountRow & {
   vaultShares: string | bigint | null;
   quotedVaultAssets: string | bigint | null;
   withdrawableVaultAssets: string | bigint | null;
+  reserveFloorAssets: string | bigint | null;
+  strategyFloorAssets: string | bigint | null;
+  maxRepayPerActionAssets: string | bigint | null;
   assessmentStatus: string | null;
   assessmentCreatedAt: Date | string | null;
   assessmentReasonCodes: string[] | null;
+  assessmentRecommendedAction: string | null;
+  assessmentRates: unknown;
   ownerBorrowCapacityAssets: string | bigint | null;
   projectedCarryAssets: string | bigint | null;
   projectedSpreadBps: string | bigint | null;
   realizedDebtRepaidAssets: string | bigint | null;
+  repaymentDebtBefore: string | bigint | null;
+  repaymentDebtAfter: string | bigint | null;
+  repaymentRepaid: string | bigint | null;
+  repaymentBlockNumber: string | bigint | null;
+  repaymentTransactionHash: string | null;
 };
 
 /** Reads only canonical same-block observations from the reviewed route. */
@@ -166,7 +203,10 @@ export function createRecordedAccountReader(
             a.loan_token_balance,
             s.share_balance,
             s.quoted_assets,
-            s.max_withdrawable_assets
+            s.max_withdrawable_assets,
+            a.reserve_floor_assets,
+            a.strategy_floor_assets,
+            a.max_repay_per_action_assets
           from account c
           join account_snapshots a on a.crest_account_id = c.id
           join position_snapshots p on p.crest_account_id = c.id
@@ -213,13 +253,23 @@ export function createRecordedAccountReader(
           s.share_balance as "vaultShares",
           s.quoted_assets as "quotedVaultAssets",
           s.max_withdrawable_assets as "withdrawableVaultAssets",
+          s.reserve_floor_assets as "reserveFloorAssets",
+          s.strategy_floor_assets as "strategyFloorAssets",
+          s.max_repay_per_action_assets as "maxRepayPerActionAssets",
           assessment.status as "assessmentStatus",
           assessment.created_at as "assessmentCreatedAt",
           assessment.reason_codes as "assessmentReasonCodes",
+          assessment.recommended_action as "assessmentRecommendedAction",
+          assessment.input_json -> 'rates' as "assessmentRates",
           assessment.owner_borrow_capacity_assets as "ownerBorrowCapacityAssets",
           assessment.estimated_annual_carry_assets as "projectedCarryAssets",
           assessment.estimated_spread_bps as "projectedSpreadBps",
-          realized.debt_repaid_assets as "realizedDebtRepaidAssets"
+          realized.debt_repaid_assets as "realizedDebtRepaidAssets",
+          latest.debt_before_assets as "repaymentDebtBefore",
+          latest.debt_after_assets as "repaymentDebtAfter",
+          latest.debt_repaid_assets as "repaymentRepaid",
+          latest.block_number as "repaymentBlockNumber",
+          encode(latest.transaction_hash, 'hex') as "repaymentTransactionHash"
         from account c
         left join coherent_snapshot s on true
         left join lateral (
@@ -245,6 +295,13 @@ export function createRecordedAccountReader(
           from realized_strategy_events e
           where e.crest_account_id = c.id and e.kind = 'repay' and e.canonical
         ) realized on true
+        left join lateral (
+          select e.debt_before_assets, e.debt_after_assets, e.debt_repaid_assets, e.block_number, e.transaction_hash
+          from realized_strategy_events e
+          where e.crest_account_id = c.id and e.kind = 'repay' and e.canonical
+          order by e.block_number desc, e.log_index desc
+          limit 1
+        ) latest on true
       `);
       const row = rows[0];
       return row ? toPosition(row) : null;
@@ -289,14 +346,27 @@ function toPosition(row: PositionRow): AccountPositionResponse {
     vaultShares: nullableDecimal(row.vaultShares),
     quotedVaultAssets: nullableDecimal(row.quotedVaultAssets),
     withdrawableVaultAssets: nullableDecimal(row.withdrawableVaultAssets),
+    reserveFloorAssets: decimal(required(row.reserveFloorAssets)),
+    strategyFloorAssets: decimal(required(row.strategyFloorAssets)),
+    maxRepayPerActionAssets: decimal(required(row.maxRepayPerActionAssets)),
   };
+  const rates = typeof row.assessmentRates === "string" ? JSON.parse(row.assessmentRates) : row.assessmentRates;
   const assessment = row.assessmentStatus === null ? null : {
     createdAt: timestamp(required(row.assessmentCreatedAt)),
     status: row.assessmentStatus,
     reasonCodes: row.assessmentReasonCodes ?? [],
+    recommendedAction: required(row.assessmentRecommendedAction),
     ownerBorrowCapacityAssets: nullableDecimal(row.ownerBorrowCapacityAssets),
     projectedCarryAssets: nullableDecimal(row.projectedCarryAssets),
     projectedSpreadBps: nullableDecimal(row.projectedSpreadBps),
+    rates: { borrow: recordedRate(rates, "borrow"), vault: recordedRate(rates, "vault") },
+  };
+  const latestRepayment = row.repaymentBlockNumber === null ? null : {
+    debtBeforeAssets: decimal(required(row.repaymentDebtBefore)),
+    debtAfterAssets: decimal(required(row.repaymentDebtAfter)),
+    debtRepaidAssets: decimal(required(row.repaymentRepaid)),
+    blockNumber: decimal(row.repaymentBlockNumber),
+    transactionHash: `0x${required(row.repaymentTransactionHash)}`,
   };
 
   return {
@@ -305,6 +375,49 @@ function toPosition(row: PositionRow): AccountPositionResponse {
     snapshot,
     assessment,
     realizedDebtRepaidAssets: nullableDecimal(row.realizedDebtRepaidAssets),
+    latestRepayment,
+  };
+}
+
+const UNRECORDED_RATE: RecordedRate = {
+  status: "unknown", reasons: ["not_recorded"], value: null, scale: null, convention: null, window: null, source: null, observedAt: null,
+};
+
+function field(value: unknown, key: string): unknown {
+  if (typeof value !== "object" || value === null) return undefined;
+  return Object.getOwnPropertyDescriptor(value, key)?.value;
+}
+
+function text(value: unknown): string | null {
+  return typeof value === "string" ? value : null;
+}
+
+/** Canonical JSON stores bigints as `{ "$bigint": "<digits>" }`. */
+function bigintText(value: unknown): string | null {
+  const digits = field(value, "$bigint");
+  return typeof digits === "string" && /^-?\d+$/.test(digits) ? digits : null;
+}
+
+/** Reads one rate observation from the immutable assessment input; anything unrecognized stays unknown. */
+function recordedRate(rates: unknown, side: "borrow" | "vault"): RecordedRate {
+  const observation = field(rates, side);
+  const status = text(field(observation, "status"));
+  if (status === null) return UNRECORDED_RATE;
+  const reasons = field(observation, "reasons");
+  const value = field(observation, "value");
+  const provenance = field(observation, "provenance");
+  const block = field(provenance, "block");
+  const blockNumber = bigintText(field(block, "number"));
+  const blockTime = bigintText(field(block, "timestamp"));
+  return {
+    status,
+    reasons: Array.isArray(reasons) ? reasons.filter((reason): reason is string => typeof reason === "string") : [],
+    value: bigintText(field(value, "value")),
+    scale: bigintText(field(value, "scale")),
+    convention: text(field(value, "convention")),
+    window: text(field(value, "window")),
+    source: text(field(provenance, "url")) ?? (blockNumber === null ? null : `block ${blockNumber}`),
+    observedAt: text(field(provenance, "fetchedAt")) ?? (blockTime === null ? null : new Date(Number(blockTime) * 1000).toISOString()),
   };
 }
 

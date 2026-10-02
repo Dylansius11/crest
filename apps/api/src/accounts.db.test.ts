@@ -67,8 +67,13 @@ suite("recorded account evidence over real PostgreSQL", () => {
     if (!database || !reader) throw new Error("isolated database required");
     const { client } = database;
     await client`update strategy_position_snapshots set block_hash = ${hashA} where id = ${id.strategy}`;
+    const rates = {
+      borrow: { status: "normal", reasons: [], value: { kind: "market_borrow", value: { $bigint: "52000000000000000" }, scale: { $bigint: "1000000000000000000" }, convention: "apy", window: "P1D" },
+        provenance: { kind: "http", url: "https://api.morpho.org/borrow", fetchedAt: "2026-10-02T05:45:37.700Z" } },
+      vault: { status: "unknown", reasons: ["unreadable"], value: null, provenance: { kind: "http", url: "https://api.morpho.org/vault", fetchedAt: "2026-10-02T05:45:37.702Z" } },
+    };
     await client`insert into risk_assessments (id, crest_account_id, policy_id, account_snapshot_id, position_snapshot_id, strategy_position_snapshot_id, risk_engine_version, status, owner_borrow_capacity_assets, repay_capacity_assets, estimated_annual_carry_assets, estimated_spread_bps, recommended_action, input_json, canonical_input_hash, created_at)
-      values (${randomUUID()}, ${id.account}, ${id.policy}, ${id.snapshot}, ${id.position}, ${id.strategy}, 'crest-risk/1', 'NORMAL', 100000, 0, -120000, -12, 'none', '{}'::jsonb, ${fill("1", 32)}, now())`;
+      values (${randomUUID()}, ${id.account}, ${id.policy}, ${id.snapshot}, ${id.position}, ${id.strategy}, 'crest-risk/1', 'NORMAL', 100000, 0, -120000, -12, 'none', ${JSON.stringify({ rates })}::jsonb, ${fill("1", 32)}, now())`;
     for (const [index, amount, canonical] of [[0, 80, true], [1, 20, true], [2, 900, false]] as const) {
       await client`insert into realized_strategy_events (crest_account_id, kind, transaction_hash, log_index, assets_before, assets_after, debt_before_assets, debt_after_assets, debt_repaid_assets, block_number, block_hash, block_time, canonical, observed_at)
         values (${id.account}, 'repay', ${fill(String(index + 2), 32)}, ${index}, 2000, 1000, ${amount + 1}, 1, ${amount}, 100, ${hashA}, now(), ${canonical}, now())`;
@@ -80,8 +85,14 @@ suite("recorded account evidence over real PostgreSQL", () => {
       targetLtvWad: "400000000000000000", upperLtvWad: "500000000000000000", criticalLtvWad: "600000000000000000",
       quotedVaultAssets: "650000", withdrawableVaultAssets: "400000",
     });
-    expect(result?.assessment).toMatchObject({ status: "NORMAL", projectedCarryAssets: "-120000", projectedSpreadBps: "-12" });
+    expect(result?.snapshot).toMatchObject({ reserveFloorAssets: "0", strategyFloorAssets: "0", maxRepayPerActionAssets: "1000000" });
+    expect(result?.assessment).toMatchObject({ status: "NORMAL", recommendedAction: "none", projectedCarryAssets: "-120000", projectedSpreadBps: "-12" });
+    expect(result?.assessment?.rates.borrow).toEqual({ status: "normal", reasons: [], value: "52000000000000000", scale: "1000000000000000000",
+      convention: "apy", window: "P1D", source: "https://api.morpho.org/borrow", observedAt: "2026-10-02T05:45:37.700Z" });
+    expect(result?.assessment?.rates.vault).toMatchObject({ status: "unknown", reasons: ["unreadable"], value: null, source: "https://api.morpho.org/vault" });
     expect(result?.realizedDebtRepaidAssets).toBe("100");
+    // The latest canonical repayment wins; the later non-canonical row never does.
+    expect(result?.latestRepayment).toEqual({ debtBeforeAssets: "21", debtAfterAssets: "1", debtRepaidAssets: "20", blockNumber: "100", transactionHash: `0x${"33".repeat(16)}` });
     await client`update account_snapshots set canonical = false where id = ${id.snapshot}`;
     const invalidated = await reader.positionByAddress(accountAddress);
     expect(invalidated?.snapshot).toBeNull();
