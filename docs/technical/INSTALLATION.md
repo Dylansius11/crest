@@ -165,13 +165,15 @@ GUARDIAN_ALLOWED_ACCOUNT=
 # Active SANDBOX route
 DEPLOYMENT_MANIFEST_PATH=./config/deployment-manifest.46630.json
 
-# Optional policy drafting
+# Optional server-only Groq drafting. Disabled by default; manual policy remains available.
 POLICY_LLM_PROVIDER=disabled
 POLICY_LLM_API_KEY=
 
 LOG_LEVEL=info
 OTEL_EXPORTER_OTLP_ENDPOINT=
 ```
+
+To enable optional owner drafting, set `POLICY_LLM_PROVIDER=groq` and supply `POLICY_LLM_API_KEY` only to the Hono API process. Keep both out of `NEXT_PUBLIC_*`, client bundles, logs, and responses. The web same-origin `/v1/policy/draft` rewrite targets `CREST_API_URL`; it cannot access the key directly. With provider disabled or key missing, the endpoint returns 503 while typed manual policy compilation/staging remains available. The API caps JSON bodies at 8 KiB and accepted requests at three per minute per process; deploy a gateway quota if scaling to multiple instances. No Groq SDK is installed.
 
 Rules:
 

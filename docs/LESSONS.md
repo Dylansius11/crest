@@ -25,6 +25,12 @@ Rules for this file:
 
 ---
 
+## 2026-10-02 — Groq strict JSON Schema is available on both Crest draft models (Technical)
+
+- [Groq Structured Outputs](https://console.groq.com/docs/structured-outputs#models-with-strict-mode-strict-true) lists both `openai/gpt-oss-120b` and `qwen/qwen3.8-27b` under `json_schema` with `strict: true`. Strict mode requires every field and `additionalProperties: false`; it constrains syntax, not Crest policy semantics.
+- [Groq Reasoning](https://console.groq.com/docs/reasoning#reasoning-format) documents `reasoning_format: hidden` for final-answer-only output. GPT-OSS accepts `reasoning_effort: low`, while Qwen accepts `reasoning_effort: none` to disable reasoning. [Groq Models](https://console.groq.com/docs/models) lists GPT-OSS 120B as production and Qwen 3.8 27B as preview, so the latter may change availability.
+- Rule: use each model's strict JSON Schema and hidden reasoning without a client SDK, then independently parse unknown fields, convert exact bigint units, and run the domain schema plus policy compiler before exposing an editable owner draft. Never treat provider format guarantees as authority.
+
 ## 2026-10-02 — Robinhood testnet Blockscout cannot verify solc 0.8.37; Sourcify can (Technical)
 
 - Blockscout's `/api/v2/smart-contracts/verification/config` on `explorer.testnet.chain.robinhood.com` lists solc only up to `v0.8.36+commit.8a079791`, so the pinned `v0.8.37+commit.f401782d` Crest Account cannot be source-verified there. Sourcify lists chain 46630 as supported, and `forge verify-contract --verifier sourcify --chain-id 46630` returned creation and runtime `match` for `0xaD8A…2c75`.

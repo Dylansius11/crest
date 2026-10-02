@@ -23,6 +23,7 @@ import { createDatabase } from "@crest/db";
 import { crestAccountAbi, GUARDIAN_SELECTORS } from "@crest/contracts";
 import { loadDeploymentManifest } from "@crest/contracts/manifest/file";
 import type { DeploymentManifest } from "@crest/contracts/manifest";
+import { createPolicyDrafter, DraftError, type PolicyDrafter } from "./policy-draft.ts";
 
 /**
  * Read-only API over reviewed, already-verified facts.
@@ -76,6 +77,7 @@ export type { Enrollment, RegisterResponse, StagePolicyResponse } from "./enroll
 export interface CreateAppOptions {
   accounts?: RecordedAccountReader;
   enrollment?: Enrollment;
+  policyDrafter?: PolicyDrafter;
 }
 
 /** The write surface accepts only a bounded, JSON envelope; nothing is parsed beyond the size guard. */
@@ -112,6 +114,38 @@ function stateChangingSignatures(): string[] {
 export function createApp(manifest: DeploymentManifest, options: CreateAppOptions = {}): Hono {
   const app = new Hono();
 
+  const policyDrafter = options.policyDrafter ?? createPolicyDrafter(manifest, {
+    provider: process.env.POLICY_LLM_PROVIDER ?? "disabled",
+    key: process.env.POLICY_LLM_API_KEY ?? "",
+  });
+
+  app.post("/v1/policy/draft", async (context) => {
+    try {
+      const reader = context.req.raw.body?.getReader();
+      if (!reader) throw new DraftError(400, "A JSON request body is required.");
+      let raw = "";
+      const decoder = new TextDecoder("utf-8", { fatal: true });
+      let bytes = 0;
+      while (true) {
+        const chunk = await reader.read();
+        if (chunk.done) break;
+        bytes += chunk.value.byteLength;
+        if (bytes > 8192) {
+          await reader.cancel();
+          throw new DraftError(413, "Draft request exceeds 8192 bytes. Use the manual policy form.");
+        }
+        raw += decoder.decode(chunk.value, { stream: true });
+      }
+      raw += decoder.decode();
+      let body: unknown;
+      try { body = JSON.parse(raw); }
+      catch { throw new DraftError(400, "Draft request must be JSON."); }
+      return context.json(await policyDrafter.draft(body));
+    } catch (error) {
+      if (error instanceof DraftError) return context.json({ error: error.message }, error.status);
+      return context.json({ error: "Draft request is unreadable. Use the manual policy form." }, 400);
+    }
+  });
   app.get("/health", (context) => context.json({ status: "ok", service: "crest-api" }));
 
   app.get("/v1/route", (context) => {

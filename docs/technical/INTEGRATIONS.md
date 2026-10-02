@@ -14,7 +14,7 @@
 | Crest Account | Required; built by Crest | Owner policy authority | Caps, fixed route, freeze, bounded repayment |
 | wagmi + viem | Required | Client integration | Reads, simulation, wallet signatures |
 | PostgreSQL | Required | Offchain audit/coordination | Observations, policy, triggers, receipts, postconditions |
-| LLM provider | Optional | Untrusted draft | Natural-language policy draft only |
+| Groq (optional) | Optional | Untrusted owner draft only | Server-side `/v1/policy/draft` with strict JSON Schema; no policy or Guardian authority |
 | Stylus | Not MVP | None | Add only after measured need |
 
 ## 2. Robinhood Chain
@@ -417,17 +417,11 @@ No generic RPC transaction endpoint is exposed.
 
 ## 12. Optional natural-language policy
 
-The model returns an untrusted draft matching strict schema. Validation rejects:
+`POST /v1/policy/draft` accepts a bounded owner description (up to 2,000 characters), the current editable limits if present, and the form's owner, account, and Guardian addresses. The server alone supplies the active manifest's token symbols/decimals, LLTV, trust tier, and SANDBOX disclosures. It never sends the Guardian address to Groq or accepts route, asset intents, Guardian, addresses, or freshness from model output. The server converts decimal token amounts to exact bigint base units and percentage points to WAD, fixes intents to the verified market/vault, applies `DEFAULT_FRESHNESS`, and checks `compilePolicy` including strict `policyV2Schema` before returning editable human-unit limits.
 
-- market/vault selected by ticker/name alone;
-- unknown asset intent;
-- invalid LTV ordering;
-- invented APY, oracle, LLTV, or liquidity;
-- unsupported Guardian borrowing;
-- arbitrary receiver/venue/swap;
-- cap below current position;
-- vault asset different from loan token;
-- missing base-unit confirmation.
+The Groq Chat Completions call uses `openai/gpt-oss-120b`, then `qwen/qwen3.8-27b` if the first returns HTTP error, times out, produces invalid JSON/schema output, or fails policy compilation. Both use strict JSON Schema and hidden reasoning; GPT-OSS uses low reasoning effort and Qwen uses none. No SDK or browser-visible key. The response is labeled `Draft`, never signed/staged; the owner reviews every field and separately signs the existing staging message and configure transaction. Provider disabled/missing key returns 503; failed models return 502; a request over 8 KiB returns 413 and the shared in-process guard allows at most three valid requests per minute per API process (not a distributed quota).
+
+Model output cannot assert APY, oracle safety, route suitability, or Guardian permissions. The API further requires critical LTV at least ten percentage points below manifest LLTV, reserve floor no greater than debt ceiling, and all three degraded-source freezes enabled. SANDBOX disclosures remain in the workspace, and the sandbox vault is not evidence of yield. Draft limits are not compared with live position balances here; normal compilation, transaction simulation, and owner review remain necessary. Groq outages never relax these checks.
 
 Manual typed policy remains complete without an LLM.
 

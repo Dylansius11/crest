@@ -12,6 +12,7 @@
 | Vault | ERC-4626 interface plus one fixed adapter only if required | Standard shares/assets/withdrawal semantics |
 | Contracts | Solidity + Foundry + OpenZeppelin | Narrow account and invariant/fork proof |
 | API | Hono on Node | Bounded typed HTTP surface |
+| Optional policy drafting | Native Node `fetch` to Groq Chat Completions, no LLM SDK | Two fixed models; strict JSON Schema and domain/compiler validation before owner review |
 | Validation | Zod + generated JSON Schema | Policy and external trust boundaries |
 | Data | Supabase Postgres + Drizzle | Hosted relational audit state, bigint-safe schema, and signer-exclusive Guardian claims |
 | Monitor | Node worker | Block/rate/lifecycle observations and assessments |
@@ -29,7 +30,7 @@ Pin exact versions, compiler, ABIs, deployment manifest, and rate conventions.
 crest/
 ├─ apps/
 │  ├─ web/                   Next.js App Router shell and owner screens
-│  ├─ api/                   typed read-only route/authority API (Hono)
+│  ├─ api/                   Hono account/route API plus optional untrusted Groq draft endpoint
 │  ├─ monitor/               route-drift observation; market/vault/rate assessment
 │  └─ automation/            isolated Crest Guardian operator CLI
 ├─ packages/
@@ -96,6 +97,8 @@ and `@crest/vault` packages. Task 8 adds no new external package or version pin.
 ephemeral viem `PrivateKeyAccount`, not a generic wallet executor or additional service.
 
 Primary version sources: [Node releases](https://nodejs.org/en/about/previous-releases), [npm registry](https://www.npmjs.com/), [Supabase CLI releases](https://github.com/supabase/cli/releases), [PostgreSQL versioning](https://www.postgresql.org/support/versioning/), [Solidity releases](https://github.com/argotorg/solidity/releases), and [Foundry releases](https://github.com/foundry-rs/foundry/releases).
+
+Optional policy drafting adds **no package**: Node's native `fetch` calls `https://api.groq.com/openai/v1/chat/completions` using server-only `POLICY_LLM_API_KEY`. Fixed primary `openai/gpt-oss-120b` and fallback `qwen/qwen3.8-27b` both support strict JSON Schema output; GPT-OSS uses `reasoning_effort: low`, Qwen uses `reasoning_effort: none`, and both use `reasoning_format: hidden`. The API validates model output and runs the existing `@crest/policy` compiler. This provider never runs in `@crest/risk`, monitor, Guardian, or the contract. [Groq models](https://console.groq.com/docs/models), [structured outputs](https://console.groq.com/docs/structured-outputs), [reasoning](https://console.groq.com/docs/reasoning).
 
 ### 3.1 Rust decision
 

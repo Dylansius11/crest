@@ -21,6 +21,7 @@ const config: NextConfig = {
     return [
       { source: "/rpc", destination: rpc },
       { source: "/v1/accounts", destination: `${api}/v1/accounts` },
+      { source: "/v1/policy/draft", destination: `${api}/v1/policy/draft` },
       { source: "/v1/accounts/register", destination: `${api}/v1/accounts/register` },
       { source: "/v1/accounts/:address/position", destination: `${api}/v1/accounts/:address/position` },
       { source: "/v1/accounts/:address/policies", destination: `${api}/v1/accounts/:address/policies` },

@@ -54,11 +54,11 @@ flowchart LR
 | Unit | Responsibility | Explicitly forbidden |
 |---|---|---|
 | `apps/web` | Asset intents, route verification, owner transactions, LTV/carry/debt evidence | Holding keys, presenting projections as realized |
-| `apps/api` | Reviewed route/ABI facts and canonical recorded-account reads over PostgreSQL | Signing, unverified live claims, Guardian calls |
+| `apps/api` | Manifest-bound route/ABI/recorded-account facts, owner enrollment, and optional server-only Groq draft endpoint | Signing, unverified live claims, Guardian calls, granting authority to an LLM |
 | `apps/monitor` | Read market, position, vault, rates, and lifecycle; create assessments/triggers | Signing, changing policy, or selecting arbitrary routes |
 | `apps/automation` | Claim trigger, simulate, sign only freeze/own-debt repayment, reconcile | Borrowing, generic calls, swaps, withdrawals to receivers |
 | `packages/risk` | Pure LTV, health, capacity, carry, withdrawal, and action calculations | Provider/database access |
-| `packages/policy` | Schema, optional NL draft, compiler, configuration diff | Choosing market/vault/thresholds autonomously |
+| `packages/policy` | Strict typed policy compiler, manifest-bound route and configure calldata | Choosing market/vault/thresholds autonomously |
 | `packages/robinhood` | REST adapters and lifecycle freshness | Onchain price or permission authority |
 | `packages/morpho` | Market identity/state/actions | Hiding isolated-market constraints |
 | `packages/vault` | Fixed-vault identity, shares/assets, withdrawals, and simulation | Dynamic routing or promotional APY |
@@ -72,6 +72,7 @@ The `/v1/accounts?owner=...` registry and `/v1/accounts/:address/position` endpo
 Both enrollment-with-policy and subsequent staging require an EIP-191 `ownerSignature` over the active chain, account, next policy nonce, onchain configuration hash, and complete typed-content hash. The API recomputes both hashes, verifies the message against the canonical onchain owner at the checked block (including ERC-1271 owners), and may replace a pending draft only with owner consent. An active row is immutable; an unsigned or foreign-signed HTTP request cannot reserve the next nonce. Staging binds the next nonce at the **finalized** block, so the web reads `policyNonce` at both head and finalized and refuses to request a signature while the last configure is unfinalized. An RPC read failure during enrollment or staging (for example a pruned-state backend) returns 503 unreadable, never a refused owner, code, or signature.
 
 The default active route is the **46630 SANDBOX** manifest. Its testnet transactions are signed on 46630, but its public MockFeed collateral input, missing loan feed, idle-only vault, and disclosures mean it is never presented as reviewed. Mainnet 4663 remains registered as reviewed evidence, but runtime signing is disabled there.
+Optional `POST /v1/policy/draft` is isolated in `apps/api`: only owner-entered limits and a bounded description reach Groq, alongside manifest token units, LLTV, trust tier, and disclosures. The Guardian address stays server-side and comes from the current form; route and intents come solely from the active manifest. Both model outputs are untrusted even under strict JSON Schema: unknown fields are rejected, decimal amounts are converted to exact base units, and `compilePolicy` validates the entire draft against the fixed route and default freshness. The endpoint returns editable form values labeled `Draft`, never calldata, signatures, policy activation, or a monitor/Guardian instruction. Web proxy credentials remain server-only. Disabling the provider or exhausting its quota leaves the manual editor unchanged.
 
 ## 4. Trust boundaries
 
@@ -98,7 +99,7 @@ The default active route is the **46630 SANDBOX** manifest. Its testnet transact
 ### Advisory/untrusted
 
 - Robinhood REST metadata, bid/ask, halt, and corporate-action responses;
-- offchain APY/reward sources;
+- model-generated policy limits, rationale, and assumptions;
 - natural language and display token metadata;
 - third-party provider availability.
 
@@ -110,18 +111,23 @@ Advisory data can reduce capacity, freeze, exit yield, or alert. It cannot enabl
 sequenceDiagram
   participant U as Owner
   participant UI as Web
-  participant P as Policy compiler
-  participant R as Runtime verifier
+  participant API as Crest API draft and enrollment
+  participant P as Local policy compiler
   participant C as Crest Account
   participant D as Database
 
-  U->>UI: plain language or typed rules
-  UI->>P: draft
-  P-->>UI: schema-valid typed policy + unsupported clauses
-  UI->>R: verify market/tokens/current position
-  R-->>UI: exact addresses, units, current compatibility
-  UI->>U: human-readable + calldata diff
-  U->>C: signed configure transaction
+  U->>UI: type limits or request an optional draft
+  opt AI draft enabled
+    UI->>API: bounded text and form, Guardian held server-side
+    API-->>UI: strictly validated, manifest-bound human-unit Draft
+  end
+  UI->>P: reviewed owner-edited form
+  P-->>UI: exact compiled policy and calldata
+  UI->>U: human-readable limits and calldata diff
+  U->>UI: EIP-191 staging consent
+  UI->>API: stage pending policy with verified signature
+  API->>D: persist pending policy
+  U->>C: separately signed configure transaction
   C-->>D: indexed PolicyConfigured event
   D->>C: reconcile state and policy nonce
 ```

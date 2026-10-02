@@ -883,7 +883,8 @@ export function AccountWorkspace() {
               if (wallet.kind !== "connected") throw new Error("Reconnect the deploying owner wallet to inspect its registered account");
               await refreshRegistry(wallet.address);
             }} />
-            <PolicyEditor disabledReason={configurationBlockedReason} onCompile={compileConfiguration} onEdit={() => {
+            <PolicyEditor draftContext={wallet.kind === "connected" && selectedAddress ? { owner: wallet.address, account: selectedAddress } : null}
+              disabledReason={configurationBlockedReason} onCompile={compileConfiguration} onEdit={() => {
               policyRequest.current += 1;
               if (transaction.phase === "pending" || transaction.phase === "reconciliation-failed") return;
               setPrepared(null);
