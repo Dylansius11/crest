@@ -118,7 +118,8 @@ export function screenInput(input: RiskInput): Screened {
     const added = [...horizonReasons(observation, horizon), ...extra];
     return added.length === 0 ? observation : observe(observation.value, observation.provenance, [...observation.reasons, ...added]);
   };
-  const feedReasons = (observation: RiskInput["oracle"]["collateralFeed"], expected: string): ReasonCode[] => {
+  const feedReasons = (observation: RiskInput["oracle"]["collateralFeed"], expected: string | null): ReasonCode[] => {
+    if (expected === null) return ["unreadable"];
     const round = observation.value;
     if (round === null) return [];
     return [

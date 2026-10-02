@@ -29,8 +29,8 @@ export function exactRoute(manifest: DeploymentManifest, account: Address, guard
     loanToken: route.params.loanToken, vault: getAddress(manifest.vault.address) };
 }
 
-async function freshBlock(rpc: PublicClient) {
-  const head = await pinBlock(rpc, { nowSeconds: BigInt(Math.floor(Date.now() / 1000)), maxHeadLagSeconds: 120n });
+async function freshBlock(rpc: PublicClient, expectedChainId: number) {
+  const head = await pinBlock(rpc, { nowSeconds: BigInt(Math.floor(Date.now() / 1000)), maxHeadLagSeconds: 120n, expectedChainId });
   if (head.status !== "normal" || head.value === null) throw new Error("Custos refuses a stale or missing chain head");
   return head.value.block;
 }
@@ -50,7 +50,7 @@ export async function executeGuardianOnce(
   try {
     if (claim.marketId.toLowerCase() !== manifest.market.id.toLowerCase()) throw new Error("trigger market differs from reviewed market");
     const route = exactRoute(manifest, input.account, input.guardian, claim.accountCodeHash);
-    const block = await freshBlock(rpc);
+    const block = await freshBlock(rpc, manifest.network.chainId);
     const before = await readGuardianState(rpc, block, route, claim.actionKind === "freeze" ? "freeze" : "repay");
     const expected = { account: input.account, guardian: input.guardian, policyHash: claim.policyHash,
       marketId: claim.marketId, vault: route.vault };
@@ -141,7 +141,7 @@ export async function reconcileGuardianRun(
   const [network] = await db.select({ depth: networks.confirmationDepth }).from(networks)
     .where(eq(networks.chainId, BigInt(manifest.network.chainId)));
   if (!network) throw new Error("Custos network is not registered");
-  const head = await freshBlock(rpc);
+  const head = await freshBlock(rpc, manifest.network.chainId);
   if (head.number < receipt.blockNumber + BigInt(network.depth)) return pendingResult;
   const mined = await rpc.getBlock({ blockNumber: receipt.blockNumber });
   if (mined.hash.toLowerCase() !== receipt.blockHash.toLowerCase()) return pendingResult;

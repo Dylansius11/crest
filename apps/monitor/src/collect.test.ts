@@ -15,13 +15,13 @@ const client = (latest: bigint, visited: bigint[]): PublicClient => ({
 describe("monitor finalized horizon", () => {
   test("all downstream reads use a confirmed numbered block, never latest", async () => {
     const visited: bigint[] = [];
-    const pinned = await pinConfirmedBlock(client(120n, visited), 20, 1_700_000_005n, 120n);
+    const pinned = await pinConfirmedBlock(client(120n, visited), 20, 1_700_000_005n, 120n, 4663);
     expect(visited).toEqual([120n, 100n]);
     expect(pinned.value?.block).toEqual({ number: 100n, hash, timestamp: 1_700_000_000n });
     expect(pinned.status).toBe("normal");
   });
 
   test("insufficient confirmations fail closed instead of reading before account deployment", async () => {
-    await expect(pinConfirmedBlock(client(10n, []), 20, 1_700_000_005n, 120n)).rejects.toThrow("confirmation depth");
+    await expect(pinConfirmedBlock(client(10n, []), 20, 1_700_000_005n, 120n, 4663)).rejects.toThrow("confirmation depth");
   });
 });

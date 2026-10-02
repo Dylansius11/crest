@@ -4,7 +4,7 @@ import type { Address, Hex, PublicClient } from "viem";
 import { observe } from "@crest/domain";
 import type { BlockRef, Observation, ReasonCode } from "@crest/domain";
 
-import { onchainAt } from "./client.ts";
+import { readProvenance } from "./client.ts";
 
 export const FEED_ABI = parseAbi([
   "function latestRoundData() view returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)",
@@ -76,7 +76,7 @@ export interface CrestAccountSnapshot {
 /**
  * Reads Crest Account configuration and its loan-token reserve concurrently, all against `block.number`.
  *
- * A failed read returns `observe(null, onchainAt(block))`; a loan-token or Guardian mismatch preserves the
+ * A failed read returns `observe(null, readProvenance(client, block))`; a loan-token or Guardian mismatch preserves the
  * evidence as an `identity_mismatch` rather than appearing normal.
  */
 export async function readCrestAccount(
@@ -85,7 +85,7 @@ export async function readCrestAccount(
   account: Address,
   loanToken: Address,
 ): Promise<Observation<CrestAccountSnapshot>> {
-  const provenance = onchainAt(block);
+  const provenance = readProvenance(client, block);
   try {
     const [rawPolicy, policyNonce, borrowingFrozen, owner, guardian, marketId, idleReserveAssets] = await Promise.all([
       client.readContract({ address: account, abi: CREST_ACCOUNT_ABI, functionName: "policy", blockNumber: block.number }),
@@ -140,7 +140,7 @@ export interface FeedRound {
  * stop publishing off-hours, so a weekend read is correctly stale: that restricts, it never prices at zero.
  */
 export async function readFeed(client: PublicClient, block: BlockRef, feed: Address, maxAgeSeconds: bigint): Promise<Observation<FeedRound>> {
-  const provenance = onchainAt(block);
+  const provenance = readProvenance(client, block);
   let round: readonly [bigint, bigint, bigint, bigint, bigint];
   let decimals: number;
   try {
@@ -161,7 +161,7 @@ export async function readFeed(client: PublicClient, block: BlockRef, feed: Addr
 
 /** The exact Morpho market oracle answer. This, and only this, is Morpho's collateral valuation authority. */
 export async function readMarketOraclePrice(client: PublicClient, block: BlockRef, oracle: Address): Promise<Observation<bigint>> {
-  const provenance = onchainAt(block);
+  const provenance = readProvenance(client, block);
   try {
     const price = await client.readContract({ address: oracle, abi: MORPHO_ORACLE_ABI, functionName: "price", blockNumber: block.number });
     return observe(price, provenance, price === 0n ? ["oracle_invalid"] : []);
@@ -172,7 +172,7 @@ export async function readMarketOraclePrice(client: PublicClient, block: BlockRe
 
 /** Reads deployed bytecode at the pinned block and compares its hash with the reviewed one. */
 export async function readCodeHash(client: PublicClient, block: BlockRef, address: Address, expected: Hex): Promise<Observation<Hex>> {
-  const provenance = onchainAt(block);
+  const provenance = readProvenance(client, block);
   const code = await client.getCode({ address, blockNumber: block.number }).catch(() => undefined);
   if (code === undefined || code === "0x") return observe<Hex>(null, provenance);
   const hash = keccak256(code);
@@ -190,7 +190,7 @@ export async function simulateCall(
   block: BlockRef,
   request: { from: Address; to: Address; data: Hex },
 ): Promise<Observation<SimulationResult>> {
-  const provenance = onchainAt(block);
+  const provenance = readProvenance(client, block);
   try {
     const { data } = await client.call({ account: request.from, to: request.to, data: request.data, blockNumber: block.number });
     return observe<SimulationResult>({ ok: true, returnData: data ?? "0x" }, provenance);

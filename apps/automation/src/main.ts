@@ -1,10 +1,9 @@
-import { fileURLToPath } from "node:url";
 import { and, eq } from "drizzle-orm";
 import { getAddress, parseAbi } from "viem";
 import type { Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 
-import { createRobinhoodClient, pinBlock, readCodeHash, ROBINHOOD_CHAIN_ID } from "@crest/chain";
+import { createRobinhoodClient, pinBlock, readCodeHash, robinhoodChainOf } from "@crest/chain";
 import { crestAccountAbi } from "@crest/contracts";
 import { loadDeploymentManifest } from "@crest/contracts/manifest/file";
 import { createDatabase, crestAccounts } from "@crest/db";
@@ -27,8 +26,6 @@ function required(name: string): string {
   }
   return value;
 }
-const manifestPath = process.env.DEPLOYMENT_MANIFEST_PATH
-  ?? fileURLToPath(new URL("../../../config/deployment-manifest.json", import.meta.url));
 
 const command = process.argv[2];
 if (command !== "doctor" && command !== "run" && command !== "reconcile") {
@@ -41,8 +38,13 @@ if (command === "doctor") {
   const databaseUrl = required("DATABASE_URL");
   const expectedGuardian = getAddress(required("GUARDIAN_EXPECTED_ADDRESS"));
   const account = getAddress(required("GUARDIAN_ALLOWED_ACCOUNT"));
-  const manifest = await loadDeploymentManifest(manifestPath);
-  const rpc = createRobinhoodClient(rpcUrl);
+  const expectedChainId = Number(required("GUARDIAN_EXPECTED_CHAIN_ID"));
+  const manifest = await loadDeploymentManifest();
+  robinhoodChainOf(expectedChainId);
+  if (manifest.network.chainId !== expectedChainId || manifest.gate.outcome !== "full_route") {
+    throw new Error("Custos requires GUARDIAN_EXPECTED_CHAIN_ID to match an exact qualified deployment manifest");
+  }
+  const rpc = createRobinhoodClient(rpcUrl, manifest.network.chainId);
   const { db, client } = createDatabase(databaseUrl);
   try {
     const [registered] = await db.select().from(crestAccounts).where(and(
@@ -50,7 +52,7 @@ if (command === "doctor") {
       eq(crestAccounts.address, Buffer.from(account.slice(2), "hex")),
     ));
     if (!registered || registered.status !== "active") throw new Error("Custos doctor requires a registered active Crest Account");
-    const head = await pinBlock(rpc, { nowSeconds: BigInt(Math.floor(Date.now() / 1000)), maxHeadLagSeconds: 120n });
+    const head = await pinBlock(rpc, { nowSeconds: BigInt(Math.floor(Date.now() / 1000)), maxHeadLagSeconds: 120n, expectedChainId: manifest.network.chainId });
     if (head.status !== "normal" || head.value === null) throw new Error("Custos doctor requires a fresh canonical head");
     const block = head.value.block;
     const codeHash = `0x${Buffer.from(registered.codeHash).toString("hex")}` as Hex;
@@ -91,12 +93,12 @@ if (command === "doctor") {
   const account = getAddress(required("GUARDIAN_ALLOWED_ACCOUNT"));
   const guardian = getAddress(required("GUARDIAN_EXPECTED_ADDRESS"));
   if (command === "run") required("GUARDIAN_PRIVATE_KEY");
-  if (chainId !== ROBINHOOD_CHAIN_ID) throw new Error("GUARDIAN_EXPECTED_CHAIN_ID must be 4663");
-  const manifest = await loadDeploymentManifest(manifestPath);
+  const manifest = await loadDeploymentManifest();
+  robinhoodChainOf(chainId);
   if (manifest.network.chainId !== chainId || manifest.gate.outcome !== "full_route") {
-    throw new Error("Custos requires an exact qualified deployment manifest");
+    throw new Error("Custos requires GUARDIAN_EXPECTED_CHAIN_ID to match an exact qualified deployment manifest");
   }
-  const rpc = createRobinhoodClient(rpcUrl);
+  const rpc = createRobinhoodClient(rpcUrl, manifest.network.chainId);
   const { db, client } = createDatabase(databaseUrl);
   try {
     const expected = { account, guardian };

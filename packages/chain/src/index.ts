@@ -1,4 +1,4 @@
-export { createRobinhoodClient, onchainAt, pinBlock, ROBINHOOD_CHAIN_ID, robinhoodChain } from "./client.ts";
+export { createRobinhoodClient, onchainAt, pinBlock, readProvenance, robinhoodChainOf } from "./client.ts";
 export type { PinnedBlock, PinOptions } from "./client.ts";
 export {
   CREST_ACCOUNT_ABI,

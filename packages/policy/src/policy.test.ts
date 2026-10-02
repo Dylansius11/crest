@@ -12,6 +12,7 @@ import { compilePolicy, DEFAULT_FRESHNESS, routeContextOf, toConfigurationCall }
 import type { CompiledPolicy } from "./index.ts";
 
 const manifest = await loadDeploymentManifest(fileURLToPath(new URL("../../../config/deployment-manifest.json", import.meta.url)));
+const sandboxManifest = await loadDeploymentManifest(fileURLToPath(new URL("../../../config/deployment-manifest.46630.json", import.meta.url)));
 const ACCOUNT = getAddress(`0x${"a1".repeat(20)}`);
 const OWNER = getAddress(`0x${"b2".repeat(20)}`);
 const GUARDIAN = getAddress(`0x${"c3".repeat(20)}`);
@@ -60,6 +61,10 @@ describe("verified route context", () => {
     expect(route.tokens).toEqual({ collateralDecimals: 18, loanDecimals: 6 });
     expect(route.feeds.collateral).toBe(getAddress(manifest.contracts.collateralFeed?.address ?? ""));
     expect(route.vault).toBe(getAddress(manifest.vault.address));
+  });
+
+  test("retains the sandbox route's unavailable loan feed", () => {
+    expect(routeContextOf(sandboxManifest, { account: ACCOUNT, owner: OWNER }).feeds.loan).toBeNull();
   });
 
   test("refuses a manifest whose gate did not qualify the full market-and-vault route", () => {

@@ -282,7 +282,7 @@ contract DeployCrestAccountTest is CrestFixture {
         return string.concat(
             '{"schemaVersion":1,"network":{"chainId":',
             vm.toString(manifestChain),
-            '},"contracts":',
+            '},"trust":{"level":"reviewed","disclosures":[]},"contracts":',
             codes,
             ',"market":',
             marketJson,

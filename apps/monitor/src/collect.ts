@@ -1,8 +1,8 @@
 import { getAddress } from "viem";
 import type { PublicClient } from "viem";
 
-import { onchainAt, readCrestAccount, readFeed, readMarketOraclePrice, ROBINHOOD_CHAIN_ID } from "@crest/chain";
-import type { PinnedBlock } from "@crest/chain";
+import { onchainAt, readCrestAccount, readFeed, readMarketOraclePrice } from "@crest/chain";
+import type { FeedRound, PinnedBlock } from "@crest/chain";
 import type { DeploymentManifest } from "@crest/contracts/manifest";
 import { observe } from "@crest/domain";
 import type { BlockRef, Observation } from "@crest/domain";
@@ -19,18 +19,18 @@ import type { VaultPosition } from "@crest/vault";
 
 /** Select a named block behind the configured confirmation depth; a pending or wrong-chain horizon never passes. */
 export async function pinConfirmedBlock(
-  client: PublicClient, confirmationDepth: number, nowSeconds: bigint, maxHeadLagSeconds: bigint,
+  client: PublicClient, confirmationDepth: number, nowSeconds: bigint, maxHeadLagSeconds: bigint, expectedChainId: number,
 ): Promise<Observation<PinnedBlock>> {
   if (!Number.isSafeInteger(confirmationDepth) || confirmationDepth < 0) throw new Error("invalid confirmation depth");
   const chainId = await client.getChainId();
-  if (chainId !== ROBINHOOD_CHAIN_ID) throw new Error(`expected chain ${ROBINHOOD_CHAIN_ID}, received ${chainId}`);
+  if (chainId !== expectedChainId) throw new Error(`expected chain ${expectedChainId}, received ${chainId}`);
   const latest = await client.getBlock({ blockTag: "latest" });
   if (latest.number === null || latest.hash === null || latest.number < BigInt(confirmationDepth)) throw new Error("confirmation depth exceeds current chain head");
   const confirmed = await client.getBlock({ blockNumber: latest.number - BigInt(confirmationDepth) });
   if (confirmed.number === null || confirmed.hash === null || confirmed.number !== latest.number - BigInt(confirmationDepth)) throw new Error("confirmed block missing or inconsistent");
   const block: BlockRef = { number: confirmed.number, hash: confirmed.hash, timestamp: confirmed.timestamp };
   const headLagSeconds = nowSeconds > latest.timestamp ? nowSeconds - latest.timestamp : 0n;
-  return observe({ block, headLagSeconds }, onchainAt(block), headLagSeconds > maxHeadLagSeconds ? ["head_lag"] : []);
+  return observe({ block, headLagSeconds }, onchainAt(block, expectedChainId), headLagSeconds > maxHeadLagSeconds ? ["head_lag"] : []);
 }
 
 /** Build the exact risk input from one finalized block and separately timestamped advisory data. */
@@ -55,7 +55,7 @@ export async function collectRiskInput(
   const asset = await fetchStockTokenAsset(fetchFn, process.env.ROBINHOOD_API_BASE_URL ?? "https://api.robinhood.com/rhj", token, { now });
   const collateralFeedAddress = manifest.contracts.collateralFeed?.address;
   const loanFeedAddress = manifest.contracts.loanFeed?.address;
-  if (!collateralFeedAddress || !loanFeedAddress) throw new Error("reviewed manifest has no feed addresses");
+  if (!collateralFeedAddress) throw new Error("deployment manifest has no collateral feed address");
   const apiBase = process.env.ROBINHOOD_API_BASE_URL ?? "https://api.robinhood.com/rhj";
   const [market, vault, accountRead, marketPrice, collateralFeed, loanFeed, stockToken, borrow, vaultRate, vaultIncentives, marketIncentives, quote, actions] = await Promise.all([
     readMarket(client, block, route),
@@ -63,7 +63,9 @@ export async function collectRiskInput(
     readCrestAccount(client, block, account, route.params.loanToken),
     readMarketOraclePrice(client, block, route.params.oracle),
     readFeed(client, block, getAddress(collateralFeedAddress), BigInt(compiled.policy.freshness.maxFeedAgeSeconds)),
-    readFeed(client, block, getAddress(loanFeedAddress), BigInt(compiled.policy.freshness.maxFeedAgeSeconds)),
+    loanFeedAddress === undefined
+      ? Promise.resolve(observe<FeedRound>(null, onchainAt(block, manifest.network.chainId)))
+      : readFeed(client, block, getAddress(loanFeedAddress), BigInt(compiled.policy.freshness.maxFeedAgeSeconds)),
     readStockToken(client, block, route.params.collateralToken),
     fetchMarketBorrowApy(fetchFn, { chainId: manifest.network.chainId, marketId: route.marketId }, "24h", { now, reference }),
     fetchVaultNativeApy(fetchFn, { chainId: manifest.network.chainId, vault: vaultRoute.vault }, "one_day", { now, reference }),
@@ -79,7 +81,7 @@ export async function collectRiskInput(
       accountRead.value.policyNonce !== nonce);
   const accountObservation = mismatch ? observe(accountRead.value, accountRead.provenance, [...accountRead.reasons, "conflict"]) : accountRead;
   const position = market.value === null
-    ? observe<PositionSnapshot>(null, onchainAt(block), market.reasons)
+    ? observe<PositionSnapshot>(null, onchainAt(block, manifest.network.chainId), market.reasons)
     : await readPosition(client, block, route, market.value, account);
   const strategy = await readVaultPosition(client, block, vaultRoute, vault, account);
   // The withdrawal simulation only tightens the computed liquidity bound. A quote is never proof of an exit.

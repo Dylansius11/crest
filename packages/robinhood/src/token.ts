@@ -1,9 +1,11 @@
 import { parseAbi } from "viem";
 import type { Address, Hex, PublicClient } from "viem";
 
-import { onchainAt } from "@crest/chain";
+import { readProvenance } from "@crest/chain";
 import { observe } from "@crest/domain";
 import type { BlockRef, Observation, ReasonCode } from "@crest/domain";
+
+
 
 /** ERC-8056 Scaled UI Amount surface plus Robinhood's uid and advisory oracle-pause flag. */
 export const STOCK_TOKEN_ABI = parseAbi([
@@ -28,7 +30,7 @@ export interface StockTokenState {
 
 /** Canonical Stock Token lifecycle state at the pinned block. */
 export async function readStockToken(client: PublicClient, block: BlockRef, token: Address): Promise<Observation<StockTokenState>> {
-  const provenance = onchainAt(block);
+  const provenance = readProvenance(client, block);
   const at = { address: token, abi: STOCK_TOKEN_ABI, blockNumber: block.number } as const;
   try {
     const [uid, uiMultiplierWad, newUIMultiplierWad, effectiveAt, oraclePaused, decimals] = await Promise.all([

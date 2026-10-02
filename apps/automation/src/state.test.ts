@@ -25,6 +25,7 @@ const config = { account, guardian, loanToken, vault, marketId, expectedCodeHash
 function client(observed: bigint[], wrongCode = false, wrongAddress?: Address, wrongAsset = false,
   degradedVault = false, degradedDebt = false): PublicClient {
   return {
+    chain: { id: 4663 },
     getCode: async ({ address }: { address: Address }) => {
       if (degradedVault && address === vault) throw new Error("vault RPC unavailable");
       return wrongCode || address === wrongAddress ? "0x6001" : "0x6000";

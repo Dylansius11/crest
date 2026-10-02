@@ -27,14 +27,14 @@ if (!Number.isSafeInteger(intervalMs) || intervalMs <= 0) throw new Error("MONIT
 const once = process.argv.includes("--once");
 const manifest = await loadDeploymentManifest();
 const scenarios = parseScenarioSet(JSON.parse(await readFile(fileURLToPath(new URL("../../../config/scenarios.v2.json", import.meta.url)), "utf8")));
-const rpc = createRobinhoodClient(rpcUrl);
+const rpc = createRobinhoodClient(rpcUrl, manifest.network.chainId);
 const { db, client: sqlClient } = createDatabase(databaseUrl);
 
 try {
   do {
     const [network] = await db.select().from(networks).where(eq(networks.chainId, BigInt(manifest.network.chainId)));
     if (!network?.enabled) throw new Error("reviewed network is not registered or is disabled");
-    const head = await pinConfirmedBlock(rpc, network.confirmationDepth, BigInt(Math.floor(Date.now() / 1000)), 120n);
+    const head = await pinConfirmedBlock(rpc, network.confirmationDepth, BigInt(Math.floor(Date.now() / 1000)), 120n, manifest.network.chainId);
     if (head.value === null) throw new Error("confirmed block unavailable");
     const block = head.value.block;
     const [registered] = await db.select().from(crestAccounts).where(and(

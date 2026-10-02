@@ -341,6 +341,24 @@ describe("degraded input", () => {
   });
 });
 
+  test("degrades and blocks new borrowing when the selected route has no loan feed", () => {
+    const input = fixture();
+    const policy = {
+      ...input.policy.compiled,
+      route: { ...input.policy.compiled.route, feeds: { ...input.policy.compiled.route.feeds, loan: null } },
+    };
+    const assessment = assessPosition({
+      ...input,
+      policy: { ...input.policy, compiled: policy },
+    });
+    expect(assessment).toMatchObject({
+      state: "DEGRADED",
+      degradedSources: expect.arrayContaining(["loanFeed"]),
+      ownerBorrow: { capacityAssets: 0n, blockers: expect.arrayContaining(["degraded_input"]) },
+      ownerRecommendation: { kind: "none" },
+    });
+  });
+
 describe("exit yield and harvest", () => {
   test("realized vault loss exits yield instead of hiding behind DEGRADED", () => {
     const input = fixture({ debtAssets: 1_000n * USDG, frozen: true });

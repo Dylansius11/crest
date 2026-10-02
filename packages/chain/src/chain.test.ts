@@ -56,16 +56,24 @@ function withAccountState(options: { frozen?: boolean; nonce?: bigint } = {}): P
 
 describe("pinBlock", () => {
   test("refuses any chain other than Robinhood Chain", async () => {
-    await expect(pinBlock(fakeChain({ chainId: 1, block }), { nowSeconds: block.timestamp, maxHeadLagSeconds: 60n }))
+    await expect(pinBlock(fakeChain({ chainId: 1, block }), { nowSeconds: block.timestamp, maxHeadLagSeconds: 60n, expectedChainId: 4663 }))
       .rejects.toThrow(/chain 1/);
   });
 
+  test("rejects an RPC that does not match the caller's expected supported chain", async () => {
+    await expect(pinBlock(fakeChain({ chainId: 4663, block }), {
+      nowSeconds: block.timestamp,
+      maxHeadLagSeconds: 60n,
+      expectedChainId: 46630,
+    })).rejects.toThrow(/expected.*46630.*4663/);
+  });
+
   test("a head older than budget is degraded, because no sequencer uptime feed exists to prove liveness", async () => {
-    const fresh = await pinBlock(fakeChain({ block }), { nowSeconds: block.timestamp + 5n, maxHeadLagSeconds: 60n });
+    const fresh = await pinBlock(fakeChain({ block }), { nowSeconds: block.timestamp + 5n, maxHeadLagSeconds: 60n, expectedChainId: 4663 });
     expect(fresh.status).toBe("normal");
     expect(fresh.value).toMatchObject({ headLagSeconds: 5n });
 
-    const lagging = await pinBlock(fakeChain({ block }), { nowSeconds: block.timestamp + 61n, maxHeadLagSeconds: 60n });
+    const lagging = await pinBlock(fakeChain({ block }), { nowSeconds: block.timestamp + 61n, maxHeadLagSeconds: 60n, expectedChainId: 4663 });
     expect(lagging).toMatchObject({ status: "degraded", reasons: ["head_lag"] });
     expect(lagging.provenance).toEqual({ kind: "onchain", chainId: 4663, block });
   });
