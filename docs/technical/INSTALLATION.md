@@ -358,6 +358,7 @@ Fixtures test adapters. They are never live demo evidence.
 ```bash
 pnpm --filter @crest/web dev            # Next.js owner surface on :3000
 pnpm --filter @crest/api start          # active-manifest and recorded-account API on :8787
+pnpm --filter @crest/api route:register # record the active manifest route rows; safe to repeat
 pnpm --filter @crest/monitor observe:once   # one confirmed-block assessment, no signing
 pnpm --filter @crest/automation doctor  # Guardian authority check; never signs
 pnpm --filter @crest/automation exec node src/main.ts run --once --trigger-id <trigger-id>
@@ -374,6 +375,8 @@ forge test --match-contract CrestAccountInvariantTest
 ```
 
 The API loads the repository-root `.env` in local development and needs `DATABASE_URL`; start it separately on port 8787. Web forwards `/v1/accounts`, `/v1/accounts/register`, `/v1/accounts/:address/position`, and `/v1/accounts/:address/policies` to `CREST_API_URL` through the Next.js same-origin proxy. The default manifest is the 46630 SANDBOX route, so testnet owner transactions are permitted only with its visible disclosures; 4663 remains registered reviewed evidence but runtime signing stays disabled.
+
+Run `route:register` once per database, after migrations and before any owner enrolls; enrollment refuses a policy whose market and vault are not registered. It writes the network (confirmation depth 20), both tokens, the Morpho deployment, the market, and the vault from the active manifest in one transaction. A repeated run inserts nothing, and a row that already exists with a different code hash, decimals, oracle, IRM, LLTV, or token binding is refused, never overwritten. SANDBOX route rows are stored `degraded` with reason `sandbox_route`, never `verified`.
 
 **Runtime relay when the public hostname is hijacked locally.** Resolve the real origin over DNS-over-HTTPS, then run a separate, cache-free instance of the SNI-preserving proxy for every runtime service and point both `ROBINHOOD_CHAIN_RPC_URL` and `CREST_RPC_UPSTREAM` at it:
 

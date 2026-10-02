@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "node --watch src/server.ts",
     "start": "node src/server.ts",
+    "route:register": "node src/register-route.ts",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run"
   },

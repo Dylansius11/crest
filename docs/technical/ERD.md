@@ -143,6 +143,8 @@ CHECK `0 < lltv_wad <= 1e18`.
 | `status` | `text` | `candidate/verified/degraded/unsupported` |
 | `reason_codes` | `text[]` | Gate result |
 
+Route rows (`network`, `asset`, `token_deployment`, `morpho_deployment`, `morpho_market`, `vault_deployment`) are written only by `pnpm --filter @crest/api route:register` from the active deployment manifest, in one transaction, insert-only. An existing row that disagrees with the manifest is refused rather than updated. Evidence block/hash/time come from the manifest's finalized evidence block. A SANDBOX manifest writes `status = 'degraded'` with reason `sandbox_route` on every route row; only a reviewed manifest writes `verified`. Vault V2 rows record `interface_kind = 'erc4626'`, 18 share decimals, and owner/curator/liquidity adapter in `manager_json`.
+
 ## 4. Block-scoped observations
 
 Every onchain snapshot includes `chain_id`, `block_number`, `block_hash`, `block_time`, `canonical`, `observed_at`, and non-secret `provider_key`.
