@@ -6,7 +6,7 @@ import { crestAccountAbi } from "@crest/contracts";
 import type { DeploymentManifest } from "@crest/contracts/manifest";
 import { automationRuns, automationTriggers, claimGuardianTrigger, closeGuardianClaim, crestAccounts,
   loadGuardianPendingAttempt, loadGuardianRecordedReceipt, markGuardianBroadcast, markGuardianReceiptReorged,
-  networks, policies, recordGuardianAttempt, recordGuardianReconciliation, createDatabase } from "@crest/db";
+  networks, policies, recordGuardianAttempt, recordGuardianReconciliation, type CrestDatabase } from "@crest/db";
 import { canonicalJson } from "@crest/domain";
 import { morphoRouteOf } from "@crest/morpho";
 import { guardianRuntimeSigningAllowed } from "./authority.ts";
@@ -17,7 +17,6 @@ import { readGuardianState, type GuardianRoute } from "./state.ts";
 import { submitSignedGuardianCall } from "./submit.ts";
 import { validateGuardianAction } from "./validate.ts";
 
-type Database = ReturnType<typeof createDatabase>["db"];
 type Result = { status: "no_trigger" | "pending" | "verified" | "failed" | "uncertain"; runId?: string; transactionHash?: Hex };
 
 export function exactRoute(manifest: DeploymentManifest, account: Address, guardian: Address, codeHash: Hex): GuardianRoute {
@@ -38,7 +37,7 @@ async function freshBlock(rpc: PublicClient, expectedChainId: number) {
 
 /** Explicit one-shot worker. Signing is loaded only after the reviewed account and policy pass fresh reads. */
 export async function executeGuardianOnce(
-  db: Database, rpc: PublicClient, manifest: DeploymentManifest,
+  db: CrestDatabase, rpc: PublicClient, manifest: DeploymentManifest,
   input: { triggerId: string; account: Address; guardian: Address; loadSigner: () => PrivateKeyAccount },
 ): Promise<Result> {
   if (!guardianRuntimeSigningAllowed(manifest)) throw new Error("Custos runtime signing is disabled outside the 46630 sandbox");
@@ -99,7 +98,7 @@ export async function executeGuardianOnce(
 
 /** Reconcile a previously signed run without ever loading the key or resending bytes. */
 export async function reconcileGuardianRun(
-  db: Database, rpc: PublicClient, manifest: DeploymentManifest, runId: string,
+  db: CrestDatabase, rpc: PublicClient, manifest: DeploymentManifest, runId: string,
   expected: { account: Address; guardian: Address },
 ): Promise<Result | null> {
   if (await rpc.getChainId() !== manifest.network.chainId) throw new Error("Custos reconciliation chain changed");

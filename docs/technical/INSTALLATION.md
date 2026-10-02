@@ -367,6 +367,8 @@ pnpm --filter @crest/monitor observe:once   # one confirmed-block assessment, no
 pnpm --filter @crest/automation doctor  # Guardian authority check; never signs
 pnpm --filter @crest/automation exec node src/main.ts run --once --trigger-id <trigger-id>
 pnpm --filter @crest/automation exec node src/main.ts reconcile --run-id <run-uuid>
+pnpm --filter @crest/automation exec node src/main.ts watch    # supervised Guardian worker; signs
+pnpm --filter @crest/automation exec node src/main.ts health   # heartbeat check for a supervisor
 pnpm db:migrate
 pnpm generate
 pnpm verify
@@ -419,6 +421,8 @@ before treating evidence as verified. The signer lock permits one in-flight run 
 accounts; an occupied signer leaves other triggers detected. On an existing database with conflicting
 in-flight runs, the additive unique-index migration fails rather than deleting runs: reconcile or resolve
 the conflicting signed attempts before migrating.
+
+`watch` takes the same settings as `run` (including the key and an absolute `DEPLOYMENT_MANIFEST_PATH`) without a trigger ID, plus optional `GUARDIAN_POLL_INTERVAL_MS` (default 30000) and `GUARDIAN_HEARTBEAT_FILE`. It reconciles in-flight runs first, signs at most one newest eligible trigger per tick, halts new signing on any uncertain or reorg-conflicted run, and exits nonzero when the onchain Guardian is no longer its key. `health` exits nonzero when the heartbeat file is missing or older than three intervals. Start `watch` only when you intend Custos to sign on the active route: it will act on the next trigger, including a protective freeze.
 
 `pnpm smoke:adapters` runs every Task 5 adapter once, read-only, at a freshly pinned block and writes all
 observations to `.tmp/adapter-smoke.json`; it exits 1 on any identity or route failure. The two accounts are

@@ -41,60 +41,65 @@ export interface GuardianClaim {
   idempotencyKey: `0x${string}`;
 }
 
+type GuardianTriggerScope = { chainId: bigint; accountAddress: `0x${string}`; guardianAddress: `0x${string}`; now: Date };
+
+/** Claim and unattended selection share all eligibility conditions; the claim additionally locks the row. */
+function eligibleGuardianTriggers(input: GuardianTriggerScope, triggerId?: string): SQL {
+  const accountAddress = bytea(input.accountAddress, 20);
+  const guardianAddress = bytea(input.guardianAddress, 20);
+  return sql`
+    select t.id as trigger_id, t.action_kind, t.requested_assets, t.idempotency_key,
+      a.id as assessment_id, c.id as account_id, c.address as account_address,
+      c.code_hash as account_code_hash, p.id as policy_id, p.policy_nonce, p.policy_hash, p.market_id
+    from automation_triggers t
+    join risk_assessments a on a.id = t.assessment_id
+    join policies p on p.id = t.policy_id and p.id = a.policy_id
+    join crest_accounts c on c.id = a.crest_account_id and c.id = p.crest_account_id
+    join networks n on n.chain_id = c.chain_id
+    join account_snapshots s on s.id = a.account_snapshot_id
+    where ${triggerId ? sql`t.id = ${triggerId} and` : sql``}
+      t.status = 'detected'
+      and (t.lease_expires_at is null or t.lease_expires_at <= ${input.now.toISOString()})
+      and a.invalidated_at is null
+      and p.status = 'active' and p.invalidated_at is null and p.policy_hash is not null
+      and c.status = 'active' and c.chain_id = ${input.chainId} and c.address = ${accountAddress}
+      and c.indexed_policy_nonce = p.policy_nonce and n.enabled
+      and s.canonical and s.reorged_at is null and s.crest_account_id = c.id
+      and s.guardian_address = ${guardianAddress} and s.policy_nonce = p.policy_nonce
+      and s.market_id = p.market_id and s.vault_deployment_id = p.vault_deployment_id
+      and a.recommended_action = t.action_kind
+      and not exists (select 1 from automation_runs r where r.trigger_id = t.id)
+      and not exists (
+        select 1 from automation_triggers newer
+        where newer.policy_id = t.policy_id and newer.status <> 'superseded'
+          and (newer.detected_at, newer.id) > (t.detected_at, t.id)
+      )
+      and not exists (
+        select 1 from automation_runs unresolved
+        where unresolved.guardian_address = ${guardianAddress} and unresolved.status = 'reorg_conflict'
+      )`;
+}
+
+export async function latestGuardianTriggerId(db: GuardianDatabase, input: GuardianTriggerScope): Promise<string | null> {
+  const rows = await queryRows<{ id: string }>(db, sql`
+    select t.id from automation_triggers t
+    join (${eligibleGuardianTriggers(input)}) eligible on eligible.trigger_id = t.id
+    order by t.detected_at desc, t.id desc limit 1
+  `);
+  return rows[0]?.id ?? null;
+}
+
 export async function claimGuardianTrigger(
   db: GuardianDatabase,
   input: { triggerId: string; chainId: bigint; accountAddress: `0x${string}`; guardianAddress: `0x${string}`; now: Date },
 ): Promise<GuardianClaim | null> {
-  const accountAddress = bytea(input.accountAddress, 20);
   const guardianAddress = bytea(input.guardianAddress, 20);
   const recordedAt = input.now.toISOString();
   const rows = await db.transaction(async (tx) => {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(encode(${guardianAddress}::bytea, 'hex'), 0))`);
     return queryRows<ClaimRow>(tx, sql`
     with eligible as (
-      select
-        t.id as trigger_id,
-        t.action_kind,
-        t.requested_assets,
-        t.idempotency_key,
-        a.id as assessment_id,
-        c.id as account_id,
-        c.address as account_address,
-        c.code_hash as account_code_hash,
-        p.id as policy_id,
-        p.policy_nonce,
-        p.policy_hash,
-        p.market_id
-      from automation_triggers t
-      join risk_assessments a on a.id = t.assessment_id
-      join policies p on p.id = t.policy_id and p.id = a.policy_id
-      join crest_accounts c on c.id = a.crest_account_id and c.id = p.crest_account_id
-      join networks n on n.chain_id = c.chain_id
-      join account_snapshots s on s.id = a.account_snapshot_id
-      where t.id = ${input.triggerId}
-        and t.status = 'detected'
-        and a.invalidated_at is null
-        and p.status = 'active'
-        and p.invalidated_at is null
-        and p.policy_hash is not null
-        and c.status = 'active'
-        and c.chain_id = ${input.chainId}
-        and c.address = ${accountAddress}
-        and c.indexed_policy_nonce = p.policy_nonce
-        and n.enabled
-        and s.canonical
-        and s.reorged_at is null
-        and s.crest_account_id = c.id
-        and s.guardian_address = ${guardianAddress}
-        and s.policy_nonce = p.policy_nonce
-        and s.market_id = p.market_id
-        and s.vault_deployment_id = p.vault_deployment_id
-        and a.recommended_action = t.action_kind
-        and not exists (select 1 from automation_runs r where r.trigger_id = t.id)
-        and not exists (
-          select 1 from automation_runs unresolved
-          where unresolved.guardian_address = ${guardianAddress} and unresolved.status = 'reorg_conflict'
-        )
+      ${eligibleGuardianTriggers(input, input.triggerId)}
       for update of t
     ), inserted as (
       insert into automation_runs (trigger_id, status, guardian_address, selector, observed_policy_nonce, retry_count, started_at)

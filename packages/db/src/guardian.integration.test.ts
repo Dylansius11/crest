@@ -6,6 +6,7 @@ import {
   claimGuardianTrigger,
   closeGuardianClaim,
   loadGuardianPendingAttempt,
+  latestGuardianTriggerId,
   loadGuardianRecordedReceipt,
   markGuardianBroadcast,
   recordGuardianAttempt,
@@ -120,6 +121,35 @@ async function signedAttempt(
 afterAll(async () => { await client.end(); });
 
 describe("Guardian database repository", () => {
+  test("selects only the newest eligible account trigger and never falls back to superseded older actions", async () => {
+    const input = await fixture();
+    const newer = `trigger-${randomUUID()}`;
+    await client`insert into automation_triggers
+      (id, idempotency_key, assessment_id, policy_id, action_kind, requested_assets, status, detected_at)
+      values (${newer}, ${bytes("77", 32)}, ${input.assessment}, ${input.policy}, 'freeze', null, 'detected', ${new Date(now.getTime() + 1_000).toISOString()})`;
+    const selection = () => latestGuardianTriggerId(db, {
+      chainId: 4663n, accountAddress: input.accountAddress, guardianAddress: input.guardianAddress, now,
+    });
+    expect(await selection()).toBe(newer);
+    await client`update automation_triggers set lease_expires_at = ${new Date(now.getTime() + 10_000).toISOString()} where id = ${newer}`;
+    expect(await selection()).toBeNull();
+    expect(await claim(input)).toBeNull();
+    await client`update automation_triggers set lease_expires_at = ${new Date(now.getTime() - 1_000).toISOString()} where id = ${newer}`;
+    expect(await selection()).toBe(newer);
+    const selected = await claimGuardianTrigger(db, {
+      triggerId: newer, chainId: 4663n, accountAddress: input.accountAddress, guardianAddress: input.guardianAddress, now,
+    });
+    expect(selected?.triggerId).toBe(newer);
+    await closeGuardianClaim(db, { runId: selected!.runId, status: "failed", reason: "simulation_failed", now });
+    expect(await selection()).toBeNull();
+    expect(await claim(input)).toBeNull();
+    expect(await latestGuardianTriggerId(db, {
+      chainId: 4663n, accountAddress: address("ff"), guardianAddress: input.guardianAddress, now,
+    })).toBeNull();
+    await client`update account_snapshots set canonical = false where crest_account_id = ${input.account}`;
+    expect(await selection()).toBeNull();
+  });
+
   test("concurrent claimers create one immutable run", async () => {
     const input = await fixture();
     const first = createDatabase(databaseUrl);

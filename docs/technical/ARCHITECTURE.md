@@ -270,6 +270,8 @@ The Guardian key:
 
 MVP may use one isolated hot Guardian key because its onchain authority is debt-reducing and non-extractive. Production signing infrastructure is added only when operations require it.
 
+**Supervised worker (`watch`).** Custos runs as one long-lived process beside, never inside, the monitor. It repeats the `doctor` authority check (registered active account, fresh head, exact sandbox full-route manifest, bytecode, onchain Guardian, three-method ABI) at startup and on every tick, and loads the key only after a check passes. Each tick first reconciles every in-flight run of this Guardian and account by its persisted hash, then claims at most one trigger: the newest eligible one, under the same SQL eligibility the atomic claim rechecks, so a superseded older trigger is never signed. A pending run blocks new signing; a claimed run without a durable hash, an `uncertain` result, or an unresolved reorg conflict halts signing until an operator reconciles it, and bytes are never resent. A transient read error logs one JSON line and waits for the next interval. If the onchain Guardian no longer equals the key's address (rotated or revoked), the process exits nonzero instead of idling, so a supervisor keeps reporting it. A successful tick writes a heartbeat file that the `health` command checks without RPC or database access.
+
 ## 10. Guardian repayment execution
 
 ```mermaid

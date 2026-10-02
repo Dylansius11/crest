@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "doctor": "node src/main.ts doctor",
+    "watch": "node src/main.ts watch",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run"
   },
