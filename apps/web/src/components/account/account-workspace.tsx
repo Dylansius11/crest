@@ -27,6 +27,7 @@ import { activeManifest, activeTokens } from "@/lib/manifest";
 import type { RouteToken } from "@/lib/manifest";
 import { isOwnerSigningEnabled } from "@/lib/transaction-route";
 import { AccountEvidence } from "./account-evidence";
+import { PositionSection } from "./position-section";
 import { AccountOverview } from "./account-overview";
 import { DeployPanel } from "./deploy-panel";
 import { EntryPanel } from "./entry-panel";
@@ -486,7 +487,7 @@ export function AccountWorkspace() {
       return;
     }
     if (assetIntents.collateral !== "PROTECT_AND_BORROW" || assetIntents.loan !== "EARN_STABLE") {
-      setIssues(["Select PROTECT AND BORROW for AAPL and EARN STABLE for USDG before compiling this route."]);
+      setIssues([`Select PROTECT AND BORROW for ${collateralToken.symbol} and EARN STABLE for ${loanToken.symbol} before compiling this route.`]);
       setTransaction({ phase: "blocked", action: "configure", detail: "The qualified asset intents have not both been selected." });
       return;
     }
@@ -820,7 +821,7 @@ export function AccountWorkspace() {
       <SandboxNotice manifest={activeManifest} />
       <nav aria-label="Owner workflow" className="border-b border-ink px-5 sm:px-10">
         <div className="mx-auto flex max-w-[85rem] gap-0 overflow-x-auto">
-          {[["01", "Wallet", "#wallet"], ["02", "Assets", "#assets"], ["03", "Set up", "#setup"], ["04", "Enter and exit", "#actions"], ["05", "Evidence", "#evidence"]].map(([number, label, href]) => (
+          {[["01", "Wallet", "#wallet"], ["02", "Position", "#position"], ["03", "Assets", "#assets"], ["04", "Set up", "#setup"], ["05", "Enter and exit", "#actions"], ["06", "Evidence", "#evidence"]].map(([number, label, href]) => (
             <a key={href} href={href} className="flex min-h-12 shrink-0 items-center gap-2 border-r border-ink px-3 text-sm hover:bg-paper-soft first:border-l sm:px-5"><span className="font-mono text-crest-700">{number}</span><span className="type-display text-poster-sm">{label}</span></a>
           ))}
         </div>
@@ -864,12 +865,13 @@ export function AccountWorkspace() {
           <AccountOverview wallet={wallet} position={position} hasAccount={selectedAccount !== null} />
           <p className="text-xs text-ink-soft">Account figures are recorded evidence. They are not live quotes and cannot replace an owner simulation.</p>
         </section>
+        <PositionSection position={position} positionNotice={positionNotice} nowMs={nowMs} />
         <section id="assets" className="scroll-mt-6 space-y-4">
-          <div><p className="type-display text-poster-sm text-ink-soft">02 / Decide before moving assets</p><h2 className="type-display text-poster-lg">Choose asset intent</h2><p className="mt-2 text-sm text-ink-soft">KEEP is the default. {collateralToken.symbol} is the only qualified collateral; {loanToken.symbol} is the fixed loan token and vault asset.</p></div>
+          <div><p className="type-display text-poster-sm text-ink-soft">03 / Decide before moving assets</p><h2 className="type-display text-poster-lg">Choose asset intent</h2><p className="mt-2 text-sm text-ink-soft">KEEP is the default. {collateralToken.symbol} is the only qualified collateral; {loanToken.symbol} is the fixed loan token and vault asset.</p></div>
           <InventoryTable assets={inventory} connected={wallet.kind === "connected"} locked={transaction.phase === "pending" || transaction.phase === "reconciliation-failed"} onIntentChange={changeIntent} />
         </section>
         <section id="setup" className="scroll-mt-6 space-y-4">
-          <div><p className="type-display text-poster-sm text-ink-soft">03 / Owner setup</p><h2 className="type-display text-poster-lg">Deploy, then define limits</h2><p className="mt-2 text-sm text-ink-soft">Deployment is not borrowing. Policy needs a separate owner signature and canonical event.</p></div>
+          <div><p className="type-display text-poster-sm text-ink-soft">04 / Owner setup</p><h2 className="type-display text-poster-lg">Deploy, then define limits</h2><p className="mt-2 text-sm text-ink-soft">Deployment is not borrowing. Policy needs a separate owner signature and canonical event.</p></div>
           <div className="grid min-w-0 items-start gap-5 xl:grid-cols-2">
             <DeployPanel wallet={wallet} registry={registry} onRegistered={async () => {
               if (wallet.kind !== "connected") throw new Error("Reconnect the deploying owner wallet to inspect its registered account");
@@ -885,7 +887,7 @@ export function AccountWorkspace() {
         </section>
         <section id="actions" className="scroll-mt-6 space-y-4">
           <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
-            <div><p className="type-display text-poster-sm text-ink-soft">04 / Signature required</p><h2 className="type-display text-poster-lg">Enter and exit</h2></div>
+            <div><p className="type-display text-poster-sm text-ink-soft">05 / Signature required</p><h2 className="type-display text-poster-lg">Enter and exit</h2></div>
             <p className="max-w-md text-sm text-ink-soft">Every action is simulated at a named block before your wallet is asked. Custos can freeze and repay; it can never borrow or withdraw.</p>
           </div>
           <div className="grid min-w-0 items-start gap-5 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">

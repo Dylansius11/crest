@@ -7,10 +7,11 @@ export function decimal(value: string | null | undefined, decimals: number, symb
   if (value === null || value === undefined) return "Unavailable";
   try {
     const raw = BigInt(value);
+    const magnitude = raw < 0n ? -raw : raw;
     const base = 10n ** BigInt(decimals);
-    const whole = raw / base;
-    const fraction = (raw % base).toString().padStart(decimals, "0").slice(0, 4).replace(/0+$/, "");
-    return `${whole.toLocaleString()}${fraction ? `.${fraction}` : ""}${symbol ? ` ${symbol}` : ""}`;
+    const whole = magnitude / base;
+    const fraction = (magnitude % base).toString().padStart(decimals, "0").slice(0, 4).replace(/0+$/, "");
+    return `${raw < 0n ? "-" : ""}${whole.toLocaleString()}${fraction ? `.${fraction}` : ""}${symbol ? ` ${symbol}` : ""}`;
   } catch {
     return "Unavailable";
   }
@@ -38,17 +39,6 @@ export function percentFromBps(value: string | null | undefined) {
   if (value === null || value === undefined) return "Unavailable";
   try {
     return `${(Number(BigInt(value)) / 100).toFixed(2)}%`;
-  } catch {
-    return "Unavailable";
-  }
-}
-
-export function liquidityStatus(quoted: string | null | undefined, withdrawable: string | null | undefined) {
-  if (quoted === null || quoted === undefined || withdrawable === null || withdrawable === undefined) return "Unavailable";
-  try {
-    return BigInt(withdrawable) < BigInt(quoted)
-      ? "Withdrawal constrained: recorded withdrawable assets are below quoted vault assets."
-      : "No recorded quoted-to-withdrawable constraint.";
   } catch {
     return "Unavailable";
   }

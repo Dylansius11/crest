@@ -31,16 +31,70 @@ export type RecordedPosition = {
     vaultShares: string | null;
     quotedVaultAssets: string | null;
     withdrawableVaultAssets: string | null;
+    reserveFloorAssets: string;
+    strategyFloorAssets: string;
+    maxRepayPerActionAssets: string;
   } | null;
   assessment: {
     status: string;
     createdAt: string;
     reasonCodes: string[];
+    recommendedAction: string;
+    policyHealthWad: string | null;
     ownerBorrowCapacityAssets: string | null;
+    repayCapacityAssets: string | null;
     projectedCarryAssets: string | null;
     projectedSpreadBps: string | null;
+    rates: { borrow: RecordedRate; vault: RecordedRate };
+    provenance: RecordedInput[];
   } | null;
   realizedDebtRepaidAssets: string | null;
+  latestRepayment: RecordedRepayment | null;
+  latestIntervention: RecordedIntervention | null;
+};
+
+/** One rate exactly as the assessment consumed it; an unread rate keeps its status and reasons. */
+export type RecordedRate = {
+  status: string;
+  reasons: string[];
+  value: string | null;
+  scale: string | null;
+  convention: string | null;
+  window: string | null;
+  source: string | null;
+  observedAt: string | null;
+};
+
+export type RecordedInput = {
+  input: string;
+  status: string;
+  reasons: string[];
+  source: string | null;
+  blockNumber: string | null;
+  observedAt: string | null;
+};
+
+export type RecordedRepayment = {
+  debtBeforeAssets: string;
+  debtAfterAssets: string;
+  debtRepaidAssets: string;
+  blockNumber: string;
+  transactionHash: string;
+};
+
+export type RecordedIntervention = {
+  actionKind: string;
+  requestedAssets: string | null;
+  status: string;
+  reasonCodes: string[];
+  detectedAt: string;
+  forCurrentAssessment: boolean;
+  run: {
+    status: string;
+    failureClass: string | null;
+    transactionHash: string | null;
+    checks: { kind: string; passed: boolean }[];
+  } | null;
 };
 
 export type RecordedRegistry = { evidence: "recorded"; accounts: RecordedAccount[] };

@@ -301,14 +301,14 @@ separately by the product owner. Build screens on top of it; do not introduce a 
 
 - [x] Disable owner signatures while the reviewed manifest remains mainnet-only; label its landing evidence as archived. Superseded for 46630 by the sandbox decision; 4663 stays signing-disabled.
 - [x] Build disconnected wallet inventory with explicit asset intent.
-- [ ] Build combined market/vault verification with fallback.
+- [x] Build combined market/vault verification with fallback. One-block live reads of market parameters, code hashes, vault asset, liquidity, and oracle; each failed read falls back to the manifest value with its reason.
 - [x] Build draft → typed policy → exact calldata consequence preview.
-- [ ] Build owner deploy/configure/supply/borrow-and-deploy flow. Owner exit (repay, strategy, reserve, collateral, unfreeze) is built; closes on the live 46630 run.
-- [ ] Build LTV band, capital allocation, carry breakdown, realized repayment, permission, and evidence components.
+- [ ] Build owner deploy/configure/supply/borrow-and-deploy flow. Deploy, signed staging, configure, supply, acknowledged sandbox borrow, owner repay, strategy and collateral withdrawal, and unfreeze all passed through the UI on a 46630 Anvil fork (blocks 127527696 to 127528532); closes on the live 46630 run.
+- [x] Build LTV band, capital allocation, carry breakdown, realized repayment, permission, and evidence components.
 - [x] Show quoted versus withdrawable vault assets.
 - [x] Make additional borrow an owner approval.
-- [ ] Cover wrong chain, unsupported route, stale rate, vault constrained/loss, frozen, no debt, floor reached, transaction failure, and postcondition failure.
-- [ ] Verify keyboard flow, reduced motion, and narrow viewport. Keyboard order and 390 px layout checked disconnected; repeat with a connected owner.
+- [x] Cover wrong chain, unsupported route, stale rate, vault constrained/loss, frozen, no debt, floor reached, transaction failure, and postcondition failure. Rendered with recorded fork data and mocked API states; wrong chain and revert reuse the existing chain-switch and transaction-panel paths.
+- [x] Verify keyboard flow, reduced motion, and narrow viewport. Connected-owner Tab order shows a visible focus ring on every control and 390 px has no horizontal overflow; reduced motion is enforced by media-query gates because the test browser cannot emulate it.
 
 - [x] Register the exact 46630 route as a labeled SANDBOX manifest with authenticated RPC, current liquidity, and a pinned testnet fork proof before enabling transactions.
 - [x] Migrate manifest, verifier, contract proof, API, monitor, Guardian, and web to the same active 46630 route.

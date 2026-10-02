@@ -147,10 +147,10 @@ Position screen order:
 Owner workspace navigation follows the action sequence rather than a permanent right-hand evidence rail:
 
 1. connect an explicitly selected injected wallet or inspect an address read-only; a wrong network offers a one-click switch to the manifest chain;
-2. show recorded debt, LTV, and withdrawable liquidity at a glance, with unavailable values intact;
+2. watch the recorded position: the Custos card (assessed state, permitted selector, Guardian-actionable amount from the engine, last intervention with its postcondition checks), the LTV band, capital (quoted versus withdrawable versus Guardian-actionable), projected carry that withholds a net spread unless both rates are normal and comparable, and realized debt reduction from canonical events; unavailable values stay visible with their reason codes;
 3. choose the manifest collateral and loan-token intent (symbols come from the active manifest, never hard-coded), then deploy and configure through separate owner approvals;
 4. enter and exit: simulate supply or owner-only borrow, and owner repay, strategy, reserve, or collateral withdrawal, or unfreeze, against a live chain read; one sticky transaction panel carries every simulation, signature, and receipt;
-5. expand exact route identity, permissions, provenance, and canonical receipts.
+5. verify: owner versus Custos permissions, a one-block live read of market parameters, code hashes, vault asset, liquidity, and oracle that falls back to the manifest value per row with its reason, input provenance, and canonical receipts.
 
 A sandbox route renders a hatched SANDBOX band directly under the header with every manifest disclosure one click away. It never shrinks into a footnote.
 
