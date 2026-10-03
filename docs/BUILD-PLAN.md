@@ -211,10 +211,12 @@ The pure module returns one deterministic Guardian state/action and one separate
 
 **Evidence (2026-09-24)**
 
-- `@crest/policy` (18 tests) compiles a strict typed draft against the `full_route` manifest into the exact `configure` calldata; the selector and `policyHash = keccak256(abi.encode(PolicyConfig))` are pinned to the generated ABI. No LLM path exists.
+- `@crest/policy` (18 tests) compiles a strict typed draft against the `full_route` manifest into the exact `configure` calldata; the selector and `policyHash = keccak256(abi.encode(PolicyConfig))` are pinned to the generated ABI.
 - `@crest/risk` (62 tests) runs with exact bigint arithmetic on manifest-bound fixtures: every LTV band edge at one base unit, Morpho health at the LLTV, the recorded `feed_times_multiplier` oracle (divergence exactly `uiMultiplier - 1`), degraded, skewed, foreign, illiquid, and nonce-conflicting input, reserve versus strategy selection, floors with share-rounding guards, the per-action cap, withdrawable-only liquidity, exit yield on stale rates, realized-only harvest, determinism, and all four scenarios in `config/scenarios.v2.json` (`illustrative`).
 - A mutation spot-check (divergence gate, state precedence, source tie-break, strategy floor, feed age) failed the suite each time. An independent review then reproduced five defects (repayment on stale, skewed, or superseded input, two share-rounding reverts that scale with share price, illiquid strategy not degrading, stale negative spread hiding the exit); each now has a failing-first regression test, and the review re-ran against the fixes.
 - Owner-borrow capacity follows the owner's oracle decision in [LESSONS](./LESSONS.md): Morpho's value, gated by Crest's feed-only divergence.
+
+**Optional drafting (2026-10-02):** `apps/api` now proposes only an untrusted, manifest-bound, compiler-validated form draft through Groq. The existing manual editor and owner staging/signature remain authoritative.
 
 ## Task 7: Persist observations and run monitor
 
@@ -225,43 +227,60 @@ The pure module returns one deterministic Guardian state/action and one separate
 
 **Steps**
 
-- [ ] Index Crest, Morpho, and vault events with block hashes/cursors.
-- [ ] Activate policy mirror only after canonical event.
-- [ ] Poll coherent market/account/vault state and timestamped advisory sources through the Task 5 adapters.
-- [ ] Read Crest Account configuration, frozen state, and policy nonce through `@crest/chain` at the same block horizon.
-- [ ] Persist immutable assessment inputs and carry estimate. Unknown carry is null and real carry can be negative, so `estimated_annual_carry_assets` and `estimated_spread_bps` must become nullable, and the domain `projectedCarrySchema` must accept a negative amount, before the first insert.
-- [ ] Reconcile `strategyCostBasisAssets` from canonical strategy deposit and withdrawal events; until it is reconciled the engine passes null and never harvests.
-- [ ] Create idempotent freeze/reserve-repay/strategy-repay triggers transactionally.
-- [ ] Create owner additional-borrow recommendation without a Guardian trigger.
-- [ ] Handle duplicate polls, stale rate/lifecycle, vault constraint/loss, policy change, restart, and reorg.
-- [ ] Attribute canonical debt reductions to realized strategy events.
+- [x] Index Crest, Morpho, and vault events with block hashes/cursors.
+- [x] Activate policy mirror only after canonical event.
+- [x] Poll coherent market/account/vault state and timestamped advisory sources through the Task 5 adapters.
+- [x] Read Crest Account configuration, frozen state, and policy nonce through `@crest/chain` at the same block horizon.
+- [x] Persist immutable assessment inputs and carry estimate. Unknown carry is null and real carry can be negative, so `estimated_annual_carry_assets` and `estimated_spread_bps` must become nullable, and the domain `projectedCarrySchema` must accept a negative amount, before the first insert.
+- [x] Reconcile `strategyCostBasisAssets` from canonical strategy deposit and withdrawal events; until it is reconciled the engine passes null and never harvests.
+- [x] Create idempotent freeze/reserve-repay/strategy-repay triggers transactionally.
+- [x] Create owner additional-borrow recommendation without a Guardian trigger.
+- [x] Handle duplicate polls, stale rate/lifecycle, vault constraint/loss, policy change, restart, and reorg.
+- [x] Attribute canonical debt reductions to realized strategy events.
 
 **Acceptance**
 
 Replay creates no duplicate trigger. Projected fields never create realized repayment records.
 
+**Evidence (2026-09-30)**
+
+- `pnpm verify`: 14/14 typechecks and 23/23 workspace tasks passed; monitor 17/17 tests and indexed RPC filtering 6/6 passed. `pnpm --filter @crest/db test:integration`: 16/16 passed against local PostgreSQL.
+- The monitor CLI exits 1 without `ROBINHOOD_CHAIN_RPC_URL`, `DATABASE_URL`, and `CREST_ACCOUNT_ADDRESS`; no live Crest Account was supplied. Database-backed replay, policy activation, immutable snapshots, reorg invalidation, and projected-versus-realized separation are proven locally, not presented as live operation.
+
 ## Task 8: Implement isolated Crest Guardian
 
 **Files**
 
-- Create `apps/automation/src/{claim,validate,simulate,submit,reconcile,postconditions}.ts`
-- Create Guardian database repository/tests
+- Implement `apps/automation/src/{main,worker,state,validate,simulate,submit,reconcile,postconditions}.ts`
+- Implement Guardian claim/receipt repository, persistence proofs, and additive PostgreSQL migrations
 
 **Steps**
 
-- [ ] Start only through an explicit command with expected chain/account/Guardian.
-- [ ] Atomically claim by idempotency key.
-- [ ] Refresh policy nonce, freeze, debt, reserve, vault shares/assets, and generation-appropriate withdrawal liquidity.
-- [ ] Permit exactly three contract selectors.
-- [ ] Simulate from Guardian address.
-- [ ] Persist attempt/hash before retry decisions.
-- [ ] Reconcile canonical receipt plus Crest/Morpho/vault post-state.
-- [ ] Require debt decrease and corresponding floors/receiver/beneficiary checks.
-- [ ] Test duplicate delivery, restart, dropped/reverted transaction, changed policy, withdrawal constraint, and no-debt state.
+- [x] Start only through an explicit command with expected chain/account/Guardian.
+- [x] Atomically claim by idempotency key and lock the signer across distinct triggers.
+- [x] Refresh exact policy nonce and freeze state; repayment also requires fresh debt, reserve, vault shares/assets, and generation-appropriate withdrawal liquidity. Protective freeze requires neither Morpho debt nor vault liquidity.
+- [x] Permit exactly three contract selectors.
+- [x] Simulate from Guardian address.
+- [x] Persist signed attempt/hash and pinned simulation block hash before broadcast or retry decisions.
+- [x] Reconcile canonical receipt plus Crest/Morpho/vault post-state, including orphaned and re-mined receipts without replacing evidence.
+- [x] Require debt decrease and corresponding floors/receiver/beneficiary checks.
+- [x] Test duplicate delivery, restart, unseen/reverted transaction, changed policy, withdrawal constraint, no-debt freeze/repay, and signer collision.
 
 **Acceptance**
 
 Compromised API/monitor cannot make Guardian borrow or redirect value; duplicate triggers submit at most once.
+
+**Local evidence (2026-09-30):** The one-shot CLI rejects missing explicit settings before RPC or signing;
+the worker persists the signed hash before broadcast, never resends an uncertain attempt, verifies both
+simulation and receipt block hashes around post-state reads, and isolates debtless/degraded protective
+freezes from Morpho debt and vault liquidity failures. Compromised trigger action/receiver requests cannot
+escape the three compiled Guardian selectors or fixed account. An isolated PostgreSQL database migrated
+through the signer and receipt-ledger migrations and passed 25/25 integration checks, including concurrent
+signer contention, reorg/re-mining, unsigned claim invalidation before attempt persistence, and an orphaned
+receipt that blocks future claims until its signed hash is reconciled. `pnpm verify`: 14/14 workspace
+typechecks and 23/23 workspace tasks passed, including 47/47 automation tests.
+No live Guardian transaction was submitted: no deployed registered account, owner policy, runtime RPC,
+or Guardian key was provided for this local proof. Keep live canary execution in Task 10.
 
 ## Task 9: Expose typed API and web flows
 
@@ -274,17 +293,27 @@ Compromised API/monitor cannot make Guardian borrow or redirect value; duplicate
 The styling foundation — global stylesheet, theme tokens, and the shadcn/ui component base — is scaffolded
 separately by the product owner. Build screens on top of it; do not introduce a second styling convention.
 
+**Testnet-first gate (2026-10-01; wallet update 2026-10-02):** The checked-in manifest, chain client, and Tasks 1/4 fork proofs target mainnet 4663. They remain archival evidence, not authorization to transact on 46630. Approach 1 has a TLS-authenticated testnet RPC, exact TSLA-labeled/Paxos USDG Morpho market and same-core Vault V2, and a **separate finalized fork-only** supply → 0.1 USDG borrow/deposit → Guardian repay → owner exit proof in `contracts/test/RobinhoodTestnetCandidate.t.sol`. Subsequent faucet receipts and direct reads prove testnet stock-token, ETH, and USDG balances in **distinct observed wallets**, not a qualified route. Collateral issuer-registry identity, the candidate's unverified owner-controlled oracle semantics and independent price feeds remain unresolved; its vault allocates to a mock-collateral market, so no real-yield claim is permitted. See [testnet candidate evidence](./technical/INTEGRATIONS.md#testnet-candidate-status-2026-10-01). Before enabling the owner workspace, qualify those dependencies, record current liquidity and full manifest evidence, then migrate the manifest, verifier, contract proof, API, monitor, Guardian, and web chain together. Until then show the candidate as **fork-tested, not live/qualified**, and expose no owner signature path or mainnet switch.
+
+**Recheck (2026-10-02):** Official `/rhj/assets[].id` is documented as the onchain `uid()` across chains, but the faucet TSLA, AMZN, NFLX, PLTR, and AMD testnet tokens each returned a **different UID** from the issuer registry; none has a listed 46630 deployment. The TSLA market with 110.239151 USDG shared free liquidity (head block `127410031`) is a *loan market*, not a vault, and its verified oracle uses a publicly settable `MockFeed` and fixed `MockIRM`. A newly discovered factory-created USDG Vault V2 (`0x70f5…21bc`) had 63 USDG idle and a successful read-only 0.1 USDG existing-holder withdrawal simulation, but still allocates to the `FakeWBTC` market and has not passed Crest lifecycle/yield gates. [Full evidence](./technical/INTEGRATIONS.md#issuer-oracle-market-and-vault-recheck-2026-10-02). Do not enable owner signing or treat the more liquid route as qualified.
+
+**Sandbox decision (2026-10-02):** The owner chose "both, sandbox first", which supersedes the recheck's signing prohibition for the labeled sandbox only; the route is still not qualified. The 46630 route is registered as a labeled SANDBOX manifest (`config/deployment-manifest.46630.json`, trust tier enforced by the validator, disclosures rendered on every owner surface) and proven by `contracts/test/RobinhoodTestnetSandbox.t.sol`. Every chain-bound service binds to the active manifest. Owner signing is enabled only on the sandbox tier; 4663 stays registered, reviewed, and signing-disabled. A DEGRADED sandbox assessment permits an owner borrow only after explicit acknowledgement of its reason codes (`apps/web/src/lib/borrow-gate.ts`).
+
 **Steps**
 
-- [ ] Build disconnected wallet inventory with explicit asset intent.
-- [ ] Build combined market/vault verification with fallback.
-- [ ] Build draft → typed policy → exact calldata consequence preview.
-- [ ] Build owner deploy/configure/supply/borrow-and-deploy flow.
-- [ ] Build LTV band, capital allocation, carry breakdown, realized repayment, permission, and evidence components.
-- [ ] Show quoted versus withdrawable vault assets.
-- [ ] Make additional borrow an owner approval.
-- [ ] Cover wrong chain, unsupported route, stale rate, vault constrained/loss, frozen, no debt, floor reached, transaction failure, and postcondition failure.
-- [ ] Verify keyboard flow, reduced motion, and narrow viewport.
+- [x] Disable owner signatures while the reviewed manifest remains mainnet-only; label its landing evidence as archived. Superseded for 46630 by the sandbox decision; 4663 stays signing-disabled.
+- [x] Build disconnected wallet inventory with explicit asset intent.
+- [x] Build combined market/vault verification with fallback. One-block live reads of market parameters, code hashes, vault asset, liquidity, and oracle; each failed read falls back to the manifest value with its reason.
+- [x] Build draft → typed policy → exact calldata consequence preview.
+- [ ] Build owner deploy/configure/supply/borrow-and-deploy flow. Deploy, signed staging, configure, supply, acknowledged sandbox borrow, owner repay, strategy and collateral withdrawal, and unfreeze all passed through the UI on a 46630 Anvil fork (blocks 127527696 to 127528532); closes on the live 46630 run.
+- [x] Build LTV band, capital allocation, carry breakdown, realized repayment, permission, and evidence components.
+- [x] Show quoted versus withdrawable vault assets.
+- [x] Make additional borrow an owner approval.
+- [x] Cover wrong chain, unsupported route, stale rate, vault constrained/loss, frozen, no debt, floor reached, transaction failure, and postcondition failure. Rendered with recorded fork data and mocked API states; wrong chain and revert reuse the existing chain-switch and transaction-panel paths.
+- [x] Verify keyboard flow, reduced motion, and narrow viewport. Connected-owner Tab order shows a visible focus ring on every control and 390 px has no horizontal overflow; reduced motion is enforced by media-query gates because the test browser cannot emulate it.
+
+- [x] Register the exact 46630 route as a labeled SANDBOX manifest with authenticated RPC, current liquidity, and a pinned testnet fork proof before enabling transactions.
+- [x] Migrate manifest, verifier, contract proof, API, monitor, Guardian, and web to the same active 46630 route.
 
 **Acceptance**
 
@@ -299,37 +328,45 @@ A first-time judge can distinguish owner versus Guardian authority, projected ve
 
 **Steps**
 
-- [ ] Inventory wallet and select one executable plus unsupported intents.
-- [ ] Open exact route evidence.
-- [ ] Configure target band, caps, floors, net-spread minimum, and Guardian.
-- [ ] Owner signs small supply and borrow-and-deploy.
-- [ ] Observe exact debt, shares, withdrawable liquidity, and current rates.
-- [ ] Attempt forbidden borrow and capture revert.
-- [ ] Trigger a labeled fork collateral-drop or spread-degradation scenario.
-- [ ] Guardian freezes and repays from fixed strategy.
-- [ ] Capture receipt, debt before/after, LTV/health change, and floor/cap results.
-- [ ] Show upside capacity waiting for owner approval.
+- [x] Inventory wallet and select one executable plus unsupported intents (fork impersonation funds the Anvil demo owner).
+- [x] Open exact SANDBOX route evidence and disclosures.
+- [x] Configure target band, caps, floors, net-spread minimum, and Guardian from a signed fork-owner policy.
+- [x] Owner signs small supply and borrow-and-deploy on the 46630 Anvil fork only.
+- [x] Observe exact debt, shares, withdrawable liquidity, and current rates as unknown/unreadable, with no APY claim.
+- [x] Attempt Guardian borrow and owner over-ceiling borrow; capture both revert names and selectors.
+- [x] Trigger a labeled fork-only MockFeed collateral drop.
+- [x] Guardian freezes and repays from the fixed strategy; both Custos runs reconcile as verified.
+- [x] Capture receipts, debt before/after, LTV/health change, persisted strategy-floor checks, and bounded-repay/debt-cap checks.
+- [x] Show zero upside capacity with exact degraded reason codes; any new borrow still requires owner approval.
+
+These checkboxes record only the Anvil 46630 fork rehearsal in `docs/evidence/demo-fork-46630.json`.
+The owner was Anvil's funded development account; no live-chain transaction, independently trusted oracle,
+current APY, or Task 11 testnet canary is established by this evidence.
 
 **Acceptance**
 
 The demo proves useful autonomous downside management without autonomous debt creation or promotional APY.
 
-## Task 11: Mainnet canary and final review
+## Task 11: Testnet canary and final review
 
 **Steps**
 
-- [ ] Reverify route, code hashes, liquidity, rates, and lifecycle state.
-- [ ] Run contract security/authority review and spec consistency review.
-- [ ] Deploy/verify source with small limits.
-- [ ] Execute canary owner supply → borrow-and-deploy → Guardian freeze → bounded repay → owner close.
-- [ ] Record exact hashes, blocks, policy, shares, debt, floors, and environment.
-- [ ] Test Guardian revocation, owner unfreeze, and process recovery.
-- [ ] Run focused Foundry, package, database, API, browser, and canary checks.
-- [ ] Confirm no Post-MVP A/B authority entered release.
+- [x] Reverify route, code hashes, liquidity, rates, and lifecycle state.
+- [x] Run contract security/authority review and spec consistency review.
+- [x] Deploy/verify source with small limits.
+- [x] Execute canary owner supply → borrow-and-deploy → Guardian freeze → bounded repay → owner close.
+- [x] Record exact hashes, blocks, policy, shares, debt, floors, and environment.
+- [x] Test Guardian revocation, owner unfreeze, and process recovery.
+- [x] Run focused Foundry, package, database, API, browser, and canary checks.
+- [x] Confirm no Post-MVP A/B authority entered release.
+
+The live canary ran on canonical Robinhood Chain Testnet 46630 (SANDBOX route) and is recorded in [`docs/evidence/canary-live-46630.json`](./evidence/canary-live-46630.json). Account [`0xaD8A3272c6E68cF819fe1E3b2aEFD0f8Fd5b2c75`](https://explorer.testnet.chain.robinhood.com/address/0xaD8A3272c6E68cF819fe1E3b2aEFD0f8Fd5b2c75) was deployed by the owner's MetaMask in block 127605219 and verified on Sourcify (creation and runtime `match`); Blockscout cannot verify it because the explorer lists solc only up to 0.8.36. `verify-deployment-manifest --manifest config/deployment-manifest.46630.json` passed online against the live relay; the monitor recorded rates, the USDG feed, and lifecycle inputs as `unreadable`, so every borrow was a degraded sandbox borrow with the owner acknowledgement. Sequence: owner supplied 1 TSLA and borrowed 10 USDG into the vault; Custos froze borrowing (tx `0x97928bd2…edf02`, block 127616213, reconcile verified); the owner tightened the LTV bands at policy nonce 2 without moving any price; the monitor assessed PROTECT at 2.796% LTV and Custos repaid 6.421094 USDG from the strategy (tx `0xe512f21c…ce90a`, block 127634675, debt 10.000047 → 3.578953); the owner repaid the rest, withdrew 3.578906 USDG of strategy and 1 TSLA, and unfroze (block 127636280), leaving zero collateral, debt, shares, and idle USDG. Checks: `forge test` 56 passed with the two pinned-fork suites skipped, `pnpm verify` green (including the database tests), and the browser path was the real owner workspace.
+
+Revocation and recovery evidence comes from an Anvil fork of 46630, not canonical testnet. Process recovery: Custos `run --once` left run `172193ff-cac4-49ed-892a-c584106fcb7e` pending (tx `0x56a336…fa6f`), a second run on the same trigger returned `no_trigger`, and two reconciles in fresh processes both returned verified with one `transaction_attempts` row. The Guardian's `unfreezeBorrowing` reverted `OwnableUnauthorizedAccount`; the owner unfroze in tx `0x65eb0f640d8ad02b187f95bb6ed62decd0e20477a321e4ec81fba27f9fe45a75` (block 127528937). `setGuardian(0x0)` in tx `0xdcd32489db39b6626a69993813da75a60144cbbe3babdc54d73af5ba5a337a04` (block 127528942) advanced `policyNonce` 1→2; the old key's `freezeBorrowing` reverted `Unauthorized()`, Custos returned `no_trigger` on the monitor's next freeze trigger, and `doctor` failed its guardian check. `CrestAccount` exposes no envelope, permit, swap, sale, multicall, or delegatecall surface.
 
 **Acceptance**
 
-Live evidence proves the route and debt reduction, or the submission explicitly labels the fork boundary and reserve-only fallback.
+Canonical testnet evidence proves the route and debt reduction; if qualification fails, report the unavailable gate rather than substituting mainnet or a simulated receipt.
 
 ## Post-MVP A plan — do not start with MVP
 

@@ -6,6 +6,10 @@
     "rpcUrl": "https://rpc.mainnet.chain.robinhood.com",
     "explorerUrl": "https://robinhoodchain.blockscout.com"
   },
+  "trust": {
+    "level": "reviewed",
+    "disclosures": []
+  },
   "evidence": {
     "retrievedAt": "2026-09-17T15:59:45Z",
     "block": {
@@ -368,6 +372,6 @@
   },
   "integrity": {
     "algorithm": "sha256",
-    "digest": "sha256:423407d4e4f77417d412dfad0a7f364ed1c163a6fad52178ab9b07b1bab869c7"
+    "digest": "sha256:51b050f58f1e7082026db7d92f62824d38657cae37b1d3c55f8167a8d7479542"
   }
 }

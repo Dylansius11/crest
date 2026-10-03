@@ -1,4 +1,4 @@
-import { Cell, CellLabel } from "@/components/ui/cell";
+import { Cell } from "@/components/ui/cell";
 import { authority } from "@/lib/content";
 
 /**
@@ -12,26 +12,18 @@ export function AuthoritySection() {
   return (
     <section id="authority" className="relative bg-crest-950 px-5 py-24 sm:px-10">
       <div className="mb-10">
-        <CellLabel className="bg-paper text-ink">03 · Authority</CellLabel>
-        <h2 className="type-display mt-4 max-w-3xl text-poster-lg text-paper sm:text-poster-xl">
-          Custos can shrink your debt. It cannot do anything else.
+        <h2 data-reveal="headline" className="type-display max-w-3xl text-poster-lg text-paper sm:text-poster-xl">
+          Only you can borrow. Custos can only apply the brakes.
         </h2>
-        <p className="mt-4 max-w-2xl text-poster-base text-paper/80">
-          Authority is enforced by the account contract, not by a promise.
-          Custos holds three selectors and every one of them can only move this
-          account's own debt down.
+        <p className="mt-4 max-w-2xl text-poster-base text-paper">
+          The account contract limits Custos to freezing new borrowing and repaying this account's own debt. It cannot move value to its wallet.
         </p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Cell
-          className="flex flex-col border-ink bg-paper"
-          index="O"
-          meta="You"
-          data-reveal="cell"
-        >
-          <div className="flex-1 p-6">
-            <h3 className="type-display text-poster-md text-ink">Owner</h3>
+      <div className="grid items-stretch gap-6 lg:grid-cols-3">
+        <Cell className="flex h-full flex-col border-ink bg-paper" data-reveal="cell">
+          <div className="flex flex-1 flex-col p-6">
+            <h3 className="type-display text-poster-md text-ink">Owner can</h3>
             <p className="mt-1 text-poster-sm text-ink-soft">
               The only key that creates debt.
             </p>
@@ -45,18 +37,13 @@ export function AuthoritySection() {
                 </li>
               ))}
             </ul>
+            <p className="mt-auto pt-6 text-sm leading-relaxed text-ink-soft">Each of these needs the owner's wallet signature. Custos holds no key that can do them.</p>
           </div>
         </Cell>
 
-        <Cell
-          className="flex flex-col border-paper bg-crest-600 text-paper"
-          index="G"
-          meta="Three selectors"
-          headerTone="paper"
-          data-reveal="cell"
-        >
-          <div className="flex-1 p-6">
-            <h3 className="type-display text-poster-md text-paper">Guardian</h3>
+        <Cell className="flex h-full flex-col border-paper bg-crest-600 text-paper" data-reveal="cell">
+          <div className="flex flex-1 flex-col p-6">
+            <h3 className="type-display text-poster-md text-paper">Custos can</h3>
             <p className="mt-1 text-poster-sm text-paper">Freeze or repay. Nothing more.</p>
             <ul className="mt-4 border-t border-paper/40">
               {authority.guardian.map((selector) => (
@@ -68,20 +55,14 @@ export function AuthoritySection() {
                 </li>
               ))}
             </ul>
+            <p className="mt-auto pt-6 text-sm leading-relaxed text-paper">Each repayment is capped per action by the owner and stops at the reserve and vault floors. The funds go to Morpho for this account only.</p>
           </div>
         </Cell>
 
-        <Cell
-          className="flex flex-col border-ink bg-flame text-ink shadow-[8px_8px_0_0_#0a1626]"
-          index="X"
-          meta="Never"
-          data-reveal="cell"
-        >
+        <Cell className="flex h-full flex-col border-ink bg-flame text-ink shadow-[8px_8px_0_0_var(--color-ink)]" data-reveal="cell">
           <div className="flex-1 p-6">
-            <h3 className="type-display text-poster-md">Guardian cannot</h3>
-            <p className="mt-1 text-poster-sm text-ink/80">
-              Read this list twice. It is the product.
-            </p>
+            <h3 className="type-display text-poster-md">Custos cannot</h3>
+            <p className="mt-1 text-poster-sm text-ink">These actions have no Custos call.</p>
             <ul className="mt-4 border-t border-ink">
               {authority.guardianCannot.map((item) => (
                 <li

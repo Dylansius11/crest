@@ -1,0 +1,84 @@
+{
+  "evidenceClass": "canonical-testnet",
+  "trust": "sandbox",
+  "chainId": "46630",
+  "recordedAtUtc": "2026-10-02T14:30:00Z",
+  "finalizedThroughBlockAtRecording": "127627497",
+  "manifestIntegrityDigest": "sha256:0e4501106d67b70b2e31b610bc120b58a79235554f003e98faa55f64621c4f8b",
+  "account": {
+    "address": "0xaD8A3272c6E68cF819fe1E3b2aEFD0f8Fd5b2c75",
+    "owner": "0x712683F374Cd524F6336E87D577Fc39d1102930A",
+    "guardian": "0x4fd1139714C571Fc49BF26fFaA0375Adb137f271",
+    "morpho": "0x99607363652591ffF66BA23EF8D91563CA48038b",
+    "codeHash": "0xad727f1b634e37d310fb17ef89d175ed903628977729acae3f176907cff51a02",
+    "deploymentTransaction": "0x8afd0f21a3f2aab2d745ed8d8ded1c8aba9e5dec7c59109c022435df74606c6f",
+    "deploymentBlock": "127605219",
+    "sourceVerification": {
+      "sourcify": { "match": "match", "creationMatch": "match", "runtimeMatch": "match", "verifiedAt": "2026-10-02T14:22:03Z", "url": "https://sourcify.dev/server/v2/contract/46630/0xaD8A3272c6E68cF819fe1E3b2aEFD0f8Fd5b2c75" },
+      "blockscout": "unavailable: the testnet explorer lists solc up to v0.8.36, and the account is compiled with the pinned v0.8.37+commit.f401782d"
+    }
+  },
+  "route": {
+    "market": "0x165f9db8f5e1d9982a35dfaadb3f944cf747970c8f819f16f10105f5c7eb6e04",
+    "loanToken": "0x7E955252E15c84f5768B83c41a71F9eba181802F",
+    "collateralToken": "0xC9f9c86933092BbbfFF3CCb4b105A4A94bf3Bd4E",
+    "oracle": "0x79DA01DB22808E3A7397B788F171a7647b1bEf8f",
+    "vault": "0x70F514670d554f3388e15eBce2c7Aa37307A21Bc",
+    "lltv": "860000000000000000"
+  },
+  "policies": [
+    {
+      "nonce": "1",
+      "policyHash": "0x06b88c2fa18d8e7185c1480ba6af1b8560ce34a423bfc29e0dff26413558eefc",
+      "contentHash": "0xa0304e3c82a4986321f84e567e09725e26c168806e3478b15ecc5bf60be50206",
+      "configureTransaction": "0xe594609325c1df0d7bc8114f01a347ad354c88f0e2d08174031cbe5d46bd6195",
+      "block": "127614423",
+      "limits": { "collateralCapTSLA": "1", "debtCeilingUSDG": "20", "strategyCapUSDG": "20", "reserveFloorUSDG": "0", "strategyFloorUSDG": "0", "guardianRepayCapUSDG": "10", "ltvPercent": { "lower": "5", "target": "10", "upper": "20", "critical": "40" }, "minNetSpreadBps": "0", "maxOracleDivergenceBps": "500", "harvestThresholdUSDG": "1" }
+    },
+    {
+      "nonce": "2",
+      "policyHash": "0xe74543c00d2f601c2f4470c294deac3566dbf0bbb4dc8c510e44379627bd10ef",
+      "contentHash": "0xcb2b7387caa110458a054b6a42ee7ee8f1f897f8a61dbcb9411427a7cd619c4d",
+      "configureTransaction": "0x3cdfa83efab9ea004985146d855b8e507815a3223478dce891475abe9cda1e2e",
+      "block": "127633398",
+      "reason": "Owner tightened the LTV bands so the existing 10 USDG debt sat above the upper band; no oracle price was changed.",
+      "limits": { "collateralCapTSLA": "1", "debtCeilingUSDG": "20", "strategyCapUSDG": "20", "reserveFloorUSDG": "0", "strategyFloorUSDG": "0", "guardianRepayCapUSDG": "10", "ltvPercent": { "lower": "0.5", "target": "1", "upper": "2", "critical": "4" }, "minNetSpreadBps": "0", "maxOracleDivergenceBps": "500", "harvestThresholdUSDG": "1" }
+    }
+  ],
+  "transactions": [
+    { "step": "deploy", "signer": "owner", "hash": "0x8afd0f21a3f2aab2d745ed8d8ded1c8aba9e5dec7c59109c022435df74606c6f", "block": "127605219" },
+    { "step": "configure nonce 1", "signer": "owner", "hash": "0xe594609325c1df0d7bc8114f01a347ad354c88f0e2d08174031cbe5d46bd6195", "block": "127614423" },
+    { "step": "approve 1 TSLA", "signer": "owner", "hash": "0x88d432190ef76d3e5eb3c24e578de7a0ba4ef68a7503a6129520dd898ad420bb", "block": "127615440" },
+    { "step": "supplyCollateral 1 TSLA", "signer": "owner", "hash": "0x3cca3bfe4568f3c243be878a67ae4d88bcf1940b7b64d223b8ccac72573d604e", "block": "127615533" },
+    { "step": "borrowAndDeploy 10 USDG", "signer": "owner", "hash": "0x07b808f91572920fe15e19f7354bcc82067c6e7358fa572108a24649920924f2", "block": "127615997", "postcondition": { "borrowedAssets": "10000000", "vaultShares": "10000000000000000000", "debtAfter": "10000001", "strategyAssetsAfter": "10000000" }, "note": "Degraded sandbox borrow with the explicit acknowledgement; reason code unreadable." },
+    { "step": "freezeBorrowing", "signer": "guardian", "hash": "0x97928bd278806869575157dc7dc515c368af602b29eb33c581c71aefa86edf02", "block": "127616213", "custosRun": "b915cea7-d3bc-4151-b33f-115a53be7cc7", "reconcile": "verified" },
+    { "step": "configure nonce 2", "signer": "owner", "hash": "0x3cdfa83efab9ea004985146d855b8e507815a3223478dce891475abe9cda1e2e", "block": "127633398" },
+    { "step": "repayFromStrategy", "signer": "guardian", "hash": "0xe512f21cdaf7b08eb80fb5de8c8fcd9e3221e4be5bf853621c08655dd46ce90a", "block": "127634675", "custosRun": "4c4dc89c-e2c3-421f-8337-247319915a1f", "reconcile": "verified", "postcondition": { "repaidAssets": "6421094", "sharesBurned": "6421094000000000000", "debtBefore": "10000047", "debtAfter": "3578953", "strategyBefore": "10000000", "strategyAfter": "3578906" }, "assessment": { "state": "PROTECT", "ltvWad": "27958336778833013", "repayCapacityAssets": "10000000" } },
+    { "step": "approve 3.582532 USDG", "signer": "owner", "hash": "0x70e28705c8696dc952a0f1ecc5722dc1d16e416decd5a7973a90a967d8bd46eb", "block": "127635326" },
+    { "step": "ownerRepay", "signer": "owner", "hash": "0x6be9c55eb5a38d2e883e31d8b0134ceb419a5e65f1bbfb39d82dcd303b4593c8", "block": "127635409", "postcondition": { "repaidAssets": "3578953", "debtBefore": "3578953", "debtAfter": "0" } },
+    { "step": "withdrawStrategy", "signer": "owner", "hash": "0x0b700f95bd0b659e455bced7d273e61158a70879a8247200ddc6bad0e14153a0", "block": "127635515", "postcondition": { "assets": "3578906", "sharesBurned": "3578906000000000000" } },
+    { "step": "withdrawCollateral 1 TSLA", "signer": "owner", "hash": "0xa556143da798b01bdf338061a88e03cd512445b911e8e18729d755baec4592ce", "block": "127636159" },
+    { "step": "unfreezeBorrowing", "signer": "owner", "hash": "0x612ff0f0ce2df37d0afe6f61e408cfabdea58d460a6072bc150d2cfb688e229a", "block": "127636280" }
+  ],
+  "finalState": {
+    "block": "127636731",
+    "morphoPosition": { "supplyShares": "0", "borrowShares": "0", "collateral": "0" },
+    "vaultShares": "0",
+    "idleUSDG": "0",
+    "borrowingFrozen": false,
+    "policyNonce": "2",
+    "guardian": "0x4fd1139714C571Fc49BF26fFaA0375Adb137f271"
+  },
+  "environment": {
+    "rpc": "local rpc-retry-proxy on 127.0.0.1:8604 forwarding to https://rpc.testnet.chain.robinhood.com/rpc",
+    "database": "local Supabase Postgres, database postgres",
+    "ownerWallet": "MetaMask, driven through the omp Chrome relay; every signature approved by the owner",
+    "guardianSigner": "Custos (apps/automation) with GUARDIAN_PRIVATE_KEY from .env, GUARDIAN_ALLOWED_ACCOUNT pinned to the account"
+  },
+  "notReviewed": [
+    "Route trust is SANDBOX: the collateral price comes from a public MockFeed that anyone can set, there is no USDG loan feed, and the vault is idle-only.",
+    "Borrow and vault rates were unreadable, so no carry or APY figure is claimed.",
+    "The Robinhood lifecycle inputs were unreadable for this testnet asset, so every assessment carried the unreadable reason code.",
+    "Transactions after block 127627497 were canonical but not yet finalized when this file was recorded."
+  ]
+}

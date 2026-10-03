@@ -173,7 +173,7 @@ export const marketSnapshots = pgTable("market_snapshots", {
   availableLoanAssets: numeric78("available_loan_assets").notNull(),
   borrowRateValue: numeric78("borrow_rate_value").notNull(),
   borrowRateScale: numeric78("borrow_rate_scale").notNull(),
-  oracleValue: numeric78("oracle_value").notNull(),
+  oracleValue: numeric78("oracle_value"),
   oracleScale: numeric78("oracle_scale").notNull(),
   oracleStatus: text("oracle_status").notNull(),
   sequencerStatus: text("sequencer_status").notNull(),
@@ -192,9 +192,9 @@ export const vaultSnapshots = pgTable("vault_snapshots", {
   vaultDeploymentId: uuid("vault_deployment_id").notNull().references(() => vaultDeployments.id),
   totalAssets: numeric78("total_assets").notNull(),
   totalSupplyShares: numeric78("total_supply_shares").notNull(),
-  maxDepositAssets: numeric78("max_deposit_assets").notNull(),
-  maxWithdrawAssets: numeric78("max_withdraw_assets").notNull(),
-  previewRedeemAssets: numeric78("preview_redeem_assets").notNull(),
+  maxDepositAssets: numeric78("max_deposit_assets"),
+  maxWithdrawAssets: numeric78("max_withdraw_assets"),
+  previewRedeemAssets: numeric78("preview_redeem_assets"),
   pauseStatus: text("pause_status").notNull(),
   downstreamJson: jsonb("downstream_json").notNull(),
   reasonCodes: text("reason_codes").array().notNull().default(sql`'{}'::text[]`),
@@ -253,8 +253,8 @@ export const accountSnapshots = pgTable("account_snapshots", {
   borrowingFrozen: boolean("borrowing_frozen").notNull(),
   policyNonce: numeric78("policy_nonce").notNull(),
   loanTokenBalance: numeric78("loan_token_balance").notNull(),
-  collateralTokenBalance: numeric78("collateral_token_balance").notNull(),
-  vaultShareBalance: numeric78("vault_share_balance").notNull(),
+  collateralTokenBalance: numeric78("collateral_token_balance"),
+  vaultShareBalance: numeric78("vault_share_balance"),
   ...blockScopedColumns(),
 }, (table) => [
   unique("account_snapshots_account_block_unique").on(table.crestAccountId, table.blockHash),
@@ -271,7 +271,7 @@ export const positionSnapshots = pgTable("position_snapshots", {
   borrowShares: numeric78("borrow_shares").notNull(),
   borrowAssetsUp: numeric78("borrow_assets_up").notNull(),
   collateralAssets: numeric78("collateral_assets").notNull(),
-  collateralValue: numeric78("collateral_value").notNull(),
+  collateralValue: numeric78("collateral_value"),
   ltvWad: numeric78("ltv_wad"),
   morphoHealthWad: numeric78("morpho_health_wad"),
   ...blockScopedColumns(),
@@ -350,6 +350,12 @@ export const rateObservations = pgTable("rate_observations", {
 }, (table) => [
   index("rate_observations_market_id_idx").on(table.marketId),
   index("rate_observations_vault_id_idx").on(table.vaultDeploymentId),
+  uniqueIndex("rate_observations_market_replay_unique")
+    .on(table.subjectKind, table.marketId, table.sourceUrl, table.fetchedAt, table.periodKind)
+    .where(sql`${table.marketId} is not null`),
+  uniqueIndex("rate_observations_vault_replay_unique")
+    .on(table.subjectKind, table.vaultDeploymentId, table.sourceUrl, table.fetchedAt, table.periodKind)
+    .where(sql`${table.vaultDeploymentId} is not null`),
   check("rate_observations_one_subject", sql`num_nonnulls(${table.marketId}, ${table.vaultDeploymentId}) = 1`),
   check("rate_observations_scale_positive", sql`${table.rateScale} > 0`),
 ]).enableRLS();
@@ -382,6 +388,7 @@ export const policies = pgTable("policies", {
   schemaVersion: integer("schema_version").notNull(),
   typedJson: jsonb("typed_json").notNull(),
   contentHash: binary("content_hash").notNull(),
+  policyHash: binary("policy_hash"),
   source: text("source").notNull(),
   configurationTransactionHash: binary("configuration_transaction_hash"),
   effectiveBlockNumber: numeric78("effective_block_number"),
@@ -413,6 +420,7 @@ export const policies = pgTable("policies", {
   }),
   check("policies_source_valid", sql`${table.source} in ('manual','llm_import')`),
   check("policies_status_valid", sql`${table.status} in ('pending','active','superseded','reorged','rejected')`),
+  check("policies_policy_hash_length", sql`${table.policyHash} is null or octet_length(${table.policyHash}) = 32`),
 ]).enableRLS();
 
 export const marketPolicies = pgTable("market_policies", {
@@ -475,10 +483,11 @@ export const riskAssessments = pgTable("risk_assessments", {
   policyHealthWad: numeric78("policy_health_wad"),
   ownerBorrowCapacityAssets: numeric78("owner_borrow_capacity_assets").notNull(),
   repayCapacityAssets: numeric78("repay_capacity_assets").notNull(),
-  estimatedAnnualCarryAssets: numeric78("estimated_annual_carry_assets").notNull(),
-  estimatedSpreadBps: integer("estimated_spread_bps").notNull(),
+  estimatedAnnualCarryAssets: numeric78("estimated_annual_carry_assets"),
+  estimatedSpreadBps: numeric78("estimated_spread_bps"),
   recommendedAction: text("recommended_action").notNull(),
   reasonCodes: text("reason_codes").array().notNull().default(sql`'{}'::text[]`),
+  inputJson: jsonb("input_json").notNull(),
   canonicalInputHash: binary("canonical_input_hash").notNull(),
   createdAt: utc("created_at").notNull(),
   invalidatedAt: utc("invalidated_at"),
@@ -533,8 +542,9 @@ export const realizedStrategyEvents = pgTable("realized_strategy_events", {
   crestAccountId: uuid("crest_account_id").notNull().references(() => crestAccounts.id),
   kind: text("kind").notNull(),
   transactionHash: binary("transaction_hash").notNull(),
-  sharesBefore: numeric78("shares_before").notNull(),
-  sharesAfter: numeric78("shares_after").notNull(),
+  logIndex: numeric78("log_index").notNull(),
+  sharesBefore: numeric78("shares_before"),
+  sharesAfter: numeric78("shares_after"),
   assetsBefore: numeric78("assets_before").notNull(),
   assetsAfter: numeric78("assets_after").notNull(),
   debtBeforeAssets: numeric78("debt_before_assets").notNull(),
@@ -548,10 +558,27 @@ export const realizedStrategyEvents = pgTable("realized_strategy_events", {
   observedAt: utc("observed_at").notNull(),
   reorgedAt: utc("reorged_at"),
 }, (table) => [
-  unique("realized_strategy_events_transaction_unique").on(table.transactionHash, table.kind),
+  unique("realized_strategy_events_account_transaction_log_block_unique").on(table.crestAccountId, table.transactionHash, table.logIndex, table.blockHash),
   index("realized_strategy_events_account_id_idx").on(table.crestAccountId),
   check("realized_strategy_events_kind_valid", sql`${table.kind} in ('deposit','withdraw','repay')`),
   check("realized_strategy_events_repay_reconciles", sql`${table.kind} <> 'repay' or (${table.debtBeforeAssets} > ${table.debtAfterAssets} and ${table.debtRepaidAssets} = ${table.debtBeforeAssets} - ${table.debtAfterAssets} and ${table.debtRepaidAssets} > 0)`),
+]).enableRLS();
+
+export const canonicalAccountEvents = pgTable("canonical_account_events", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  crestAccountId: uuid("crest_account_id").notNull().references(() => crestAccounts.id),
+  eventKind: text("event_kind").notNull(),
+  transactionHash: binary("transaction_hash").notNull(),
+  logIndex: numeric78("log_index").notNull(),
+  blockNumber: numeric78("block_number").notNull(),
+  blockHash: binary("block_hash").notNull(),
+  blockTime: utc("block_time").notNull(),
+  canonical: boolean("canonical").notNull().default(true),
+  observedAt: utc("observed_at").notNull(),
+  reorgedAt: utc("reorged_at"),
+  payloadJson: jsonb("payload_json").notNull(),
+}, (table) => [
+  unique("canonical_account_events_account_transaction_log_block_unique").on(table.crestAccountId, table.transactionHash, table.logIndex, table.blockHash),
 ]).enableRLS();
 
 export const automationTriggers = pgTable("automation_triggers", {
@@ -588,6 +615,7 @@ export const automationRuns = pgTable("automation_runs", {
   finishedAt: utc("finished_at"),
 }, (table) => [
   unique("automation_runs_trigger_unique").on(table.triggerId),
+  uniqueIndex("automation_runs_in_flight_guardian_unique").on(table.guardianAddress).where(sql`${table.status} in ('claimed', 'signed', 'broadcast')`),
   check("automation_runs_selector_allowed", sql`${table.selector} in ('freezeBorrowing()','repayFromReserve(uint256)','repayFromStrategy(uint256)')`),
   check("automation_runs_retry_nonnegative", sql`${table.retryCount} >= 0`),
 ]).enableRLS();
@@ -603,6 +631,7 @@ export const transactionAttempts = pgTable("transaction_attempts", {
   calldataHash: binary("calldata_hash").notNull(),
   decodedOperation: text("decoded_operation").notNull(),
   simulationBlockNumber: numeric78("simulation_block_number").notNull(),
+  simulationBlockHash: binary("simulation_block_hash"),
   simulationSuccess: boolean("simulation_success").notNull(),
   simulationGas: numeric78("simulation_gas"),
   nonce: numeric78("nonce"),
@@ -621,6 +650,7 @@ export const transactionAttempts = pgTable("transaction_attempts", {
   }),
   check("transaction_attempts_operation_allowed", sql`${table.decodedOperation} in ('freezeBorrowing()','repayFromReserve(uint256)','repayFromStrategy(uint256)')`),
   check("transaction_attempts_number_positive", sql`${table.attemptNumber} > 0`),
+  check("transaction_attempts_simulation_hash_present", sql`${table.simulationBlockHash} is not null`),
 ]).enableRLS();
 
 export const transactionReceipts = pgTable("transaction_receipts", {
@@ -636,7 +666,8 @@ export const transactionReceipts = pgTable("transaction_receipts", {
   observedAt: utc("observed_at").notNull(),
   reorgedAt: utc("reorged_at"),
 }, (table) => [
-  unique("transaction_receipts_attempt_unique").on(table.attemptId),
+  unique("transaction_receipts_attempt_block_unique").on(table.attemptId, table.blockHash),
+  uniqueIndex("transaction_receipts_attempt_canonical_unique").on(table.attemptId).where(sql`${table.canonical}`),
 ]).enableRLS();
 
 export const postconditionChecks = pgTable("postcondition_checks", {
@@ -650,7 +681,7 @@ export const postconditionChecks = pgTable("postcondition_checks", {
   checkedBlockHash: binary("checked_block_hash").notNull(),
   checkedAt: utc("checked_at").notNull(),
 }, (table) => [
-  unique("postcondition_checks_run_kind_unique").on(table.runId, table.kind),
+  unique("postcondition_checks_run_kind_block_unique").on(table.runId, table.kind, table.checkedBlockHash),
   index("postcondition_checks_run_id_idx").on(table.runId),
   check("postcondition_checks_kind_valid", sql`${table.kind} in ('frozen','debt_decreased','reserve_floor_held','strategy_floor_held','vault_receiver_fixed','repay_beneficiary_fixed')`),
 ]).enableRLS();

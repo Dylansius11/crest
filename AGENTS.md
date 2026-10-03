@@ -24,12 +24,16 @@ Never present planned, forked, simulated, cached, or projected behavior as live.
 | `contracts/src/libraries/VaultV2Liquidity.sol` | Vault V2 adapter and withdrawable-liquidity math | Vault route or liquidity bounds |
 | `contracts/script/DeployCrestAccount.s.sol` | Manifest-checked deployment and route validation | Deployment, evidence, or route gating |
 | `contracts/test/` | Unit, invariant, and pinned-fork proofs | Every permanent behavior change |
-| `config/deployment-manifest.json` + `.schema.json` | The reviewed route registry | Route, block, code hash, liquidity, or rate evidence changes |
+| `config/deployment-manifest.json` (4663, reviewed) + `config/deployment-manifest.46630.json` (46630, SANDBOX) + `.schema.json` | The chain-tagged route registry; `trust.level` is fixed per chain | Route, block, code hash, liquidity, rate, trust, or evidence changes |
 | `scripts/verify-deployment-manifest.ts` (+ `.test.ts`) | Offline and online manifest verification | Manifest shape, gate, or finality rules change |
 | `packages/domain/src/` | Branded identities, units, policy, risk, carry, Guardian states, Zod schemas | Domain vocabulary or generated schema changes |
 | `packages/db/src/` | Drizzle schema, client, integration tests | Persistence changes |
 | `supabase/` | Local Postgres config and migration history | Any schema migration |
+| `deploy/vps/` (+ root `.dockerignore`) | Runtime image, compose services, shared-Caddy block, secret templates, and `pnpm deploy:vps` | Hosting, runtime env, or service topology changes |
+| `.vercelignore` | Vercel CLI upload allowlist for `apps/web` (project `crest`) | Web hosting, upload scope, or web build inputs change |
 | `.agents/skills/` | Project-local skills | Task routing |
+| `.graphifyignore` | Corpus scope for the local knowledge graph | A path family should join or leave the graph |
+| `graphify-out/` (gitignored, machine-local) | Local code-and-document graph: `graph.json`, `GRAPH_REPORT.md` | Before answering a relationship question; never commit it |
 
 Command surface: `pnpm verify` (generate, typecheck, test), `pnpm db:reset`, `pnpm db:test`, `forge test`, `forge test --match-contract RobinhoodForkTest` for the pinned-fork proof, and `node scripts/verify-deployment-manifest.test.ts` plus `node scripts/verify-deployment-manifest.ts --rpc <url>` for manifest gates.
 
@@ -47,14 +51,41 @@ Conflict order: PRD owns product scope; Smart Contract owns onchain permissions;
 - Supabase schema, connection, RLS, or operations: user-global `supabase` and `supabase-postgres-best-practices`; Supabase Postgres is the only managed database provider.
 - React/Next.js work: `vercel-react-best-practices` and `crest-frontend-polish`.
 - Security and release: `crest-security-auditor`, `requesting-code-review`, and `verification-before-completion`.
+- Minimal-change design decisions: `ponytail`; take the smallest change that satisfies the observed contract, and add structure only when evidence demands it.
 
 Load only the skills relevant to the active task. Protocol-specific official skills outrank generic examples on protocol mechanics; Crest invariants still outrank any suggestion that broadens authority or scope.
+
+## Codebase graph
+
+`graphify-out/graph.json` is a local knowledge graph of this repository: code symbols and their
+import/call edges from a deterministic AST pass, plus concept and rationale nodes from the
+documents. It is gitignored and machine-local. `.graphifyignore` defines the corpus, and it
+deliberately leaves out vendored skill handbooks, generated artifacts, and binary assets so
+project structure is not buried under third-party material.
+
+Reach for the graph before reading files one by one when the question is about relationships:
+
+| Question | Command |
+| --- | --- |
+| How does X relate to Y? | `graphify query "<question>"` |
+| What depends on X, or would break if X changes? | `graphify affected "X"` |
+| What is X, in plain language? | `graphify explain "X"` |
+| Shortest path between two concepts | `graphify path "A" "B"` |
+| Most connected hubs | `graphify god-nodes` |
+| Full report | `graphify-out/GRAPH_REPORT.md` |
+
+Rules:
+- Coverage is not uniform: the code pass covers TypeScript, JavaScript, SQL, JSON, and shell. **Solidity is not extracted at all**, so `contracts/src/CrestAccount.sol` and `contracts/src/libraries/VaultV2Liquidity.sol` have no nodes. Read contract sources directly; only their documented concepts (`docs/technical/SMART-CONTRACT.md`) appear in the graph.
+- The graph is a map, not proof. A normative claim still comes from the file, test, or runtime evidence it points at; never cite graph output as deployed or measured state.
+- AST-derived code facts are reliable. Document-derived concepts, INFERRED edges, and community labels are leads to verify.
+- It is a snapshot of the last build. After a landed change run `graphify update .`; a post-commit hook already refreshes changed code nodes, but document changes need that command by hand.
+- Never commit `graphify-out/`, and never let a stale graph override the repository file it describes.
 
 ## Documentation is part of the change
 - Any work that contradicts, extends, or invalidates a document updates that document in the same change, before the commit. Never leave a document describing behavior the code no longer has.
 - Contract or ABI change updates `docs/technical/SMART-CONTRACT.md` and every caller, test, and generated artifact in the same cutover.
 - Boundary or service change updates `docs/technical/ARCHITECTURE.md`; schema change updates `docs/technical/ERD.md`; dependency or version change updates `docs/technical/TECH-STACK.md`; integration status change updates `docs/technical/INTEGRATIONS.md`.
-- Route, block, code hash, liquidity, rate, or gate change updates `config/deployment-manifest.json`, its schema, and the verifier together.
+- Route, block, code hash, liquidity, rate, trust, or gate change updates the affected `config/deployment-manifest*.json`, its schema, and the verifier together.
 - Completing a build-plan checklist item ticks it in `docs/BUILD-PLAN.md` immediately.
 - A newly verified technical fact or durable user preference is appended to `docs/LESSONS.md` using its dated headline and bullet format, before the commit that carries the work.
 - If a document and the code disagree, the reproducible runtime evidence wins and the document is corrected in that same change.

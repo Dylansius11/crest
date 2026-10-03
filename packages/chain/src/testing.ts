@@ -1,7 +1,7 @@
 import { createPublicClient, custom, decodeFunctionData, encodeFunctionResult, toHex } from "viem";
 import type { Abi, Address, Hex, PublicClient } from "viem";
 
-import { robinhoodChain } from "./client.ts";
+import { robinhoodChainOf } from "./client.ts";
 
 /**
  * A deterministic JSON-RPC endpoint for adapter tests.
@@ -42,7 +42,8 @@ function sameArgs(expected: readonly unknown[] | undefined, actual: readonly unk
 }
 
 export function fakeChain(options: FakeChainOptions): PublicClient {
-  const { block } = options;
+  const { block, chainId = 4663 } = options;
+  const configuredChainId = chainId === 46630 ? 46630 : 4663;
   const blockJson = {
     number: toHex(block.number),
     hash: block.hash,
@@ -68,7 +69,7 @@ export function fakeChain(options: FakeChainOptions): PublicClient {
 
   const handle = async ({ method, params }: { method: string; params?: unknown }): Promise<unknown> => {
     const list = (params ?? []) as unknown[];
-    if (method === "eth_chainId") return toHex(options.chainId ?? robinhoodChain.id);
+    if (method === "eth_chainId") return toHex(chainId);
     if (method === "eth_getBlockByNumber") return blockJson;
     if (method === "eth_getCode") {
       const address = String(list[0]).toLowerCase();
@@ -94,5 +95,5 @@ export function fakeChain(options: FakeChainOptions): PublicClient {
     throw new Error(`fakeChain does not serve ${method}`);
   };
 
-  return createPublicClient({ chain: robinhoodChain, transport: custom({ request: handle }, { retryCount: 0 }) });
+  return createPublicClient({ chain: robinhoodChainOf(configuredChainId), transport: custom({ request: handle }, { retryCount: 0 }) });
 }

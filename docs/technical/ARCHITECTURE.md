@@ -23,11 +23,10 @@ Safety comes from asymmetry:
 flowchart LR
   O[Owner wallet] --> W[Crest web]
   W --> API[Crest API]
-  W --> CA[Crest Account]
+  W --> RPC
 
   subgraph Offchain[Crest services]
     API --> DB[(PostgreSQL)]
-    API --> RE[Risk and carry engine]
     MON[Monitor] --> RE
     G[Crest Guardian worker] --> CA
     MON --> DB
@@ -43,7 +42,6 @@ flowchart LR
 
   RH[Robinhood read-only APIs] --> MON
   RPC[EVM RPC] --> MON
-  API --> RPC
   RE --> G
   MORPHO --> RPC
   VAULT --> RPC
@@ -56,11 +54,11 @@ flowchart LR
 | Unit | Responsibility | Explicitly forbidden |
 |---|---|---|
 | `apps/web` | Asset intents, route verification, owner transactions, LTV/carry/debt evidence | Holding keys, presenting projections as realized |
-| `apps/api` | Versioned read/config APIs and typed orchestration | Calling Guardian methods directly |
+| `apps/api` | Manifest-bound route/ABI/recorded-account facts, owner enrollment, and optional server-only Groq draft endpoint | Signing, unverified live claims, Guardian calls, granting authority to an LLM |
 | `apps/monitor` | Read market, position, vault, rates, and lifecycle; create assessments/triggers | Signing, changing policy, or selecting arbitrary routes |
 | `apps/automation` | Claim trigger, simulate, sign only freeze/own-debt repayment, reconcile | Borrowing, generic calls, swaps, withdrawals to receivers |
 | `packages/risk` | Pure LTV, health, capacity, carry, withdrawal, and action calculations | Provider/database access |
-| `packages/policy` | Schema, optional NL draft, compiler, configuration diff | Choosing market/vault/thresholds autonomously |
+| `packages/policy` | Strict typed policy compiler, manifest-bound route and configure calldata | Choosing market/vault/thresholds autonomously |
 | `packages/robinhood` | REST adapters and lifecycle freshness | Onchain price or permission authority |
 | `packages/morpho` | Market identity/state/actions | Hiding isolated-market constraints |
 | `packages/vault` | Fixed-vault identity, shares/assets, withdrawals, and simulation | Dynamic routing or promotional APY |
@@ -69,6 +67,12 @@ flowchart LR
 | `contracts` | `CrestAccount`, fixed-vault boundary, and tests | Arbitrary execution, Guardian borrowing, swaps, collateral sales |
 
 Monitor and automation are separate processes even if they share a deployment initially. Read-provider compromise must not automatically equal signer compromise.
+
+The `/v1/accounts?owner=...` registry and `/v1/accounts/:address/position` endpoint return stored evidence for the **active manifest chain** selected by `DEPLOYMENT_MANIFEST_PATH`. A position requires canonical account, Morpho-position, and vault-position snapshots at the same block/hash on that route; an assessment must reference those snapshots and its active policy nonce. The snapshot carries the policy's reserve floor, strategy floor, and per-action repayment cap; the assessment carries its recommended action, policy health, the engine's owner-borrow and Guardian repayment capacities, the borrow and vault rate observations exactly as the risk input recorded them (value, scale, convention, window, status, reasons, source, observed time), and one provenance row per recorded input (head, account, market, position, oracle, vault, strategy, rates, lifecycle) with its own status, reasons, source, and block or fetch time. The realized repayment total sums canonical `repay` events only, and `latestRepayment` is the most recent such event with debt before and after, block, and transaction hash. `latestIntervention` is the account's most recent Guardian trigger with its latest run, signed transaction hash, and every postcondition check, so a failed check stays visible beside a confirmed receipt. Missing snapshots, economics, rates, or repayment events remain `null` or `unknown`, never a projected substitute. The API also registers a canonical owner deployment receipt and stages a pending typed policy; only the monitor's matching canonical `PolicyConfigured` event activates it. The API never deploys, signs, or activates policy from an HTTP request.
+Both enrollment-with-policy and subsequent staging require an EIP-191 `ownerSignature` over the active chain, account, next policy nonce, onchain configuration hash, and complete typed-content hash. The API recomputes both hashes, verifies the message against the canonical onchain owner at the checked block (including ERC-1271 owners), and may replace a pending draft only with owner consent. An active row is immutable; an unsigned or foreign-signed HTTP request cannot reserve the next nonce. Staging binds the next nonce at the **finalized** block, so the web reads `policyNonce` at both head and finalized and refuses to request a signature while the last configure is unfinalized. An RPC read failure during enrollment or staging (for example a pruned-state backend) returns 503 unreadable, never a refused owner, code, or signature.
+
+The default active route is the **46630 SANDBOX** manifest. Its testnet transactions are signed on 46630, but its public MockFeed collateral input, missing loan feed, idle-only vault, and disclosures mean it is never presented as reviewed. Mainnet 4663 remains registered as reviewed evidence, but runtime signing is disabled there.
+Optional `POST /v1/policy/draft` is isolated in `apps/api`: only owner-entered limits and a bounded description reach Groq, alongside manifest token units, LLTV, trust tier, and disclosures. The Guardian address stays server-side and comes from the current form; route and intents come solely from the active manifest. Both model outputs are untrusted even under strict JSON Schema: unknown fields are rejected, decimal amounts are converted to exact base units, and `compilePolicy` validates the entire draft against the fixed route and default freshness. The endpoint returns editable form values labeled `Draft`, never calldata, signatures, policy activation, or a monitor/Guardian instruction. Web proxy credentials remain server-only. Disabling the provider or exhausting its quota leaves the manual editor unchanged.
 
 ## 4. Trust boundaries
 
@@ -95,7 +99,7 @@ Monitor and automation are separate processes even if they share a deployment in
 ### Advisory/untrusted
 
 - Robinhood REST metadata, bid/ask, halt, and corporate-action responses;
-- offchain APY/reward sources;
+- model-generated policy limits, rationale, and assumptions;
 - natural language and display token metadata;
 - third-party provider availability.
 
@@ -107,23 +111,30 @@ Advisory data can reduce capacity, freeze, exit yield, or alert. It cannot enabl
 sequenceDiagram
   participant U as Owner
   participant UI as Web
-  participant P as Policy compiler
-  participant R as Runtime verifier
+  participant API as Crest API draft and enrollment
+  participant P as Local policy compiler
   participant C as Crest Account
   participant D as Database
 
-  U->>UI: plain language or typed rules
-  UI->>P: draft
-  P-->>UI: schema-valid typed policy + unsupported clauses
-  UI->>R: verify market/tokens/current position
-  R-->>UI: exact addresses, units, current compatibility
-  UI->>U: human-readable + calldata diff
-  U->>C: signed configure transaction
+  U->>UI: type limits or request an optional draft
+  opt AI draft enabled
+    UI->>API: bounded text and form, Guardian held server-side
+    API-->>UI: strictly validated, manifest-bound human-unit Draft
+  end
+  UI->>P: reviewed owner-edited form
+  P-->>UI: exact compiled policy and calldata
+  UI->>U: human-readable limits and calldata diff
+  U->>UI: EIP-191 staging consent
+  UI->>API: stage pending policy with verified signature
+  API->>D: persist pending policy
+  U->>C: separately signed configure transaction
   C-->>D: indexed PolicyConfigured event
   D->>C: reconcile state and policy nonce
 ```
 
 The database marks a policy active only after the corresponding event is canonical. A rejected/pending transaction never becomes active policy.
+
+The owner signs `policyStagingMessage` for the offchain typed draft before the API stages it. This personal signature cannot configure the contract or move assets; a separate wallet transaction and matching canonical `PolicyConfigured` event are required for activation.
 
 ## 6. Position lifecycle
 
@@ -191,23 +202,35 @@ flowchart TD
 
 A trigger records the exact assessment and policy version. Recalculation with new data creates a new assessment; it does not mutate the old one.
 
+The monitor first pins a confirmed block, validates the registered account code and one reviewed route, then
+replays canonical Crest, Morpho, and vault events to its block-hash cursor. Only a matching `PolicyConfigured`
+event activates a policy. The account configuration and all onchain facts are read at the same numbered block;
+HTTP rates and Robinhood lifecycle signals retain their own source/fetch/expiry times. Immutable snapshots and
+the canonical risk input are stored separately from projected carry. An assessment and its single Guardian
+trigger are inserted in one database transaction; owner borrowing remains a recommendation without a trigger.
+Receipt-confirmed `RepaidFromStrategy` events alone create realized debt-reduction rows. A cursor fork marks
+orphaned observations noncanonical, invalidates affected assessments, and supersedes unsent triggers.
+
 ## 8. Trigger state machine
 
 ```mermaid
 stateDiagram-v2
   [*] --> Detected
-  Detected --> Superseded: newer policy/assessment invalidates
-  Detected --> Claimed: worker lock
-  Claimed --> Simulated
-  Simulated --> Submitted
-  Simulated --> Failed: simulation rejected
-  Submitted --> Confirmed
-  Submitted --> Failed: receipt reverted/dropped timeout
-  Confirmed --> Verified: postcondition holds
-  Confirmed --> Failed: debt/freeze postcondition absent
-  Failed --> Retryable: safe retry classification
-  Retryable --> Claimed
-  Verified --> [*]
+  Detected --> Superseded: canonical input or policy invalidated
+  Detected --> Claimed: atomic trigger and signer claim
+  Claimed --> Failed: pre-sign validation or simulation rejected
+  Claimed --> Signed: transaction hash committed before RPC send
+  Signed --> Broadcast: RPC returned matching hash
+  Signed --> Signed: send outcome unknown; no resend
+  Broadcast --> Broadcast: receipt absent or confirmation pending
+  Signed --> Completed: canonical receipt and checks pass
+  Broadcast --> Completed: canonical receipt and checks pass
+  Signed --> Failed: canonical revert or failed postcondition
+  Completed --> Signed: previously canonical receipt orphaned
+  Failed --> Signed: previously canonical revert orphaned
+  Broadcast --> Failed: canonical revert or failed postcondition
+  Completed --> [*]
+  Failed --> [*]
   Superseded --> [*]
 ```
 
@@ -219,7 +242,20 @@ Idempotency key:
 keccak256(chainId, crestAccount, policyNonce, assessmentId, actionKind)
 ```
 
-Database has one active run per key. Before submission, worker checks onchain state again; a stale trigger may become `superseded` rather than sending.
+Database enforces one run per trigger and one in-flight run per Guardian signer, across all accounts.
+An occupied signer or any unresolved signed reorg conflict leaves a new trigger detected; no lease
+expiry or automatic replay can allocate another nonce. A claimed trigger's assessment, policy, and
+canonical snapshot are rechecked before persisting a signed attempt. A stale policy, wrong
+account/route, invalidated input, or failed simulation closes an **unsigned** claim.
+Once a hash has been computed, uncertain persistence or broadcast is not retried automatically; the
+operator reconciles the same hash keylessly. Every explicit reconciliation rechecks even completed
+receipts: an orphaned block marks old receipt evidence noncanonical, restores the same signed attempt
+to pending, and appends a new receipt only if the same hash is re-mined canonically. Existing checks
+remain attributable to their original block hash, not overwritten. A signer re-lock collision
+remains blocked after the competing run ends until the orphaned hash is reconciled. Post-state is
+checked against the canonical receipt block and original pinned simulation block hash before and
+after reads. A protective freeze reads account authority without Morpho debt or vault liquidity;
+repayment alone requires those values.
 
 ## 9. Automation signer
 
@@ -230,9 +266,11 @@ The Guardian key:
 - is authorized only in explicitly allowlisted Crest Accounts;
 - can call only `freezeBorrowing()`, `repayFromReserve(uint256)`, and `repayFromStrategy(uint256)` by contract design;
 - cannot borrow, unfreeze, choose a receiver/venue, transfer, swap, sell collateral, or change policy;
-- can be revoked by owner.
+- can be revoked by owner: `setGuardian(newGuardian)` takes effect onchain immediately and advances `policyNonce`, so the old key reverts `Unauthorized`, the claim query refuses every trigger whose snapshot guardian or policy nonce no longer matches the active policy, and `doctor` fails its guardian check. Custos stays disabled for that account until the owner stages a new signed policy and configures it onchain, so the indexer can activate a policy at the current nonce.
 
 MVP may use one isolated hot Guardian key because its onchain authority is debt-reducing and non-extractive. Production signing infrastructure is added only when operations require it.
+
+**Supervised worker (`watch`).** Custos runs as one long-lived process beside, never inside, the monitor. It repeats the `doctor` authority check (registered active account, fresh head, exact sandbox full-route manifest, bytecode, onchain Guardian, three-method ABI) at startup and on every tick, and loads the key only after a check passes. Each tick first reconciles every in-flight run of this Guardian and account by its persisted hash, then claims at most one trigger: the newest eligible one, under the same SQL eligibility the atomic claim rechecks, so a superseded older trigger is never signed. A pending run blocks new signing; a claimed run without a durable hash, an `uncertain` result, or an unresolved reorg conflict halts signing until an operator reconciles it, and bytes are never resent. A transient read error logs one JSON line and waits for the next interval. If the onchain Guardian no longer equals the key's address (rotated or revoked), the process exits nonzero instead of idling, so a supervisor keeps reporting it. A successful tick writes a heartbeat file that the `health` command checks without RPC or database access.
 
 ## 10. Guardian repayment execution
 
@@ -240,30 +278,31 @@ MVP may use one isolated hot Guardian key because its onchain authority is debt-
 sequenceDiagram
   participant M as Monitor
   participant D as DB
-  participant G as Guardian
+  participant G as Custos
   participant C as Crest Account
   participant V as Fixed vault
   participant B as Morpho
-
-  M->>D: assessment + freeze/repay trigger
-  G->>D: atomically claim trigger
-  G->>C: refresh policy, debt, reserve, vault liquidity
-  G->>C: simulate exact permitted action
-  G->>C: freezeBorrowing
-  C-->>D: canonical freeze receipt
-  alt idle reserve selected
-    G->>C: repayFromReserve(max)
-  else fixed strategy selected
-    G->>C: repayFromStrategy(max)
-    C->>V: withdraw to Crest Account
+  M->>D: canonical assessment and one permitted trigger
+  G->>D: atomically claim trigger and exclusive signer
+  G->>C: pin head; verify bytecode, policy, debt, reserve, vault shares/liquidity
+  G->>C: simulate exact bounded selector from Guardian address
+  G->>D: commit signed hash, selector, calldata and simulation block/hash
+  G->>C: broadcast signed zero-value transaction once
+  G->>C: later fetch canonical receipt and independent pre/post-state
+  alt reserve repayment
+    C->>B: repay own accrued debt
+  else strategy repayment
+    C->>V: withdraw only to Crest Account
+    C->>B: repay own accrued debt
   end
-  C->>B: repay own accrued debt
-  C-->>D: debt/vault/reserve event evidence
-  G->>B: independently read post-state
-  G->>D: verified only if debt decreased and policy constraints held
+  G->>D: persist receipt and debt/floor/receiver/beneficiary checks
 ```
 
-If repayment fails, borrowing remains frozen after a confirmed freeze. Retries require a new assessment and fresh simulation; partial vault liquidity is a normal bounded outcome, not permission to sell collateral.
+Freeze and repayment are distinct triggers. A protective freeze needs neither debt nor vault liquidity;
+unavailable external vault reads cannot disable `freezeBorrowing()`. A confirmed freeze remains effective
+even if a later repayment reverts or stays uncertain. Partial withdrawal liquidity bounds repayment;
+it is never permission to sell collateral or change routes. Unknown signed transactions stay pending
+until explicitly reconciled; there is no dropped-transaction timeout, lease takeover, or automatic resend.
 
 ## 11. Risk engine
 
@@ -298,6 +337,7 @@ Rules:
 - stale/paused/conflicting/illiquid input is `degraded`; the engine re-applies the policy's own freshness budgets, requires every onchain input at the pinned block (`block_skew`), and checks account, market, vault, feed, and policy-nonce identity;
 - Morpho's oracle value drives LTV, health, and capacity; Crest's feed-only value is disclosed beside it, and a gap above `maxOracleDivergenceBps` or with no known composition is `oracle_divergence`;
 - degraded input sets owner-borrow capacity to zero and may trigger freeze/exit; each degraded oracle, vault, or lifecycle source freezes only when its policy trigger is on, while head, account, market, and position always do;
+- on 46630 SANDBOX only, the owner may explicitly acknowledge the displayed DEGRADED reasons to prepare a borrow despite the engine's zero offchain capacity; this never changes the engine output or authorizes Custos, and onchain debt ceiling, freeze, Morpho LLTV, and exact pre-signature simulation still apply. Reviewed routes never borrow on DEGRADED input;
 - Guardian repayment uses only current withdrawable/simulated assets;
 - scenarios are adverse by schema and cannot increase capacity;
 - all outputs cite inputs and stable reason codes, and carry the engine version, input hash, policy nonce and hash, and scenario set version.
@@ -312,6 +352,8 @@ MVP owner-borrow capacity is the minimum of:
 - remaining Crest strategy cap;
 - remaining fixed-vault deposit room under every absolute and relative cap on the liquidity adapter's ids (Vault V2 `maxDeposit` always returns zero, and a configured deposit gate counts as no room);
 - zero when borrowing is frozen, net spread is below policy floor, rates cannot be netted, or any required source is degraded, including `oracle_divergence`, `block_skew`, and a policy-nonce `conflict`.
+
+The 46630 owner-signing SANDBOX exception does not treat zero degraded risk capacity as a positive recommendation: it bypasses that offchain owner-borrow gate only after explicit acknowledgement. This exception cannot activate on 4663, grant Guardian debt authority, or make stale/missing assessments signable.
 
 Repayment capacity is separately bounded by current debt, per-action cap, idle reserve above floor, and currently withdrawable strategy assets above the strategy floor plus one vault share's value of rounding. A repayment is planned only from the account's own reads at the pinned block under the policy nonce the contract holds; a stale, skewed, foreign, drifted, or superseded source leaves only a freeze. Both owner-borrow debt rooms hold back one Morpho borrow share's value for share rounding, and a strategy that cannot currently withdraw what it holds is degraded input.
 

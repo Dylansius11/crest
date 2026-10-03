@@ -40,6 +40,8 @@ erDiagram
   MORPHO_MARKET ||--o{ POSITION_SNAPSHOT : defines
   VAULT_DEPLOYMENT ||--o{ STRATEGY_POSITION_SNAPSHOT : defines
 
+  CREST_ACCOUNT ||--o{ CANONICAL_ACCOUNT_EVENT : emits
+
   CREST_ACCOUNT ||--o{ ASSET_INTENT : declares
   CREST_ACCOUNT ||--o{ POLICY : versions
   POLICY ||--|| MARKET_POLICY : configures
@@ -141,6 +143,8 @@ CHECK `0 < lltv_wad <= 1e18`.
 | `status` | `text` | `candidate/verified/degraded/unsupported` |
 | `reason_codes` | `text[]` | Gate result |
 
+Route rows (`network`, `asset`, `token_deployment`, `morpho_deployment`, `morpho_market`, `vault_deployment`) are written only by `pnpm --filter @crest/api route:register` from the active deployment manifest, in one transaction, insert-only. An existing row that disagrees with the manifest is refused rather than updated. Evidence block/hash/time come from the manifest's finalized evidence block. A SANDBOX manifest writes `status = 'degraded'` with reason `sandbox_route` on every route row; only a reviewed manifest writes `verified`. Vault V2 rows record `interface_kind = 'erc4626'`, 18 share decimals, and owner/curator/liquidity adapter in `manager_json`.
+
 ## 4. Block-scoped observations
 
 Every onchain snapshot includes `chain_id`, `block_number`, `block_hash`, `block_time`, `canonical`, `observed_at`, and non-secret `provider_key`.
@@ -151,7 +155,7 @@ Every onchain snapshot includes `chain_id`, `block_number`, `block_hash`, `block
 - total supply/borrow assets and shares;
 - available loan liquidity;
 - borrow/supply rate with exact scale/source;
-- oracle raw value, scale, update, and status;
+- oracle raw value, scale, update, and status, with value null when unavailable;
 - sequencer status;
 - route classification and reasons.
 
@@ -165,9 +169,9 @@ UNIQUE `(market_id,block_hash)`.
 | `vault_deployment_id` | `uuid` | FK |
 | `total_assets` | `numeric(78,0)` | Reported vault assets |
 | `total_supply_shares` | `numeric(78,0)` | Share supply |
-| `max_deposit_assets` | `numeric(78,0)` | Current account-context cap when applicable |
-| `max_withdraw_assets` | `numeric(78,0)` | Current Crest Account withdrawal bound |
-| `preview_redeem_assets` | `numeric(78,0)` | Quoted value of observed shares |
+| `max_deposit_assets` | `numeric(78,0)` nullable | Exact cap when observed; null when unavailable |
+| `max_withdraw_assets` | `numeric(78,0)` nullable | Exact withdrawal bound when observed; null when unavailable |
+| `preview_redeem_assets` | `numeric(78,0)` nullable | Quoted value of observed shares; null when unreadable |
 | `pause_status` | `text` | Normal/degraded |
 | `downstream_json` | `jsonb` | Validated allocations/concentration |
 | `reason_codes` | `text[]` | Liquidity/loss/pause reasons |
@@ -189,8 +193,19 @@ Registry: `id`, chain/address UNIQUE, owner, deployment transaction/block, contr
 - repayment cap;
 - lower/target/upper/critical LTV;
 - borrowing freeze and policy nonce;
-- raw loan/collateral token and vault-share balances;
+- raw loan-token balance plus nullable collateral-token and vault-share balances when their reads are unavailable;
 - common block fields.
+
+### `canonical_account_event`
+
+Immutable indexed Crest, Morpho, or vault event:
+
+- Crest Account FK and unconstrained event kind;
+- transaction hash and `log_index`;
+- canonical block number/hash/time, canonical status, observation time, and reorg time;
+- decoded event payload.
+
+UNIQUE `(crest_account_id,transaction_hash,log_index,block_hash)`.
 
 ### `position_snapshot`
 
@@ -202,7 +217,7 @@ Registry: `id`, chain/address UNIQUE, owner, deployment transaction/block, contr
 | `borrow_shares` | `numeric(78,0)` | Raw |
 | `borrow_assets_up` | `numeric(78,0)` | Accrued rounded-up debt |
 | `collateral_assets` | `numeric(78,0)` | Raw units |
-| `collateral_value` | `numeric(78,0)` | Explicit scale |
+| `collateral_value` | `numeric(78,0)` nullable | Explicit scale; null when oracle valuation is unavailable |
 | `ltv_wad` | `numeric(78,0)` | Nullable no debt |
 | `morpho_health_wad` | `numeric(78,0)` | Nullable no debt |
 | common block fields | — | Exact observation |
@@ -254,6 +269,8 @@ Provider action ID, asset, type/status, documented process fields, source/fetch 
 | `status` | `text` | `normal/degraded/unknown` |
 | `reason_codes` | `text[]` | Stable reasons |
 
+Replay identity is `(subject_kind,subject,source_url,fetched_at,period_kind)`, enforced with partial unique indexes for market and vault subjects.
+
 No rate row is called “realized.”
 
 ## 6. Owner, intent, and policy
@@ -282,12 +299,15 @@ Append-only confirmed versions:
 - account and policy nonce;
 - schema version and canonical typed JSON;
 - canonical content hash;
+- separate nullable 32-byte `policy_hash` from canonical `PolicyConfig` ABI encoding; canonical `content_hash` remains the typed policy/intent JSON hash;
 - source `manual/llm_import`;
 - configuration transaction and effective block/hash;
 - status `pending/active/superseded/reorged/rejected`;
 - draft/activation times.
 
 UNIQUE `(crest_account_id,policy_nonce)` and `(crest_account_id,content_hash)`.
+
+Only a registered policy with a verified `policy_hash` may activate, and the canonical `PolicyConfigured.policyHash` must equal it; `content_hash` never authorizes activation.
 
 ### `market_policy`
 
@@ -315,8 +335,9 @@ Lower, target, upper, critical LTV WAD. CHECK:
 
 | Column | Type | Meaning |
 |---|---|---|
-| `id` | `text` | PK sortable ID |
-| account/policy/snapshot refs | FK | Exact inputs |
+| `id` | `text` | PK, deterministic canonical input hash |
+| account/policy/snapshot refs | FK | Exact observation inputs |
+| `input_json` | `jsonb` | Immutable lossless serialized full `RiskInput`, including feed/oracle evidence and provenance |
 | `risk_engine_version` | `text` | Reproducibility |
 | `status` | `text` | Guardian state |
 | `ltv_wad` | `numeric(78,0)` | Nullable no debt |
@@ -324,8 +345,8 @@ Lower, target, upper, critical LTV WAD. CHECK:
 | `policy_health_wad` | `numeric(78,0)` | Nullable |
 | `owner_borrow_capacity_assets` | `numeric(78,0)` | Zero when degraded/frozen |
 | `repay_capacity_assets` | `numeric(78,0)` | Current bounded capacity |
-| `estimated_annual_carry_assets` | `numeric(78,0)` | Signed projected value |
-| `estimated_spread_bps` | `integer` | Signed projected ratio |
+| `estimated_annual_carry_assets` | `numeric(78,0)` nullable | Signed projected value; null when unknown |
+| `estimated_spread_bps` | `numeric(78,0)` nullable | Signed projected ratio; null when unknown |
 | `recommended_action` | `text` | `none/owner_borrow/freeze/repay_reserve/repay_strategy/owner_review` |
 | `reason_codes` | `text[]` | Stable reasons |
 | `canonical_input_hash` | `bytea` | Idempotency |
@@ -337,19 +358,21 @@ Projected fields never update realized-performance rows.
 
 Canonical event-derived accounting:
 
-- Crest Account and transaction;
+- Crest Account, transaction, and `log_index`;
 - kind `deposit/withdraw/repay`;
-- vault shares/assets before and after;
+- vault assets before and after, plus nullable shares before and after only when emitted;
 - accrued debt before and after;
 - `debt_repaid_assets`;
 - attributed fees where measurable;
 - block/hash/time and canonical status.
 
+UNIQUE `(crest_account_id,transaction_hash,log_index,block_hash)`.
+
 A “self-repayment” claim must point to `debt_repaid_assets > 0`.
 
 ### `assessment_input`
 
-Assessment ID, input kind, referenced observation ID, and purpose. Enforce exact reference type.
+Assessment ID, input kind, referenced observation UUID, and purpose. The monitor links typed snapshot references transactionally; the database enforces the assessment FK but not a cross-table FK for the polymorphic observation UUID.
 
 ### `stress_scenario` and `scenario_result`
 
@@ -372,21 +395,27 @@ Versioned scenario configuration with provenance and status `illustrative/calibr
 
 ### `automation_run`
 
-One run per trigger: state machine status, Guardian address, exact selector, observed policy nonce, pre-state references, timing, failure class, and retry count.
+One run per trigger; a partial unique index on `guardian_address` for `claimed/signed/broadcast` permits
+only one in-flight signer across accounts. Terminal statuses release it; a later receipt reorg reacquires
+the same signer for the original signed hash or fails closed on a collision. Runs retain exact selector,
+observed policy nonce, timing, and failure classification.
 
 ### `transaction_attempt`
 
-Run and attempt number, chain/account/from/to, calldata hash and decoded permitted operation, simulation block/result/gas, nonce, transaction hash, submission status/error.
-
-Never store a private key or raw signature.
+Run and attempt number, chain/account/from/to, calldata hash and decoded permitted operation,
+simulation **block number and hash**, result/gas, nonce, signed transaction hash, submission status/error.
+The hash is persisted before broadcast and the signed bytes/private key are never stored.
 
 ### `transaction_receipt`
 
-Attempt ID, canonical block/hash, success/revert, gas, decoded Crest/Morpho/vault events, observed time.
+Attempt ID, observed block/hash, canonical flag, success/revert, gas, decoded Crest/Morpho/vault events,
+observed/reorged time. The `(attempt_id,block_hash)` pair is immutable and only one canonical receipt
+may exist per attempt; an orphaned receipt stays recorded with `canonical=false`.
 
 ### `postcondition_check`
 
-Kinds:
+One row per `(run_id,kind,checked_block_hash)`; re-mining the same signed hash appends new checks while
+orphaned block evidence remains auditable. Kinds:
 
 - `frozen`;
 - `debt_decreased`;
@@ -395,11 +424,11 @@ Kinds:
 - `vault_receiver_fixed`;
 - `repay_beneficiary_fixed`.
 
-A run is verified only when every required check passes.
+A run is verified only when the current canonical receipt and every required postcondition pass.
 
 ## 9. Indexing and reorgs
 
-`indexer_cursor(chain_id,stream_key)` stores last canonical block/hash. Events and cursor update atomically. Reorgs mark affected snapshots/receipts/events reorged and invalidate dependent assessments/triggers without deleting audit history.
+`indexer_cursor(chain_id,stream_key)` stores last canonical block/hash. `canonical_account_event` persists each account event by `(crest_account_id,transaction_hash,log_index,block_hash)`. Events and cursor update atomically. Reorgs mark affected snapshots/receipts/events reorged and invalidate dependent assessments/triggers without deleting audit history.
 
 ## 10. Units
 

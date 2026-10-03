@@ -34,10 +34,15 @@ export const ACCOUNT = getAddress(`0x${"a1".repeat(20)}`);
 export const OWNER = getAddress(`0x${"b2".repeat(20)}`);
 export const GUARDIAN = getAddress(`0x${"c3".repeat(20)}`);
 export const route = routeContextOf(manifest, { account: ACCOUNT, owner: OWNER });
+function requiredLoanFeed(feed: Address | null): Address {
+  if (feed === null) throw new Error("mainnet risk fixtures require a loan feed");
+  return feed;
+}
+const loanFeed = requiredLoanFeed(route.feeds.loan);
 
 // 2026-09-21T14:13:20Z. The pin's wall clock is two seconds later; HTTP responses arrived twenty seconds before it.
 export const BLOCK: BlockRef = { number: 70_226_651n, hash: `0x${"ab".repeat(32)}`, timestamp: 1_790_000_000n };
-export const at: Provenance = onchainAt(BLOCK);
+export const at: Provenance = onchainAt(BLOCK, route.chainId);
 const http: Provenance = { kind: "http", url: "https://api.morpho.org", fetchedAt: "2026-09-21T14:13:02Z", generatedAt: null, expiresAt: null, indexedBlock: 70_226_600n };
 
 export const baseDraft = {
@@ -165,7 +170,7 @@ export function fixture(options: FixtureOptions = {}): RiskInput {
     oracle: {
       marketPrice: observe(options.oraclePrice ?? 300n * 10n ** 24n, at),
       collateralFeed: feed(route.feeds.collateral, options.collateralAnswer ?? 30_000_000_000n),
-      loanFeed: feed(route.feeds.loan, options.loanAnswer ?? 100_000_000n),
+      loanFeed: feed(loanFeed, options.loanAnswer ?? 100_000_000n),
     },
     vault: observe(vaultSnapshot(), at),
     strategy: observe(strategy, at),

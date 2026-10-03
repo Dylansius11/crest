@@ -8,10 +8,11 @@ import { crestAccount } from "@crest/contracts";
 import { loadDeploymentManifest } from "@crest/contracts/manifest/file";
 import { marketIdOf } from "@crest/morpho";
 
-import { compilePolicy, DEFAULT_FRESHNESS, routeContextOf, toConfigurationCall } from "./index.ts";
+import { compilePolicy, DEFAULT_FRESHNESS, policyStagingMessage, routeContextOf, toConfigurationCall } from "./index.ts";
 import type { CompiledPolicy } from "./index.ts";
 
 const manifest = await loadDeploymentManifest(fileURLToPath(new URL("../../../config/deployment-manifest.json", import.meta.url)));
+const sandboxManifest = await loadDeploymentManifest(fileURLToPath(new URL("../../../config/deployment-manifest.46630.json", import.meta.url)));
 const ACCOUNT = getAddress(`0x${"a1".repeat(20)}`);
 const OWNER = getAddress(`0x${"b2".repeat(20)}`);
 const GUARDIAN = getAddress(`0x${"c3".repeat(20)}`);
@@ -62,12 +63,33 @@ describe("verified route context", () => {
     expect(route.vault).toBe(getAddress(manifest.vault.address));
   });
 
+  test("retains the sandbox route's unavailable loan feed", () => {
+    expect(routeContextOf(sandboxManifest, { account: ACCOUNT, owner: OWNER }).feeds.loan).toBeNull();
+  });
+
   test("refuses a manifest whose gate did not qualify the full market-and-vault route", () => {
     expect(() => routeContextOf({ ...manifest, gate: { ...manifest.gate, outcome: "reserve_only" } }, { account: ACCOUNT, owner: OWNER })).toThrow(/full_route/);
   });
 
   test("refuses a manifest whose market id does not derive from its parameters", () => {
     expect(() => routeContextOf({ ...manifest, market: { ...manifest.market, lltv: "860000000000000000" } }, { account: ACCOUNT, owner: OWNER })).toThrow(/market id/);
+  });
+});
+
+describe("owner policy staging message", () => {
+  test("binds a checksummed account, chain, nonce and both distinct hashes to a draft-only signature", () => {
+    expect(policyStagingMessage({
+      chainId: 46630, account: "0x52908400098527886e0f7030069857d2e4169ee7",
+      policyNonce: 7n, policyHash: `0x${"11".repeat(32)}`, contentHash: `0x${"22".repeat(32)}`,
+    })).toBe([
+      "Crest policy staging",
+      "Chain: 46630",
+      "Account: 0x52908400098527886E0F7030069857D2E4169EE7",
+      "Policy nonce: 7",
+      `Policy hash: 0x${"11".repeat(32)}`,
+      `Content hash: 0x${"22".repeat(32)}`,
+      "This signature stages a draft only. It moves no funds and creates no debt.",
+    ].join("\n"));
   });
 });
 

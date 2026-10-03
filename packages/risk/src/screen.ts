@@ -2,6 +2,7 @@ import { observe } from "@crest/domain";
 import type { BlockRef, FreshnessBudget, Observation, ReasonCode } from "@crest/domain";
 import { classifyMarketOracle } from "@crest/robinhood";
 import type { LifecycleAssessment, OracleComposition } from "@crest/robinhood";
+import { policyHashOf } from "@crest/policy";
 
 import type { RiskInput, SourceName } from "./input.ts";
 import { BPS, ceilDiv, WAD } from "./math.ts";
@@ -117,7 +118,8 @@ export function screenInput(input: RiskInput): Screened {
     const added = [...horizonReasons(observation, horizon), ...extra];
     return added.length === 0 ? observation : observe(observation.value, observation.provenance, [...observation.reasons, ...added]);
   };
-  const feedReasons = (observation: RiskInput["oracle"]["collateralFeed"], expected: string): ReasonCode[] => {
+  const feedReasons = (observation: RiskInput["oracle"]["collateralFeed"], expected: string | null): ReasonCode[] => {
+    if (expected === null) return ["unreadable"];
     const round = observation.value;
     if (round === null) return [];
     return [
@@ -142,6 +144,12 @@ export function screenInput(input: RiskInput): Screened {
     account: at(input.account, [
       ...(account !== null && !sameAddress(account.account, route.account) ? (["identity_mismatch"] as const) : []),
       ...(account !== null && account.policyNonce !== nonce ? (["conflict"] as const) : []),
+      ...(account?.policy !== undefined && (
+        !sameAddress(account.policy.owner, route.owner)
+        || !sameAddress(account.policy.guardian, policy.guardian)
+        || account.policy.marketId.toLowerCase() !== route.marketId.toLowerCase()
+        || policyHashOf(account.policy) !== compiled.policyHash
+      ) ? (["conflict"] as const) : []),
     ]),
     market: at(input.market, market !== null && !(
       market.id.toLowerCase() === route.marketId

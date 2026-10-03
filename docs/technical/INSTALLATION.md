@@ -1,6 +1,6 @@
 # Crest Installation and Development Enablement
 
-This repository currently contains planning artifacts. Install runtime dependencies only when implementation starts from [BUILD-PLAN](../BUILD-PLAN.md).
+Build stages 1–8 are implemented and proven locally; a live monitor or Guardian requires a deployed Crest Account, a registered exact route, a canonically activated owner policy, and a reviewed runtime RPC. See [BUILD-PLAN](../BUILD-PLAN.md) for later stages.
 
 ## 1. Workflow
 
@@ -144,7 +144,7 @@ Commit `.env.example`, never credentials.
 ```dotenv
 # Public
 NEXT_PUBLIC_APP_URL=http://localhost:3000
-NEXT_PUBLIC_ROBINHOOD_CHAIN_ID=4663
+NEXT_PUBLIC_ROBINHOOD_CHAIN_ID=46630
 NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=
 
 # Server only
@@ -153,22 +153,27 @@ DIRECT_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres
 SUPABASE_PROJECT_REF=
 ROBINHOOD_CHAIN_RPC_URL=
 ROBINHOOD_API_BASE_URL=https://api.robinhood.com/rhj
+CREST_ACCOUNT_ADDRESS=
+MONITOR_INTERVAL_MS=60000
 
 # Guardian process only
+GUARDIAN_EXPECTED_CHAIN_ID=46630
 GUARDIAN_PRIVATE_KEY=
 GUARDIAN_EXPECTED_ADDRESS=
 GUARDIAN_ALLOWED_ACCOUNT=
 
-# Verified route
-DEPLOYMENT_MANIFEST_PATH=./config/deployment-manifest.json
+# Active SANDBOX route
+DEPLOYMENT_MANIFEST_PATH=./config/deployment-manifest.46630.json
 
-# Optional policy drafting
+# Optional server-only Groq drafting. Disabled by default; manual policy remains available.
 POLICY_LLM_PROVIDER=disabled
 POLICY_LLM_API_KEY=
 
 LOG_LEVEL=info
 OTEL_EXPORTER_OTLP_ENDPOINT=
 ```
+
+To enable optional owner drafting, set `POLICY_LLM_PROVIDER=groq` and supply `POLICY_LLM_API_KEY` only to the Hono API process. Keep both out of `NEXT_PUBLIC_*`, client bundles, logs, and responses. The web same-origin `/v1/policy/draft` rewrite targets `CREST_API_URL`; it cannot access the key directly. With provider disabled or key missing, the endpoint returns 503 while typed manual policy compilation/staging remains available. The API caps JSON bodies at 8 KiB and accepted requests at three per minute per process; deploy a gateway quota if scaling to multiple instances. No Groq SDK is installed.
 
 Rules:
 
@@ -202,6 +207,12 @@ For hosted environments:
 - transaction-pooler clients use `max: 1`, `prepare: false`, and required SSL;
 - never expose database passwords, direct URLs, secret/service-role keys, or Guardian credentials to the browser;
 - record the hosted PostgreSQL major, required extensions, region, pooling mode, and migration result as deployment evidence.
+
+**Hosted Crest database (2026-10-02).** Supabase project in `ap-southeast-2`, PostgreSQL 17.11. Every runtime and migration connection uses the **session pooler** (`aws-0-<region>.pooler.supabase.com:5432`, user `postgres.<project-ref>`): the direct host `db.<project-ref>.supabase.co` publishes only an AAAA record, so IPv4-only hosts cannot reach it (this workstation's resolver returned `ENOTFOUND`; the VPS resolves it but has no global IPv6 address). Apply migrations from a workstation with `pnpm exec supabase db push --db-url "<session pooler URL>"` (dry-run first); deploys never migrate.
+
+Postgres.js connects **without TLS** unless the URL says otherwise, and the pooler accepts it. Always append `sslmode`: `?sslmode=verify-full` on hosted runtimes with `NODE_EXTRA_CA_CERTS` pointing at `deploy/vps/supabase-root-2021-ca.crt` (Supabase Root 2021 CA, SHA-256 `80:70:25:AD:…:CA:FA`, identical to Supabase's published `prod-ca-2021.crt`), or `?sslmode=require` locally. Proof: `verify-full` without the CA fails with `SELF_SIGNED_CERT_IN_CHAIN`, with it the query succeeds.
+
+The live 46630 records moved from the local stack with `pg_dump --data-only --schema=public` and one `psql -1 -v ON_ERROR_STOP=1` transaction after the four migrations; all 34 public tables matched row for row except monitor cycles written after the dump. Every table keeps RLS enabled with no policies, so the Supabase Data API exposes nothing to `anon` or `authenticated`.
 
 No Neon, Redis, or message broker. One Guardian worker plus Supabase Postgres leases/idempotency is MVP.
 
@@ -259,6 +270,8 @@ Ellipses are schema examples only. A shipped manifest contains current verified 
 
 The verifier recomputes market ID, confirms code and vault asset, and reads current market/vault state.
 
+For deployment, pass an **absolute** `DEPLOYMENT_MANIFEST_PATH` for the selected chain and set `CREST_BROADCAST=true` only for an intended owner-signed run. `DeployCrestAccount.s.sol` also accepts `CREST_ALLOW_MAINNET_BROADCAST=true` as an explicit operator override for 4663; this override is **not** authorization to execute mainnet in the testnet-first release. The browser and Custos signer remain disabled on 4663. On 46630 the manifest is a labeled SANDBOX, not reviewed evidence; keep that disclosure on every owner-signing surface.
+
 ## 10. Fork setup (verified runbook)
 
 Robinhood Chain RPC access has two verified defects; both are already handled by tooling in this repository, so
@@ -301,6 +314,24 @@ Fork prerequisites:
 
 A fork proves compatibility at one state, not future rates or liquidity.
 
+### Active 46630 SANDBOX route
+
+The 46630 TSLA-labeled / test USDG route is the active **SANDBOX** manifest, not reviewed evidence. Its public MockFeed collateral input, unavailable loan feed, and idle-only vault mean monitoring degrades/freezes rather than treating the route as normal. It may be used for explicitly labeled testnet signing; never represent it as a qualified mainnet route. For the independent fork-only contract-compatibility proof:
+
+```bash
+CREST_UPSTREAM_RPC=https://rpc.testnet.chain.robinhood.com/rpc \
+CREST_UPSTREAM_IP=104.20.46.209 \
+CREST_PROXY_PORT=8603 \
+CREST_PROXY_CACHE=.tmp/testnet-rpc-cache.json \
+node scripts/rpc-retry-proxy.ts
+
+# Separate shell, from contracts/
+CREST_TESTNET_FORK_RPC=http://127.0.0.1:8603 \
+forge test --match-contract RobinhoodTestnetCandidateTest -vv
+```
+
+Re-resolve the testnet hostname via DNS-over-HTTPS and verify TLS/SNI before reusing that IP; IPs can rotate. This fork pins finalized block `127234001` and checks its canonical hash. The test uses disposable cheatcode-funded tokens, no private key and no live transaction. Public RPC state may be pruned: a missing historical proof is **unavailable evidence**, never permission to weaken the sandbox disclosure.
+
 ## 11. Fixtures
 
 ### Robinhood
@@ -336,9 +367,14 @@ Fixtures test adapters. They are never live demo evidence.
 
 ```bash
 pnpm --filter @crest/web dev            # Next.js owner surface on :3000
-pnpm --filter @crest/api start          # read-only route/authority API on :8787
-pnpm --filter @crest/monitor observe:once   # one route-drift observation, exits 1 on drift
+pnpm --filter @crest/api start          # active-manifest and recorded-account API on :8787
+pnpm --filter @crest/api route:register # record the active manifest route rows; safe to repeat
+pnpm --filter @crest/monitor observe:once   # one confirmed-block assessment, no signing
 pnpm --filter @crest/automation doctor  # Guardian authority check; never signs
+pnpm --filter @crest/automation exec node src/main.ts run --once --trigger-id <trigger-id>
+pnpm --filter @crest/automation exec node src/main.ts reconcile --run-id <run-uuid>
+pnpm --filter @crest/automation exec node src/main.ts watch    # supervised Guardian worker; signs
+pnpm --filter @crest/automation exec node src/main.ts health   # heartbeat check for a supervisor
 pnpm db:migrate
 pnpm generate
 pnpm verify
@@ -350,8 +386,49 @@ forge test
 forge test --match-contract CrestAccountInvariantTest
 ```
 
-`@crest/monitor` and `@crest/automation` require `ROBINHOOD_CHAIN_RPC_URL`; the Guardian CLI additionally
-requires `GUARDIAN_EXPECTED_ADDRESS` and `GUARDIAN_ALLOWED_ACCOUNT`. Each refuses to start without them.
+The API loads the repository-root `.env` in local development and needs `DATABASE_URL`; start it separately on port 8787. Web forwards `/v1/accounts`, `/v1/accounts/register`, `/v1/accounts/:address/position`, and `/v1/accounts/:address/policies` to `CREST_API_URL` through the Next.js same-origin proxy. The default manifest is the 46630 SANDBOX route, so testnet owner transactions are permitted only with its visible disclosures; 4663 remains registered reviewed evidence but runtime signing stays disabled.
+
+Run `route:register` once per database, after migrations and before any owner enrolls; enrollment refuses a policy whose market and vault are not registered. It writes the network (confirmation depth 20), both tokens, the Morpho deployment, the market, and the vault from the active manifest in one transaction. A repeated run inserts nothing, and a row that already exists with a different code hash, decimals, oracle, IRM, LLTV, or token binding is refused, never overwritten. SANDBOX route rows are stored `degraded` with reason `sandbox_route`, never `verified`.
+
+**Runtime relay when the public hostname is hijacked locally.** Resolve the real origin over DNS-over-HTTPS, then run a separate, cache-free instance of the SNI-preserving proxy for every runtime service and point both `ROBINHOOD_CHAIN_RPC_URL` and `CREST_RPC_UPSTREAM` at it:
+
+```bash
+CREST_UPSTREAM_RPC=https://rpc.testnet.chain.robinhood.com/rpc CREST_UPSTREAM_IP=<DoH-resolved IP> \
+CREST_PROXY_PORT=8604 CREST_PROXY_CACHE=off node scripts/rpc-retry-proxy.ts
+```
+
+TLS still validates the real hostname. `CREST_PROXY_CACHE=off` is mandatory here: the fork proxy caches block-pinned reads, which would hide a reorged block or receipt from the canonical-receipt checks. The proxy listens on loopback unless `CREST_PROXY_HOST` says otherwise; only the VPS container sets `0.0.0.0` so its sibling services can reach it. The browser never talks to the RPC directly; it reads through the web app's same-origin `/rpc` rewrite, while the wallet signs through its own configured RPC.
+
+`@crest/monitor` requires `ROBINHOOD_CHAIN_RPC_URL`, `DATABASE_URL`, and `CREST_ACCOUNT_ADDRESS`; the address must
+already be enrolled (`pending_policy` or `active`) with a staged owner policy. The indexer activates the account and
+that policy only when its `policy_hash` matches a canonical `PolicyConfigured` event on the active manifest route; no
+assessment is written until both are active. The poll indexes events and
+reads the account, market, vault, oracle, rates, and lifecycle, then stores immutable snapshots, an assessment,
+and at most one idempotent Guardian trigger. No account is fabricated or registered by a read-only poll. Use
+`pnpm --filter @crest/monitor start` for continuous polling (`MONITOR_INTERVAL_MS`, default 60000 ms); `--once`
+exits on any registry, route, or RPC failure. A read-only monitor must not receive the Guardian key.
+
+`@crest/automation doctor` requires `ROBINHOOD_CHAIN_RPC_URL`, `DATABASE_URL`, `GUARDIAN_EXPECTED_ADDRESS`,
+and `GUARDIAN_ALLOWED_ACCOUNT`. It checks the active registered account bytecode, exact Morpho/vault/token
+code hashes, vault asset, current policy/route, and qualified manifest at one fresh block; it never loads
+a key or signs. A degraded vault or Morpho read prevents a full-route attestation.
+`run --once` requires `GUARDIAN_EXPECTED_CHAIN_ID` equal to the active manifest chain, `GUARDIAN_PRIVATE_KEY`, and an explicit detected trigger ID. The default is 46630; it signs only the SANDBOX route's full-route manifest and must preserve its disclosures. The signer refuses any chain without a registered Robinhood route before persisting a hash. Custos reads only its process environment: load the key with `node --env-file=../../.env src/main.ts run …` from `apps/automation`, and unset an exported empty `GUARDIAN_PRIVATE_KEY` first, because `--env-file` never overrides an existing variable.
+`reconcile --run-id` requires the same route, chain, account, Guardian, RPC and database settings, but
+**not** the key. Keep the key only in the isolated Guardian process, never in the monitor.
+`run` signs at most one action; `pending` or `uncertain` requires operator inspection of the persisted hash
+and explicit keyless reconciliation. Never rerun a claimed trigger, replace its nonce, or resend uncertain bytes.
+`failed` or `no_pending` exits nonzero. An unseen hash stays pending, not \"dropped\" by elapsed time.
+Keyless reconciliation rechecks already recorded receipts: if a previously canonical block is orphaned,
+the old receipt/check evidence remains, the same signed hash returns to pending, and any new canonical receipt
+is appended. If another in-flight action already owns the signer, the re-lock fails closed; even after that
+action finishes, new claims remain blocked until the orphaned hash is reconciled. Resolve it explicitly
+without deleting history. Compare canonical receipt and original simulation hashes across post-state reads
+before treating evidence as verified. The signer lock permits one in-flight run per Guardian across
+accounts; an occupied signer leaves other triggers detected. On an existing database with conflicting
+in-flight runs, the additive unique-index migration fails rather than deleting runs: reconcile or resolve
+the conflicting signed attempts before migrating.
+
+`watch` takes the same settings as `run` (including the key and an absolute `DEPLOYMENT_MANIFEST_PATH`) without a trigger ID, plus optional `GUARDIAN_POLL_INTERVAL_MS` (default 30000) and `GUARDIAN_HEARTBEAT_FILE`. It reconciles in-flight runs first, signs at most one newest eligible trigger per tick, halts new signing on any uncertain or reorg-conflicted run, and exits nonzero when the onchain Guardian is no longer its key. `health` exits nonzero when the heartbeat file is missing or older than three intervals. Start `watch` only when you intend Custos to sign on the active route: it will act on the next trigger, including a protective freeze.
 
 `pnpm smoke:adapters` runs every Task 5 adapter once, read-only, at a freshly pinned block and writes all
 observations to `.tmp/adapter-smoke.json`; it exits 1 on any identity or route failure. The two accounts are
@@ -361,6 +438,35 @@ assumed. `--doh` resolves HTTPS hosts over Cloudflare DNS-over-HTTPS for network
 `*.robinhood.com`; like the fork proxy it is dev-only transport.
 
 Guardian defaults off. Starting it requires an explicit command and allowlisted account.
+
+### Fork-only Task 10 rehearsal
+
+Run the cache-free 46630 relay on `:8604` as described above. Start Anvil with
+`anvil --fork-url http://127.0.0.1:8604 --port 8545 --slots-in-an-epoch 1 --no-rate-limit --retries 10`.
+Start the local `supabase_db_crest` Postgres container and run these commands from the repository root in a
+Bash terminal. Use a fresh database; migrations must run in filename order.
+
+```bash
+export DEPLOYMENT_MANIFEST_PATH="$(node -p "require('node:path').resolve('config/deployment-manifest.46630.json')")"
+docker exec supabase_db_crest psql -U postgres -c "create database crest_demo"
+for file in supabase/migrations/*.sql; do docker exec -i supabase_db_crest psql -U postgres -d crest_demo -v ON_ERROR_STOP=1 < "$file" || exit 1; done
+DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/crest_demo pnpm --filter @crest/api route:register
+API_PORT=8788 DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/crest_demo ROBINHOOD_CHAIN_RPC_URL=http://127.0.0.1:8545 pnpm --filter @crest/api start
+# In a second terminal, with the API still running:
+pnpm smoke:demo
+```
+
+The manifest path must be absolute for both API commands, not cwd-relative. The runner fixes
+its own database, fork RPC, API, and manifest to these isolated resources; it verifies the 46630
+Anvil client, relay-backed fork, an empty `crest_demo`, registered API, and sandbox trust before signing.
+It impersonates the **live canary wallet only on the fork** to transfer test TSLA/USDG to Anvil's
+known local development owner, which signs the first policy staging consent and deploys the account.
+Anvil interval-mines every second so the 120-second head-lag guard remains meaningful. The isolated
+Custos process uses its repository-root `.env` key only for `run`, never for monitor/doctor/reconcile; an
+exported empty `GUARDIAN_PRIVATE_KEY` is removed from the child environment. All recorded hashes and the fork-only
+MockFeed change land in `docs/evidence/demo-fork-46630.json`, with `evidenceClass: "forked"` and `notLive`
+disclosures. A rerun against the populated database fails clearly; use a **new** fork and freshly migrated
+database for each rehearsal. Nothing in this command sends a live 46630 transaction or replaces Task 11.
 
 ## 13. CI order
 
@@ -379,7 +485,7 @@ verify pinned toolchains
 
 A missing external secret skips/fails visibly; it is never reported as passing live integration.
 
-## 14. Mainnet canary
+## 14. Testnet canary (46630 SANDBOX)
 
 1. Reverify route, code, liquidity, vault withdrawal, and current rates.
 2. Deploy and verify Crest Account source.
@@ -396,6 +502,8 @@ A missing external secret skips/fails visibly; it is never reported as passing l
 13. Record exact hashes, blocks, policy, rates, and environment.
 
 Stop after any unexpected result. Never raise limits to make the demo work.
+
+The current mainnet-pinned proof does not satisfy this section. A failed testnet market, oracle, or vault gate stops the canary; never copy mainnet addresses, fund mainnet accounts, or bypass TLS validation for the demo.
 
 ## 15. Security checklist
 
@@ -425,3 +533,44 @@ Stop after any unexpected result. Never raise limits to make the demo work.
 - Post-MVP B multi-market/multi-vault or collateral-sale methods.
 
 Each requires an approved scope and updated threat model.
+
+## 17. Hosted runtime on the shared VPS
+
+The relay, API, monitor, and Custos run as the Docker Compose project `crest` on the shared VPS (`deploy/vps/`). Topology and limits are in [TECH-STACK §12](./TECH-STACK.md#12-deployment-topology); the database setup is §8 above.
+
+One-time setup:
+
+1. Key-only SSH alias `crest-vps` in `~/.ssh/config` (dedicated `crest_vps_ed25519` key).
+2. `~/crest/api.env`, `~/crest/monitor.env`, `~/crest/custos.env` on the VPS, mode 600, from the `deploy/vps/*.env.example` templates. `DATABASE_URL` is the session pooler with `?sslmode=verify-full`. Generate the Guardian key on the VPS; it never leaves `custos.env`.
+3. Append `deploy/vps/Caddyfile.crest` to the shared `/opt/annona/deploy/vps/Caddyfile` after a timestamped backup, then `caddy validate` and `caddy reload` inside `vps-caddy-1`. Never edit another project's block.
+
+Deploy the committed HEAD:
+
+```bash
+pnpm deploy:vps                                   # relay, api, monitor, custos
+pnpm deploy:vps --services "relay api monitor"    # without the signer
+pnpm deploy:vps --rollback <12-char sha>          # previous release, no rebuild
+```
+
+The script verifies `https://crest-api.43-129-38-115.nip.io/health`, `/v1/route`, and a `/rpc` `eth_chainId` after the swap. Start `custos` only once the onchain Guardian equals the key in `custos.env`; otherwise `watch` exits nonzero by design and Docker keeps restarting it. Stop any local monitor or Custos pointed at the same database before the VPS copies start, so one monitor and one Guardian worker exist per account.
+
+## 18. Web on Vercel
+
+`apps/web` deploys from the CLI to the Vercel project `crest` (Root Directory `apps/web`, Next.js preset, Node 24.x); production is `https://crestguard.vercel.app`, and the first alias `crest-three-omega.vercel.app` answers with a 308 to it (project domain `redirect`). Project env vars, for production, preview, and development, none secret:
+
+| Variable | Value |
+|---|---|
+| `NEXT_PUBLIC_ROBINHOOD_CHAIN_ID` | `46630` |
+| `CREST_API_URL` | `https://crest-api.43-129-38-115.nip.io` |
+| `CREST_RPC_UPSTREAM` | `https://crest-api.43-129-38-115.nip.io/rpc` |
+| `ENABLE_EXPERIMENTAL_COREPACK` | `1`, so the build uses the pinned `pnpm@12.4.1` |
+
+Deploy from the repository root, never from `apps/web`: the build reads `config/` and the workspace packages.
+
+```bash
+npx vercel@62.2.0 login                  # once per machine
+npx vercel@62.2.0 link --yes --project crest
+npx vercel@62.2.0 deploy --prod --yes
+```
+
+The CLI uploads the working tree, untracked files included. The root `.vercelignore` is an allowlist of the workspace manifests, lockfile, `apps/web`, `packages`, and `config`, and drops every `.env*`, agent note, and other app's sources. `vercel link` writes `.env.local` (a short-lived OIDC token) and appends `.vercel` and `.env*` to `.gitignore`; drop those two lines, because `.env*` overrides `!.env.example` and `.gitignore` already covers both. Generated deployment URLs sit behind Vercel Authentication; the production domain is public. Rewrites are server-side, so the VPS needs no CORS rule.

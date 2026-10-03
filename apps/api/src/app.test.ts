@@ -23,6 +23,15 @@ describe("read-only route API", () => {
     expect(body.chainId).toBe(4663);
   });
 
+  test("labels the testnet route as sandbox evidence and ships its disclosures", async () => {
+    const sandbox = await loadDeploymentManifest(fileURLToPath(new URL("../../../config/deployment-manifest.46630.json", import.meta.url)));
+    const body = (await (await createApp(sandbox).request("/v1/route")).json()) as RouteResponse;
+
+    expect(body.evidence).toBe("sandbox-manifest");
+    expect(body.chainId).toBe(46630);
+    expect(body.trust.disclosures).toEqual(sandbox.trust.disclosures);
+  });
+
   test("reports the Guardian surface as exactly the three bounded selectors", async () => {
     const response = await app.request("/v1/authority");
     const body = (await response.json()) as AuthorityResponse;

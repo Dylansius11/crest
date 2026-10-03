@@ -69,22 +69,52 @@
 
   --radius-cell: 2px;
   --radius-card: 4px;
-
-  --animate-marquee: marquee 28s linear infinite;
-
-  @keyframes marquee {
-    from {
-      transform: translateX(0);
-    }
-    to {
-      transform: translateX(-50%);
-    }
-  }
 }
 
 /* Base */
+/* The layout was composed on a 1536px-wide viewport (1920px at 125% display
+   scaling). On wider 100% displays the root size grows with the viewport, so
+   every rem-based size scales together instead of leaving empty side bands.
+   Media-query breakpoints use the browser default rem, so they do not move. */
 html {
+  font-size: clamp(100%, 100vw / 96, 125%);
   scroll-behavior: smooth;
+}
+
+/* Poster scrollbar: paper track with an ink rule, square blue thumb inset by a
+   paper border, flame while hovered or dragged. Firefox gets the two colors. */
+::-webkit-scrollbar {
+  width: 14px;
+  height: 14px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-paper);
+  border-left: 1px solid var(--color-ink);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-crest-600);
+  border: 3px solid var(--color-paper);
+  border-radius: 0;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-flame);
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: var(--color-flame-press);
+}
+
+::-webkit-scrollbar-corner {
+  background: var(--color-paper);
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  html {
+    scrollbar-color: var(--color-crest-600) var(--color-paper);
+  }
 }
 
 body {
@@ -173,6 +203,36 @@ body {
 
 .pulse-once {
   animation: crest-pulse 0.5s ease-out 1;
+}
+
+/*
+ * Hero entrance. CSS rather than JavaScript, so the first paint already runs it
+ * and the hero is never left hidden waiting for hydration. Reduced motion
+ * collapses it to the final frame through the rule below.
+ */
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+    filter: blur(6px);
+  }
+}
+
+@keyframes stamp-in {
+  from {
+    opacity: 0;
+    transform: rotate(-2deg) scale(1.18);
+  }
+}
+
+.rise-in {
+  animation: rise-in 0.8s cubic-bezier(0.23, 1, 0.32, 1) both;
+  animation-delay: var(--delay, 0ms);
+}
+
+.stamp-in {
+  animation: stamp-in 0.42s cubic-bezier(0.23, 1, 0.32, 1) both;
+  animation-delay: var(--delay, 0ms);
 }
 
 @media (prefers-reduced-motion: reduce) {

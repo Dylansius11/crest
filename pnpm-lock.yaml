@@ -208,54 +208,120 @@ importers:
 
   apps/api:
     dependencies:
+      '@crest/chain':
+        specifier: workspace:*
+        version: link:../../packages/chain
       '@crest/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@crest/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       '@crest/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@crest/policy':
+        specifier: workspace:*
+        version: link:../../packages/policy
       '@hono/node-server':
         specifier: 2.1.1
         version: 2.1.1(hono@4.13.8)
+      drizzle-orm:
+        specifier: 0.45.2
+        version: 0.45.2(postgres@3.4.9)
       hono:
         specifier: 4.13.8
         version: 4.13.8
+      viem:
+        specifier: 2.56.8
+        version: 2.56.8(typescript@7.0.2)(zod@4.6.4)
       zod:
         specifier: 4.6.4
         version: 4.6.4
 
   apps/automation:
     dependencies:
+      '@crest/chain':
+        specifier: workspace:*
+        version: link:../../packages/chain
       '@crest/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@crest/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       '@crest/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@crest/morpho':
+        specifier: workspace:*
+        version: link:../../packages/morpho
+      '@crest/policy':
+        specifier: workspace:*
+        version: link:../../packages/policy
+      '@crest/vault':
+        specifier: workspace:*
+        version: link:../../packages/vault
+      drizzle-orm:
+        specifier: 0.45.2
+        version: 0.45.2(postgres@3.4.9)
       viem:
         specifier: 2.56.8
         version: 2.56.8(typescript@7.0.2)(zod@4.6.4)
 
   apps/monitor:
     dependencies:
+      '@crest/chain':
+        specifier: workspace:*
+        version: link:../../packages/chain
       '@crest/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@crest/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       '@crest/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@crest/morpho':
+        specifier: workspace:*
+        version: link:../../packages/morpho
+      '@crest/policy':
+        specifier: workspace:*
+        version: link:../../packages/policy
+      '@crest/rates':
+        specifier: workspace:*
+        version: link:../../packages/rates
+      '@crest/risk':
+        specifier: workspace:*
+        version: link:../../packages/risk
+      '@crest/robinhood':
+        specifier: workspace:*
+        version: link:../../packages/robinhood
+      '@crest/vault':
+        specifier: workspace:*
+        version: link:../../packages/vault
+      drizzle-orm:
+        specifier: 0.45.2
+        version: 0.45.2(postgres@3.4.9)
       viem:
         specifier: 2.56.8
         version: 2.56.8(typescript@7.0.2)(zod@4.6.4)
 
   apps/web:
     dependencies:
+      '@crest/chain':
+        specifier: workspace:*
+        version: link:../../packages/chain
       '@crest/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
       '@crest/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@crest/policy':
+        specifier: workspace:*
+        version: link:../../packages/policy
       '@fontsource-variable/archivo':
         specifier: 5.3.0
         version: 5.3.0
@@ -295,6 +361,9 @@ importers:
       tailwind-merge:
         specifier: 3.7.0
         version: 3.7.0
+      viem:
+        specifier: 2.56.8
+        version: 2.56.8(typescript@7.0.2)(zod@4.6.4)
     devDependencies:
       '@tailwindcss/postcss':
         specifier: 4.3.3
@@ -323,6 +392,10 @@ importers:
       '@crest/domain':
         specifier: workspace:*
         version: link:../domain
+    devDependencies:
+      viem:
+        specifier: 2.56.8
+        version: 2.56.8(typescript@7.0.2)(zod@4.6.4)
 
   packages/db:
     dependencies:
@@ -335,6 +408,9 @@ importers:
       postgres:
         specifier: 3.4.9
         version: 3.4.9
+      viem:
+        specifier: 2.56.8
+        version: 2.56.8(typescript@7.0.2)(zod@4.6.4)
     devDependencies:
       drizzle-kit:
         specifier: 0.31.10

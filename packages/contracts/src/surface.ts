@@ -10,6 +10,9 @@ export const GUARDIAN_SELECTORS = ["freezeBorrowing()", "repayFromReserve(uint25
 /** Entry points that must never exist, because they would let a delegate move value or debt freely. */
 export const FORBIDDEN_SIGNATURE_PATTERNS = [/^execute/i, /^multicall/i, /^call\(/i, /delegatecall/i, /^upgrade/i, /^sweep/i] as const;
 
+/** A `0x`-prefixed hex string; the same shape the chain libraries take, declared here to stay dependency-free. */
+export type Hex = `0x${string}`;
+
 export interface AbiInput {
   name: string;
   type: string;
@@ -31,4 +34,9 @@ export interface CrestAccountArtifact {
   abi: AbiEntry[];
   methodIdentifiers: Record<string, string>;
   guardianSelectors: Record<string, string>;
+  /**
+   * Exact creation bytecode of the compiled contract, so the owner flow can deploy a Crest Account
+   * without filesystem access. Immutables are resolved by the constructor, so no library link is allowed.
+   */
+  creationBytecode: Hex;
 }

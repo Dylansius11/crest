@@ -12,6 +12,7 @@ coverage/
 supabase/.branches/
 supabase/.temp/
 .tmp/
+.vercel/
 contracts/out/
 contracts/cache/
 contracts/broadcast/
@@ -19,3 +20,7 @@ contracts/broadcast/
 reference/*.tsbuildinfo
 
 *.tsbuildinfo
+
+# Graphify knowledge-graph output. Derived from the corpus by `graphify .`;
+# see .graphifyignore for what the corpus includes.
+graphify-out/

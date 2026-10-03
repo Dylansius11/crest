@@ -1,5 +1,6 @@
 import { GUARDIAN_SELECTORS } from "@crest/contracts";
 import type { AbiEntry } from "@crest/contracts";
+import type { DeploymentManifest } from "@crest/contracts/manifest";
 
 /**
  * Guardian authority verification.
@@ -44,6 +45,11 @@ function check(name: string, ok: boolean, detail: string): Finding {
   return { name, status: ok ? "ok" : "failed", detail };
 }
 
+/** Runtime signing is a testnet SANDBOX capability, not a property of a full-route manifest alone. */
+export function guardianRuntimeSigningAllowed(manifest: Pick<DeploymentManifest, "network" | "trust">): boolean {
+  return manifest.network.chainId === 46630 && manifest.trust.level === "sandbox";
+}
+
 /** Signatures the Guardian is allowed to call, derived from the compiled ABI rather than a written list. */
 export function guardianSurface(abi: readonly AbiEntry[]): string[] {
   return abi
@@ -58,6 +64,7 @@ export function verifyGuardianAuthority(
   state: OnchainAccountState,
   expectation: GuardianExpectation,
   chainId: number,
+  proof: { accountCodeHashMatches: boolean; routeQualified: boolean; runtimeSigningAllowed: boolean },
 ): AuthorityReport {
   const surface = guardianSurface(abi);
   const expectedSurface = [...GUARDIAN_SELECTORS].sort();
@@ -78,6 +85,9 @@ export function verifyGuardianAuthority(
       state.guardian.toLowerCase() !== state.owner.toLowerCase(),
       `owner ${state.owner}`,
     ),
+    check("deployed account bytecode matches registered code hash", proof.accountCodeHashMatches, proof.accountCodeHashMatches ? "registered bytecode" : "account code mismatch"),
+    check("manifest and onchain route are qualified", proof.routeQualified, proof.routeQualified ? "qualified route" : "route mismatch"),
+    check("runtime signing allowed", proof.runtimeSigningAllowed, proof.runtimeSigningAllowed ? "sandbox signing enabled" : "runtime signing is disabled"),
     check(
       "compiled ABI exposes exactly the three Guardian methods",
       surface.length === expectedSurface.length && surface.every((signature, index) => signature === expectedSurface[index]),

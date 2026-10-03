@@ -33,13 +33,16 @@ export function Cell({
             headerTone === "ink" ? "border-ink" : "border-paper",
           )}
         >
-          <span className="type-display flex min-h-11 items-center px-4 text-poster-sm">
-            {index}
-          </span>
+          {index !== undefined && (
+            <span className="type-display flex min-h-11 items-center px-4 text-poster-sm">
+              {index}
+            </span>
+          )}
           {meta !== undefined && (
             <span
               className={cn(
-                "type-display flex items-center border-l px-4 text-poster-sm uppercase",
+                "type-display flex min-h-11 items-center px-4 text-poster-sm uppercase",
+                index !== undefined && "border-l",
                 headerTone === "ink" ? "border-ink" : "border-paper",
               )}
             >

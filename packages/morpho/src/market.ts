@@ -1,12 +1,14 @@
 import { encodeAbiParameters, keccak256, parseAbi } from "viem";
 import type { Address, Hex, PublicClient } from "viem";
 
-import { onchainAt } from "@crest/chain";
+import { readProvenance } from "@crest/chain";
 import { observe } from "@crest/domain";
 import type { BlockRef, Observation, ReasonCode } from "@crest/domain";
 
+
 import { accrueInterest, toAssetsUp } from "./math.ts";
 import type { MarketState } from "./math.ts";
+
 
 export const MORPHO_ABI = parseAbi([
   "function market(bytes32 id) view returns (uint128 totalSupplyAssets, uint128 totalSupplyShares, uint128 totalBorrowAssets, uint128 totalBorrowShares, uint128 lastUpdate, uint128 fee)",
@@ -87,7 +89,7 @@ function sameParams(left: MarketParams, right: MarketParams): boolean {
  * cannot describe this account's risk.
  */
 export async function readMarket(client: PublicClient, block: BlockRef, route: MorphoRoute): Promise<Observation<MarketSnapshot>> {
-  const provenance = onchainAt(block);
+  const provenance = readProvenance(client, block);
   const at = { blockNumber: block.number };
   let stored: MarketState;
   let onchainParams: MarketParams;
@@ -157,7 +159,7 @@ export async function readPosition(
   market: MarketSnapshot,
   account: Address,
 ): Promise<Observation<PositionSnapshot>> {
-  const provenance = onchainAt(block);
+  const provenance = readProvenance(client, block);
   try {
     const [supplyShares, borrowShares, collateralAssets] = await client.readContract({
       address: route.morpho,

@@ -1,6 +1,11 @@
+import { existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { serve } from "@hono/node-server";
 
 import { createAppFromManifest } from "./app.ts";
+
+const localEnv = fileURLToPath(new URL("../../../.env", import.meta.url));
+if (existsSync(localEnv)) process.loadEnvFile(localEnv);
 
 const port = Number(process.env.API_PORT ?? 8787);
 const app = await createAppFromManifest();

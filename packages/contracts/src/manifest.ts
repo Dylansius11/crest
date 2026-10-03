@@ -10,7 +10,14 @@ import { createHash } from "node:crypto";
 const ADDRESS = /^0x[0-9a-fA-F]{40}$/;
 const HASH = /^0x[0-9a-fA-F]{64}$/;
 const UINT = /^(0|[1-9][0-9]*)$/;
-const ROBINHOOD_CHAIN_ID = 4663;
+/**
+ * Every supported chain has exactly one trust tier. Mainnet routes are reviewed against official issuer, oracle,
+ * and Morpho sources; the testnet publishes none, so a 46630 route can only ever be a labeled SANDBOX.
+ */
+export const ROUTE_TRUST_BY_CHAIN = { 4663: "reviewed", 46630: "sandbox" } as const;
+export type SupportedChainId = keyof typeof ROUTE_TRUST_BY_CHAIN;
+export type RouteTrustLevel = (typeof ROUTE_TRUST_BY_CHAIN)[SupportedChainId];
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
 export interface ContractEvidence {
   address: string;
@@ -20,7 +27,9 @@ export interface ContractEvidence {
 
 export interface DeploymentManifest {
   schemaVersion: number;
-  network: { chainId: number; name: string };
+  network: { chainId: SupportedChainId; name: string; rpcUrl: string; explorerUrl: string };
+  /** Route trust tier; `disclosures` name every reason a sandbox route is not a reviewed route. */
+  trust: { level: RouteTrustLevel; disclosures: string[] };
   evidence: {
     retrievedAt: string;
     block: { number: string; hash: string; timestamp: string; finality: "finalized" };
@@ -46,7 +55,10 @@ export interface DeploymentManifest {
     governance: { liquidityAdapter: string };
     /** Share price at the evidence block, RAY-scaled across share and asset decimals: the vault-loss baseline. */
     state: { sharePriceRay: string };
-    /** Exactly one entry has `liquidityRole: "default"`: the market the liquidity adapter exits through. */
+    /**
+     * With a liquidity adapter, exactly one entry has `liquidityRole: "default"`: the market it exits through.
+     * An idle-only vault (zero liquidity adapter) has none: normal exits draw on idle assets alone.
+     */
     downstreamAllocations: Array<{ adapter: string; marketId: string; liquidityRole: "default" | "allocated" }>;
     withdrawableAssets: string;
     plannedWithdrawalAssets: string;
@@ -123,7 +135,18 @@ export function validateDeploymentManifest(value: unknown): string[] {
   if (!isRecord(value)) return ["manifest must be an object"];
 
   if (at(value, "schemaVersion") !== 1) errors.push("schemaVersion must be 1");
-  if (at(value, "network", "chainId") !== ROBINHOOD_CHAIN_ID) errors.push("network.chainId must be 4663");
+  const chainId = at(value, "network", "chainId");
+  const expectedTrust = typeof chainId === "number" && Object.hasOwn(ROUTE_TRUST_BY_CHAIN, chainId)
+    ? ROUTE_TRUST_BY_CHAIN[chainId as SupportedChainId]
+    : undefined;
+  if (expectedTrust === undefined) errors.push("network.chainId must be 4663 or 46630");
+  else if (at(value, "trust", "level") !== expectedTrust) errors.push(`trust.level must be ${expectedTrust} on chain ${String(chainId)}`);
+  const disclosures = at(value, "trust", "disclosures");
+  if (!Array.isArray(disclosures) || disclosures.some((entry) => typeof entry !== "string" || entry.trim() === "")) {
+    errors.push("trust.disclosures must be an array of non-empty strings");
+  } else if (expectedTrust === "sandbox" && disclosures.length === 0) {
+    errors.push("a sandbox route must disclose why it is not reviewed");
+  }
   requirePattern(errors, at(value, "evidence", "block", "number"), UINT, "evidence.block.number");
   requirePattern(errors, at(value, "evidence", "block", "hash"), HASH, "evidence.block.hash");
   if (at(value, "evidence", "block", "finality") !== "finalized") errors.push("evidence.block.finality must be finalized");
@@ -147,13 +170,18 @@ export function validateDeploymentManifest(value: unknown): string[] {
   requirePattern(errors, at(value, "vault", "state", "sharePriceRay"), UINT, "vault.state.sharePriceRay");
   const allocations = at(value, "vault", "downstreamAllocations");
   const defaults = Array.isArray(allocations) ? allocations.filter((entry: unknown) => at(entry, "liquidityRole") === "default") : [];
-  const [liquidityMarket] = defaults;
-  if (
-    defaults.length !== 1
-    || !sameAddress(at(liquidityMarket, "adapter"), at(value, "vault", "governance", "liquidityAdapter"))
-    || !HASH.test(String(at(liquidityMarket, "marketId")))
-  ) {
-    errors.push("vault must name exactly one default liquidity market on its liquidity adapter");
+  const liquidityAdapter = at(value, "vault", "governance", "liquidityAdapter");
+  if (sameAddress(liquidityAdapter, ZERO_ADDRESS)) {
+    if (defaults.length !== 0) errors.push("an idle-only vault has no default liquidity market");
+  } else {
+    const [liquidityMarket] = defaults;
+    if (
+      defaults.length !== 1
+      || !sameAddress(at(liquidityMarket, "adapter"), liquidityAdapter)
+      || !HASH.test(String(at(liquidityMarket, "marketId")))
+    ) {
+      errors.push("vault must name exactly one default liquidity market on its liquidity adapter");
+    }
   }
 
   if (at(value, "market", "id") !== at(value, "market", "derivedId")) errors.push("market.id does not match derivedId");

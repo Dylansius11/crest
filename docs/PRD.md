@@ -3,7 +3,7 @@
 **Status:** Build-ready revised product specification
 **Product:** Crest
 **Primary event:** Arbitrum Open House Singapore 2026
-**Primary deployment:** Robinhood Chain, subject to live market and vault verification
+**Primary development and demo target:** Robinhood Chain Testnet (`46630`), gated on an independently qualified testnet market and vault; no mainnet transaction in this release
 **Strategy:** [STRATEGY.md](./STRATEGY.md)
 **Logo:** [`crest-logo.png`](./crest-logo.png)
 
@@ -65,7 +65,7 @@ Needs to know which source triggered an action, what the agent could call, and w
 
 ## 4. Verified constraints
 
-- Robinhood Chain is an Arbitrum-based EVM chain; current official docs identify mainnet chain ID `4663`.
+- Robinhood Chain mainnet is chain ID `4663`; the testnet is `46630`. Mainnet route and fork evidence cannot qualify testnet contracts, addresses, liquidity, or transactions.
 - Stock Tokens provide tokenized economic exposure and are jurisdiction-restricted.
 - Robinhood lifecycle APIs are advisory, read-only sources; they cannot replace the Morpho oracle.
 - A Morpho market is isolated and identified by loan token, collateral token, oracle, IRM, and LLTV.
@@ -76,6 +76,12 @@ Needs to know which source triggered an action, what the agent could call, and w
 - A trading-halt signal does not prove Stock Token transfers or Morpho liquidation stop.
 
 These constraints are product behavior, not footnotes.
+
+### Testnet-first release gate
+
+The existing reviewed manifest and pinned-fork proof describe mainnet 4663 only. They remain historical evidence, not authority for testnet transactions. No primary source publishes a qualifiable 46630 route, so on 2026-10-02 the owner chose a labeled **SANDBOX**: the 46630 route is registered in `config/deployment-manifest.46630.json` with trust tier `sandbox` and explicit disclosures, verified bytecode, market parameters, liquidity, and a pinned-fork lifecycle proof. Owner signing is enabled only on that tier with every disclosure visible; the reviewed 4663 route stays registered but signing-disabled. A working faucet supplies gas, not a borrowing market or strategy.
+
+Because the sandbox risk inputs are DEGRADED by construction, an owner borrow on 46630 requires an explicit acknowledgement of the shown reason codes. Frozen borrowing, a missing or stale assessment, and a failed simulation still block it. A reviewed route never borrows on DEGRADED input. Mainnet execution is outside this testnet-first release.
 
 ## 5. Jobs to be done
 

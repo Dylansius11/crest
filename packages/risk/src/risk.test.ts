@@ -315,6 +315,22 @@ describe("degraded input", () => {
     expect(assessment.state).toBe("DEGRADED");
   });
 
+  test("an onchain owner or policy mismatch cannot authorize repayment under a stale mirror", () => {
+    const input = fixture({ debtAssets: 1_300n * USDG, frozen: true });
+    const policy = {
+      ...input.policy.compiled.config,
+      market: input.policy.compiled.route.market,
+      marketId: input.policy.compiled.route.marketId,
+      yieldVault: input.policy.compiled.route.vault,
+      owner: `0x${"e5".repeat(20)}` as const,
+    };
+    const account = observe({ ...input.account.value!, policy }, at);
+    const assessment = assessPosition({ ...input, account });
+    expect(assessment.reasons).toContain("conflict");
+    expect(assessment.repayment.strategyCapacityAssets).toBe(0n);
+    expect(planGuardianAction(assessment)).toBeNull();
+  });
+
   test("under a superseded policy nothing is repaid, because its floors and caps may no longer hold", () => {
     const input = fixture({ debtAssets: 1_300n * USDG, frozen: true });
     const assessment = assessPosition({ ...input, policy: { ...input.policy, nonce: 2n } });
@@ -324,6 +340,24 @@ describe("degraded input", () => {
     expect(planGuardianAction(assessPosition({ ...fixture({ debtAssets: 1_300n * USDG }), policy: { ...input.policy, nonce: 2n } }))).toEqual({ kind: "freeze", selector: "freezeBorrowing()" });
   });
 });
+
+  test("degrades and blocks new borrowing when the selected route has no loan feed", () => {
+    const input = fixture();
+    const policy = {
+      ...input.policy.compiled,
+      route: { ...input.policy.compiled.route, feeds: { ...input.policy.compiled.route.feeds, loan: null } },
+    };
+    const assessment = assessPosition({
+      ...input,
+      policy: { ...input.policy, compiled: policy },
+    });
+    expect(assessment).toMatchObject({
+      state: "DEGRADED",
+      degradedSources: expect.arrayContaining(["loanFeed"]),
+      ownerBorrow: { capacityAssets: 0n, blockers: expect.arrayContaining(["degraded_input"]) },
+      ownerRecommendation: { kind: "none" },
+    });
+  });
 
 describe("exit yield and harvest", () => {
   test("realized vault loss exits yield instead of hiding behind DEGRADED", () => {

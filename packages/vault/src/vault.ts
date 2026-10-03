@@ -1,11 +1,13 @@
 import { decodeAbiParameters, decodeFunctionResult, encodeAbiParameters, encodeFunctionData, keccak256, parseAbi, zeroAddress } from "viem";
 import type { Address, Hex, PublicClient } from "viem";
 
-import { onchainAt, readCodeHash, simulateCall } from "@crest/chain";
+import { readCodeHash, readProvenance, simulateCall } from "@crest/chain";
 import { observe } from "@crest/domain";
 import type { BlockRef, Observation, ReasonCode } from "@crest/domain";
 import { ERC20_BALANCE_ABI, MORPHO_ABI } from "@crest/morpho";
 import type { MarketParams } from "@crest/morpho";
+
+
 
 /** Narrow Vault V2 surface, matching the selectors `VaultV2Liquidity.sol` relies on onchain. */
 export const VAULT_V2_ABI = parseAbi([
@@ -60,8 +62,8 @@ export interface VaultRoute {
   asset: Address;
   morpho: Address;
   liquidityAdapter: Address;
-  /** keccak256 of `liquidityData()`: the Morpho market id the adapter exits through. */
-  liquidityMarketId: Hex;
+  /** `null` for an idle-only vault with no adapter route. */
+  liquidityMarketId: Hex | null;
   /** Reviewed share price; any read below it is a realized vault loss. */
   baselineSharePriceRay: bigint;
 }
@@ -129,7 +131,7 @@ function sameAddress(left: string, right: string): boolean {
  * A drifted route contributes no adapter liquidity, the same way the contract returns zero for it.
  */
 export async function readVault(client: PublicClient, block: BlockRef, route: VaultRoute): Promise<Observation<VaultSnapshot>> {
-  const provenance = onchainAt(block);
+  const provenance = readProvenance(client, block);
   const at = { blockNumber: block.number };
   const read = <const F extends string>(functionName: F, args?: readonly unknown[]) =>
     client.readContract({ address: route.vault, abi: VAULT_V2_ABI, functionName, ...(args ? { args } : {}), ...at } as never) as Promise<unknown>;
@@ -174,11 +176,18 @@ export async function readVault(client: PublicClient, block: BlockRef, route: Va
   }
 
   const liquidityMarketId = keccak256(liquidityData);
-  const routeMatches = sameAddress(liquidityAdapter, route.liquidityAdapter) && liquidityMarketId === route.liquidityMarketId.toLowerCase();
+  const idleOnly = route.liquidityAdapter === zeroAddress && route.liquidityMarketId === null;
+  const routeMatches = idleOnly
+    ? liquidityAdapter === zeroAddress && liquidityData === "0x"
+    : route.liquidityMarketId !== null
+      && sameAddress(liquidityAdapter, route.liquidityAdapter)
+      && liquidityMarketId === route.liquidityMarketId.toLowerCase();
   let caps: VaultSnapshot["caps"] = null;
   let adapterLiquidityAssets = 0n;
 
-  if (!routeMatches || liquidityAdapter === zeroAddress || liquidityData.length !== 2 + 160 * 2) {
+  if (idleOnly) {
+    // Idle assets are the entire conservative exit capacity.
+  } else if (!routeMatches || liquidityAdapter === zeroAddress || liquidityData.length !== 2 + 160 * 2) {
     reasons.push("route_drift");
   } else {
     try {
@@ -271,7 +280,7 @@ export async function readVaultPosition(
   vault: Observation<VaultSnapshot>,
   account: Address,
 ): Promise<Observation<VaultPosition>> {
-  const provenance = onchainAt(block);
+  const provenance = readProvenance(client, block);
   if (vault.value === null) return observe<VaultPosition>(null, provenance, vault.reasons);
   const at = { blockNumber: block.number };
   try {
@@ -301,7 +310,7 @@ export async function simulateWithdrawal(
   position: Observation<VaultPosition>,
   assets: bigint,
 ): Promise<Observation<WithdrawalSimulation>> {
-  const provenance = onchainAt(block);
+  const provenance = readProvenance(client, block);
   if (position.value === null) return observe<WithdrawalSimulation>(null, provenance, position.reasons);
   const owner = position.value.account;
   const reasons: ReasonCode[] = [...position.reasons];

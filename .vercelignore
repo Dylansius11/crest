@@ -1,0 +1,32 @@
+# Vercel CLI uploads the working tree, untracked files included. Allow only what the web build needs:
+# the workspace manifests and lockfile, apps/web, the TypeScript packages, and the reviewed manifests.
+/*
+!/package.json
+!/pnpm-lock.yaml
+!/pnpm-workspace.yaml
+!/tsconfig.base.json
+!/apps
+!/packages
+!/config
+# The frozen lockfile resolves every workspace importer, so the other apps keep only their manifests.
+/apps/*
+!/apps/web
+!/apps/api
+!/apps/monitor
+!/apps/automation
+/apps/api/*
+/apps/monitor/*
+/apps/automation/*
+!/apps/api/package.json
+!/apps/monitor/package.json
+!/apps/automation/package.json
+# Secrets, agent notes, and machine-local state never leave the workstation.
+**/.env
+**/.env.*
+**/AGENTS.md
+**/CLAUDE.md
+**/*.tsbuildinfo
+**/node_modules
+**/.next
+**/.turbo
+**/.vercel

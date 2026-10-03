@@ -1,31 +1,52 @@
 import { createPublicClient, defineChain, http } from "viem";
-import type { PublicClient } from "viem";
+import type { Chain, PublicClient } from "viem";
 
 import { observe } from "@crest/domain";
 import type { BlockRef, Observation, Provenance } from "@crest/domain";
 
-export const ROBINHOOD_CHAIN_ID = 4663;
+const ROBINHOOD_CHAINS = {
+  4663: {
+    name: "Robinhood Chain",
+    rpcUrl: "https://rpc.mainnet.chain.robinhood.com",
+    explorerUrl: "https://robinhoodchain.blockscout.com",
+  },
+  46630: {
+    name: "Robinhood Chain Testnet",
+    rpcUrl: "https://rpc.testnet.chain.robinhood.com",
+    explorerUrl: "https://explorer.testnet.chain.robinhood.com",
+  },
+} as const;
 
-export const robinhoodChain = defineChain({
-  id: ROBINHOOD_CHAIN_ID,
-  name: "Robinhood Chain",
-  nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
-  rpcUrls: { default: { http: ["https://rpc.mainnet.chain.robinhood.com"] } },
-  blockExplorers: { default: { name: "Blockscout", url: "https://robinhoodchain.blockscout.com" } },
-});
+export function robinhoodChainOf(chainId: number): Chain {
+  const route = ROBINHOOD_CHAINS[chainId as keyof typeof ROBINHOOD_CHAINS];
+  if (route === undefined) throw new Error(`unsupported Robinhood chain ${chainId}`);
+  return defineChain({
+    id: chainId,
+    name: route.name,
+    nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+    rpcUrls: { default: { http: [route.rpcUrl] } },
+    blockExplorers: { default: { name: "Blockscout", url: route.explorerUrl } },
+  });
+}
 
 /**
  * The runtime read client. The endpoint is always explicit: adapters never fall back to a public or local RPC,
  * because a silently substituted endpoint would make every downstream observation unattributable.
  */
-export function createRobinhoodClient(rpcUrl: string | undefined): PublicClient {
+export function createRobinhoodClient(rpcUrl: string | undefined, chainId: number): PublicClient {
   if (!rpcUrl) throw new Error("ROBINHOOD_CHAIN_RPC_URL is required; Crest adapters refuse to guess an endpoint");
-  return createPublicClient({ chain: robinhoodChain, transport: http(rpcUrl, { retryCount: 2 }) });
+  return createPublicClient({ chain: robinhoodChainOf(chainId), transport: http(rpcUrl, { retryCount: 2 }) });
 }
 
-/** Every onchain read is bound to one block so a snapshot has one coherent horizon. */
-export function onchainAt(block: BlockRef): Provenance {
-  return { kind: "onchain", chainId: ROBINHOOD_CHAIN_ID, block };
+/** Every onchain read is bound to one block and chain so a snapshot has one coherent horizon. */
+export function onchainAt(block: BlockRef, chainId: number): Provenance {
+  return { kind: "onchain", chainId, block };
+}
+
+/** Provenance for an adapter read: the chain comes from the client, never from a default. */
+export function readProvenance(client: PublicClient, block: BlockRef): Provenance {
+  if (client.chain === undefined) throw new Error("onchain adapter requires a chain-configured client");
+  return onchainAt(block, client.chain.id);
 }
 
 export interface PinnedBlock {
@@ -41,6 +62,8 @@ export interface PinOptions {
    * available. A head older than this budget degrades every observation read against it.
    */
   maxHeadLagSeconds: bigint;
+  /** The selected deployment-manifest chain; an RPC disagreement is always fatal. */
+  expectedChainId: number;
 }
 
 /**
@@ -49,10 +72,10 @@ export interface PinOptions {
  */
 export async function pinBlock(client: PublicClient, options: PinOptions): Promise<Observation<PinnedBlock>> {
   const chainId = await client.getChainId();
-  if (chainId !== ROBINHOOD_CHAIN_ID) throw new Error(`expected Robinhood Chain ${ROBINHOOD_CHAIN_ID}, RPC reports chain ${chainId}`);
+  if (chainId !== options.expectedChainId) throw new Error(`expected Robinhood Chain ${options.expectedChainId}, RPC reports chain ${chainId}`);
   const head = await client.getBlock({ blockTag: "latest" });
   if (head.hash === null || head.number === null) throw new Error("latest block has no hash; refusing a pending horizon");
   const block: BlockRef = { number: head.number, hash: head.hash, timestamp: head.timestamp };
   const headLagSeconds = options.nowSeconds > block.timestamp ? options.nowSeconds - block.timestamp : 0n;
-  return observe({ block, headLagSeconds }, onchainAt(block), headLagSeconds > options.maxHeadLagSeconds ? ["head_lag"] : []);
+  return observe({ block, headLagSeconds }, onchainAt(block, options.expectedChainId), headLagSeconds > options.maxHeadLagSeconds ? ["head_lag"] : []);
 }

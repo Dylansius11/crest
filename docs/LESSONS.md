@@ -25,6 +25,166 @@ Rules for this file:
 
 ---
 
+## 2026-10-03 — A layout composed at 125% display scaling looks shrunken at 100% (Technical)
+
+- Observed: the landing was tuned on a 1920px screen at 125% scaling, a 1536px CSS viewport. At 100% the same screen is 1912px wide, so the `85rem` column left about 280px of empty blue on each side and the six-line headline pushed the CTA below the fold.
+- Why: CSS px track the OS scale factor. A fixed rem maximum looks full at one scale and sparse at another.
+- Rule: scale the root size with the viewport above the composition width (`html { font-size: clamp(100%, 100vw / 96, 125%) }`) and size layout in rem. Check hero fit at 1912x948 as well as 1440 and 390; rem media queries use the browser default and are unaffected.
+
+## 2026-10-03 — Next dev served on 127.0.0.1 never hydrates when opened from that origin (Technical)
+
+- Opening the dev server (Next 16.3.5, Turbopack) at `http://127.0.0.1:3100` rendered the server HTML, but the HMR connection was blocked as cross-origin, the client never hydrated, the landing console stayed on its fallback, and no GSAP trigger ran. The same server at `http://localhost:3100` hydrated and every effect ran.
+- Next treats dev resources requested from a host it does not recognise as cross-origin and blocks them unless the host is listed in `allowedDevOrigins`.
+- Rule: review the web app in a browser at `localhost`, and treat "static page, no effects, fallbacks stuck" in dev as a hydration failure to check before debugging components.
+
+## 2026-10-03 — The Vercel CLI uploads untracked files, and `vercel link` rewrites `.gitignore` (Technical)
+
+- A CLI deploy sends the working tree, not git's tracked set: a dry run with git's matcher showed `.env.example` and the untracked `apps/web/AGENTS.md` and `CLAUDE.md` in the upload until the root `.vercelignore` became an allowlist. The repo root also holds `.env` with live credentials.
+- `vercel link` (CLI 62.2.0) wrote `.env.local` with a `VERCEL_OIDC_TOKEN` and appended `.vercel` and `.env*` to `.gitignore`; the appended `.env*` sits after `!.env.example` and silently ignores the tracked template.
+- Rule: before any CLI upload, check the set with git's matcher (`git ls-files -c -i --exclude-from=.vercelignore` lists the tracked files dropped, `git ls-files -o --exclude-from=.vercelignore` lists the untracked files that would ship), keep `.vercelignore` an allowlist, and review the `.gitignore` diff after `vercel link`.
+
+## 2026-10-02 — A Guardian action outruns the monitor's confirmation depth (Technical)
+
+- Right after hosted Custos froze the account (block 127691278), the monitor's next cycle was still pinned 20 blocks back, before the freeze, and wrote one more freeze trigger. Custos claimed it on the next tick and closed the run as `pre_sign_validation_or_simulation` because the live account was already frozen; the Guardian's transaction count stayed 1.
+- Assessments read a confirmed block for reorg safety, while the Guardian validates against a fresh block before signing, so one stale trigger per action is expected.
+- Rule: keep pre-sign validation against fresh canonical state as the authority for every Guardian action, and read a single refused run after an action as this lag, not a fault.
+
+## 2026-10-02 — An LLM anchors on any numeric limit it is shown (Technical)
+
+- The policy draft facts include `maximumCriticalLtvPercent: 76` so the model can respect it. GPT-OSS 120B at low effort counted bands down from it: across vague, "as much as possible", and 84%-request prompts with no current policy, 6 of 11 baseline drafts ended at critical LTV 76 (46/56/66/76, 50/60/70/76), and the "hard limit, not a target" wording did not stop it. Stating that the limit is validation only, fixing 25/35/45/55 bands unless the owner writes percentages, resetting (not clamping) an over-limit request, and naming 1 collateral / 10 loan token placeholders produced 12 of 12 expected drafts with explicit owner numbers kept.
+- Soft words such as "conservative" do not move a model off a concrete number in its context; a concrete default does.
+- Rule: give a model a concrete default for every limit-bound field, and measure prompt changes against the live model with repeated runs before shipping. Code-side bounds stay the authority.
+
+## 2026-10-02 — Supabase pooler connections are plaintext unless the URL asks for TLS (Technical)
+
+- Postgres.js connected to the Supabase session pooler with no `sslmode` and the pooler accepted it, so the hosted database traffic was unencrypted until `?sslmode=` was added. With `sslmode=verify-full`, the connection fails `SELF_SIGNED_CERT_IN_CHAIN` until `NODE_EXTRA_CA_CERTS` points at the Supabase Root 2021 CA, whose SHA-256 matches Supabase's published `prod-ca-2021.crt`.
+- `pg_stat_ssl` cannot prove client TLS through Supavisor: it reports the pooler's own backend connection (`ssl = false`) either way. Prove TLS by making verification fail without the CA.
+- The direct host `db.<ref>.supabase.co` has only an AAAA record, so IPv4-only machines must use the session pooler for migrations as well as runtime.
+- Rule: every hosted `DATABASE_URL` carries `sslmode=verify-full` with the pinned CA, local cloud access carries at least `sslmode=require`, and TLS is proven by a failing negative check.
+
+## 2026-10-02 — Groq strict JSON Schema is available on both Crest draft models (Technical)
+
+- [Groq Structured Outputs](https://console.groq.com/docs/structured-outputs#models-with-strict-mode-strict-true) lists both `openai/gpt-oss-120b` and `qwen/qwen3.8-27b` under `json_schema` with `strict: true`. Strict mode requires every field and `additionalProperties: false`; it constrains syntax, not Crest policy semantics.
+- [Groq Reasoning](https://console.groq.com/docs/reasoning#reasoning-format) documents `reasoning_format: hidden` for final-answer-only output. GPT-OSS accepts `reasoning_effort: low`, while Qwen accepts `reasoning_effort: none` to disable reasoning. [Groq Models](https://console.groq.com/docs/models) lists GPT-OSS 120B as production and Qwen 3.8 27B as preview, so the latter may change availability.
+- Rule: use each model's strict JSON Schema and hidden reasoning without a client SDK, then independently parse unknown fields, convert exact bigint units, and run the domain schema plus policy compiler before exposing an editable owner draft. Never treat provider format guarantees as authority.
+
+## 2026-10-02 — Robinhood testnet Blockscout cannot verify solc 0.8.37; Sourcify can (Technical)
+
+- Blockscout's `/api/v2/smart-contracts/verification/config` on `explorer.testnet.chain.robinhood.com` lists solc only up to `v0.8.36+commit.8a079791`, so the pinned `v0.8.37+commit.f401782d` Crest Account cannot be source-verified there. Sourcify lists chain 46630 as supported, and `forge verify-contract --verifier sourcify --chain-id 46630` returned creation and runtime `match` for `0xaD8A…2c75`.
+- The explorer hostname also resolves to a local filter host on this network; it is reachable only with `--resolve` to the DoH-resolved Cloudflare origin.
+- Rule: verify Crest deployments on Sourcify and record Blockscout as unavailable until it ships 0.8.37; never downgrade the compiler pin just to satisfy an explorer, because that changes the deployed bytecode.
+
+## 2026-10-02 — Owner consent must bind the nonce at the same block tag on both sides (Technical)
+
+- In the live 46630 canary, staging policy nonce 2 right after the nonce 1 configure failed with 401: the web signed head `policyNonce + 1` (2) while the API verified finalized `policyNonce + 1` (1), because 46630 finality trailed the head by roughly 20 to 30 minutes. Later attempts failed as "owner does not match" and "no contract code" because the API mapped pruned-state RPC errors (`historical state ... is not available`) to refusals, and the runtime relay had been started with 8 retries instead of the proxy default of 60.
+- A signature over a nonce is only valid if signer and verifier read that nonce at the same block tag. Robinhood testnet pools mix archive and pruned backends, so a finalized-block read can fail transiently.
+- Rule: read consent-bound state at the verifier's block tag, refuse before signing while head and finalized disagree, let read failures surface as 503 unreadable, and run the runtime relay with the default retry budget.
+
+## 2026-10-02 — An Anvil fork of 46630 stops mining once upstream prunes the fork-base state (Technical)
+
+- About 25 minutes into a UI rehearsal, the `:8546` fork froze at block 127528964 and `evm_mine` failed with `failed to get storage for 0x0000F90827F1C53a10cb7A02335B175320002935 ... historical state ... is not available`, while the upstream relay kept advancing.
+- Every new block runs the EIP-2935 history-contract system call, which reads that contract's storage at the fork-base block. Once the upstream RPC prunes that historical state, the fork cannot produce any further block and cannot be recovered.
+- Rule: finish each fork rehearsal inside the upstream's state window, record evidence as you go, and restart from a fresh block (with a fresh database) rather than trying to revive a stalled fork.
+
+## 2026-10-02 — An onchain policy hash cannot authenticate an offchain draft (Technical)
+
+- `policyHashOf(config)` hashes only the contract's configuration, while `contentHash` includes typed intents, spread, freshness, and trigger settings. Two drafts can therefore share an onchain hash but disagree on offchain Guardian behavior. The API previously accepted a public owner-address string as staging authority, letting another caller reserve the next unique policy nonce.
+- A matching canonical `PolicyConfigured` event proves which onchain configuration was accepted, not who submitted the offchain policy or whether its additional terms had owner consent.
+- Rule: require an owner-verified EIP-191 signature binding chain, account, next nonce, policy hash, and content hash before persisting a draft. Permit a newly signed owner draft to replace only a still-pending row; never infer offchain consent solely from the onchain event hash.
+
+## 2026-10-02 — The web suite ran outside `pnpm verify` (Technical)
+
+- `apps/web` had vitest files for the borrow gate and formatting but no `test` script, so turbo's `test` task skipped the package and `pnpm verify` stayed green whatever those files asserted.
+- Turbo runs a task only in packages that define the matching script; a test file alone does not register a package.
+- Rule: every package with test files declares `"test": "vitest run"`, and a new package's tests are confirmed in the `pnpm verify` output before it is called covered.
+
+## 2026-10-02 — Next dev never hydrates when opened on 127.0.0.1 (Technical)
+
+- The owner workspace served static HTML on `http://127.0.0.1:3000` but no click handler ran; the same build on `http://localhost:3000` hydrated and connected the wallet.
+- Next 16 dev blocks cross-origin dev resources and the HMR socket unless the origin is allowed, and `127.0.0.1` is a different origin from `localhost`.
+- Rule: browser checks against the dev server use `http://localhost:3000`; a page that renders but ignores input is checked for blocked dev-origin requests before the component is debugged.
+
+## 2026-10-02 — Only a fresh-database rehearsal exercises first activation (Technical)
+
+- The full 46630 fork rehearsal on an empty database hit, in order: no route rows (enrollment foreign-key failure), a monitor that refused the `pending_policy` account before running the indexer that is the only writer of `active`, and a Guardian submit gate pinned to chain 4663. Every unit and integration suite passed throughout, because each fixture inserted route rows and an already-active account itself.
+- Fixtures that seed the state a step is supposed to produce hide the transition into that state.
+- Rule: before a live run, rehearse the whole path (route registration, deploy, register, stage, configure, monitor, Custos run and reconcile, owner exit) on a fork against a freshly migrated database. Anvil mines only on transactions, so enable `evm_setIntervalMining` or the 120 s head-lag gate correctly refuses the fork head.
+
+## 2026-10-02 - An inherited shell environment silently outranks `.env` (Technical)
+
+- The persistent agent shell still exported `NEXT_PUBLIC_ROBINHOOD_CHAIN_ID=4663`, `GUARDIAN_EXPECTED_CHAIN_ID=4663`, and the mainnet `DEPLOYMENT_MANIFEST_PATH` after `.env` moved to 46630. Loaders such as dotenv never overwrite an existing variable, so the web test that asserted the env-selected manifest failed and every service would have started on the wrong route. `DEPLOYMENT_MANIFEST_PATH` also resolves against the process cwd, which is the package directory under `pnpm --filter`.
+- Rule: start route-bound services with explicit `NEXT_PUBLIC_ROBINHOOD_CHAIN_ID`, `DEPLOYMENT_MANIFEST_PATH` (absolute), RPC, and chain variables. Tests name the manifest they check; they never assert whichever route the environment happens to select.
+
+## 2026-10-02 - A runtime RPC relay must not cache, and a degraded sandbox borrow needs consent (Technical)
+
+- The fork proxy caches every non-head-relative payload. That is right for pinned forks and wrong for runtime: a cached block or receipt at an unfinalized height would hide a reorg from the canonical-receipt checks. `CREST_PROXY_CACHE=off` runs the same SNI-preserving relay without a cache for web, API, monitor, and Custos.
+- On the 46630 sandbox the risk engine is DEGRADED by construction (MockFeed collateral price, no loan feed, idle-only vault), and the database forces DEGRADED capacity to zero. Per the owner's decision, a sandbox borrow may proceed only after the owner ticks an acknowledgement of the shown reason codes; a frozen account, a missing or stale (over 10 minutes) assessment, or a failed simulation still blocks it, and a reviewed route never borrows on DEGRADED.
+- Rule: keep runtime relays cache-free. Encode any sandbox exception as a tested pure gate (`apps/web/src/lib/borrow-gate.ts`) that can only add a consent step, never remove a block.
+
+## 2026-10-02 - A testnet route is a sandbox by construction, and its mock oracle has a clock (Technical)
+
+- Robinhood's issuer registry, Chainlink's network directory, and Morpho's address page publish no 46630 deployments, so no testnet route can pass the reviewed gate. The manifest validator now fixes the trust tier per chain (4663 `reviewed`, 46630 `sandbox` with disclosures). The chosen sandbox oracle, `VigilOracle`, reverts when its session oracle judges the publicly settable `MockFeed` stale (18 h windows anchored to the market calendar), which blocks borrowing and collateral withdrawal with debt but not repayment.
+- Rule: never let a chain ID choose a trust label implicitly; encode the tier in evidence and reject the mismatch. Before any sandbox owner signature, simulate the exact call, because the sandbox price can stop working on a schedule nobody controls.
+
+## 2026-10-02 — Ticker, vault TVL, and borrowable liquidity are different proofs (Technical)
+
+- Robinhood documents `/rhj/assets[].id` as the onchain `uid()` shared across chains for one asset. At Robinhood testnet block `127410311`, all five faucet Stock Token `uid()` values (TSLA, AMZN, NFLX, PLTR, AMD) differed from their same-ticker issuer-registry IDs, and the registry listed no 46630 deployment. A faucet transfer and verified `Stock` implementation alone do not establish registered-asset identity.
+- Factory `CreateVaultV2` events revealed two exact-Paxos-USDG Vault V2 contracts absent from the explorer's source-verified vault search. The `testLPVault` had 63 idle USDG and simulated a 0.1 USDG withdrawal for an existing holder, but also allocated to a `FakeWBTC`-collateral market; another TSLA market had 110.239151 USDG of *borrowable* liquidity backed by a publicly settable `MockFeed` and a fixed `MockIRM`.
+- Rule: compare onchain UID to the issuer's stable ID before using a testnet ticker; enumerate vault factories rather than trusting token names or verified-source search; gate the lending market and vault independently, keeping `totalAssets`, current normal-exit capacity, and market free liquidity separate.
+
+## 2026-10-01 — A same-core fork route does not establish oracle trust (Technical)
+
+- A TLS-authenticated official testnet RPC through the SNI-preserving proxy returned chain 46630 and let Foundry replay a finalized TSLA-labeled/Paxos test USDG Morpho market and USDG Vault V2. The fork proved 0.1 USDG borrow/deposit, Guardian strategy repayment, and owner exit; the market had only 1 USDG shared free liquidity at the evidence block.
+- The vault's downstream position depends on a mock-collateral market, and the market oracle source and independent price feeds were not verified. The official Robinhood `/rhj/assets` registry returned 194 assets but **no 46630 deployments**, including TSLA; a verified testnet proxy named `Stock` is not enough to assert canonical issuer identity. A same-asset, same-core vault and a passing fork do not turn manually priced test tokens into an independently valued Stock Token route.
+- Rule: separate fork execution compatibility from route qualification. Keep owner signatures disabled until token provenance, oracle/feed trust, current liquidity, funding, and all chain-bound clients pass a single reviewed testnet gate; never market experimental vault shares as live yield.
+
+## 2026-10-01 — The code graph cannot see Solidity, and an incremental rebuild renames communities (Technical)
+
+- The local `graphify` build extracts code with tree-sitter grammars for TypeScript, JavaScript, Python, Java, C/C++ and others, but ships none for Solidity. `contracts/src/CrestAccount.sol`, `contracts/src/libraries/VaultV2Liquidity.sol`, the deployment script, and the Foundry tests contribute zero nodes, and the post-commit rebuild reports `.sol` as an unclassified extension. Contract behavior reaches the graph only through `docs/technical/SMART-CONTRACT.md`.
+- A post-commit rebuild re-runs clustering. When the community set changes, saved names are discarded and every community is renamed after its hub node, so a curated `graphify-out/.graphify_labels.json` must be re-mapped by member overlap and re-applied before the report is quoted.
+- Rule: treat `graphify-out/` as a navigation aid for the TypeScript, SQL, and document layers only; read `contracts/src/` directly for contract behavior. After any rebuild that changes the community count, re-check that community names are still the curated ones.
+
+## 2026-10-01 — A faucet does not qualify a borrowing route (Technical)
+
+- The owner wallet connected to Robinhood testnet 46630 while Crest's reviewed manifest and fork proof targeted mainnet 4663. `cast chain-id` against the official testnet RPC failed TLS hostname validation on this workstation; the official Morpho address list did not identify a Robinhood testnet Blue deployment. Neither observation proves that no testnet route exists, but no 46630 AAPL/USDG market and vault have passed Crest's gate.
+- Rule: qualify tokens, five Morpho market parameters, oracle, liquidity, vault, bytecode, block, and fork independently for each network. A testnet faucet provides gas, not a market. Keep mainnet evidence visible only as historical evidence and block owner signatures until every runtime component uses the same qualified testnet route.
+
+## 2026-10-01 — Resolve manifest paths from the module, not a package command's working directory (Technical)
+
+- `pnpm --filter @crest/api start` runs inside `apps/api`. The read-only API failed with `ENOENT` when `loadDeploymentManifest()` looked for `apps/api/config/deployment-manifest.json`; a module-relative path successfully started the service and served the recorded registry from local PostgreSQL.
+- Rule: package-local commands must resolve checked-in route evidence relative to their own module, not assume the repository root is the process working directory. Keep the account API's same-origin proxy explicit and label its DB results `recorded`, never `live`.
+
+## 2026-09-30 — A signed Guardian attempt outlives its first receipt (Technical)
+
+- Local PostgreSQL integration verified two independent trigger claims using one signer need a partial in-flight unique index; without it, two workers can sign the same pending nonce. The reorg regression also reproduced a later claim slipping through after a conflicting run finished, while the orphan's signed hash was still unresolved.
+- A canonical receipt can later be orphaned. The original signed hash, simulation block hash, receipt block hash, and postcondition block hash must remain separately attributable; keyless reconciliation can append re-mined evidence but must never auto-resend. A claimed trigger's assessment and snapshot may be invalidated before an attempt is persisted.
+- Rule: claim exclusively per signer, persist the hash before send, reject new claims while any signed reorg conflict remains unresolved, and recheck the claimed evidence immediately before persisting an attempt. Retain orphaned receipt/check rows and never auto-resend.
+
+## 2026-09-30 — Protective freezes cannot depend on vault liquidity (Technical)
+
+- Local regressions reproduced `maxWithdrawableStrategyAssets` and `currentDebtAssets` failures aborting an otherwise valid `freezeBorrowing`; another reproduced a debtless degraded account whose monitor requested freeze but Guardian validation rejected it.
+- Rule: read pinned account identity/policy/frozen state for freeze without probing Morpho debt or the vault; debt, reserve, and vault evidence are nullable until needed for repayment. A zero-debt account may still be frozen, but never repaid.
+
+## 2026-09-30 — A replayed block hash must not reuse conflicting observations (Technical)
+
+- Same-block polls could silently reuse position and strategy snapshot IDs when a provider returned different borrow shares or withdrawable assets; focused database regressions reproduced both collisions.
+- Rule: compare every persisted position and strategy field before reusing an immutable snapshot. A conflicting read fails closed rather than attaching stale evidence to a new assessment.
+
+## 2026-09-30 — Viem `getLogs` ignores raw `topics` (Technical)
+
+- The Task 7 indexer passed a `topics` property to viem's public `getLogs`, but viem v2.56.8 did not forward it to `eth_getLogs`. An RPC-capturing regression reproduced empty filters, which would scan entire Morpho and vault contracts each poll.
+- Rule: send `eth_getLogs` with explicit encoded topics and normalize its RPC logs with `formatLog`. Pad indexed account addresses to 32 bytes and filter the actual indexed `onBehalf` or `owner` position, not caller, sender, or receiver.
+
+## 2026-09-29 — Vault withdrawal proceeds are not invested principal (Technical)
+
+- In a regression, 100 deposited assets minted 100 shares; after yield accrual, an 11-asset withdrawal burned only 10 shares. Subtracting all 11 withdrawn assets falsely reported 89 principal instead of 90 for the remaining 90 shares.
+- Rule: reconcile remaining cost basis from the fraction of shares burned, rounding the remaining principal up. Missing or inconsistent share history makes cost basis unknown and disables harvest; only canonical receipt-backed debt reduction counts as realized repayment.
+
+## 2026-09-29 — Policy content identity is not the onchain policy hash (Technical)
+
+- `compilePolicy` computes `contentHash` over canonical typed policy and intents, while `CrestAccount.PolicyConfigured` emits `policyHash = keccak256(abi.encode(PolicyConfig))`; the two hash different inputs and cannot be substituted. Task 7 registry tests verify activation against the emitted ABI hash and separately verify the stored typed content hash.
+- Rule: persist both hashes independently. Only a canonical policy event whose nonce, route, and ABI policy hash match may activate a mirrored policy; an existing row with no verified ABI hash remains inactive.
+
 ## 2026-09-24 — Share rounding can overshoot a bound by one share's value (Technical)
 
 - An independent review reproduced reverts in plans that looked exact. Morpho `borrow(x)` mints `toSharesUp` shares and debt reads back through `toAssetsUp`, so a borrow of the full room overshot target by one unit on a market at about 1e-6 assets per share, and by six units on a market at 6.9 assets per share (`1364023701` assets over `196242494` shares). Vault V2 `withdraw` burns shares rounded up and `CrestAccount` re-checks the strategy floor on the rounded-down quote, so withdrawing exactly `quoted - floor` can revert `StrategyFloorViolation`.

@@ -12,10 +12,11 @@
 | Vault | ERC-4626 interface plus one fixed adapter only if required | Standard shares/assets/withdrawal semantics |
 | Contracts | Solidity + Foundry + OpenZeppelin | Narrow account and invariant/fork proof |
 | API | Hono on Node | Bounded typed HTTP surface |
+| Optional policy drafting | Native Node `fetch` to Groq Chat Completions, no LLM SDK | Two fixed models; strict JSON Schema and domain/compiler validation before owner review |
 | Validation | Zod + generated JSON Schema | Policy and external trust boundaries |
-| Data | Supabase Postgres + Drizzle | Hosted relational audit state, bigint-safe schema, and job leases |
+| Data | Supabase Postgres + Drizzle | Hosted relational audit state, bigint-safe schema, and signer-exclusive Guardian claims |
 | Monitor | Node worker | Block/rate/lifecycle observations and assessments |
-| Guardian | Isolated Node process with viem wallet client | Three fixed debt-protection selectors |
+| Guardian | Isolated Node process with viem local signing | Three fixed debt-protection selectors; one signed hash persisted before a one-shot RPC send |
 | Math | Native bigint + audited Morpho/vault semantics | Exact units and rounding |
 | Tests | Vitest, Foundry, Playwright | Pure, onchain/fork, and user-flow behavior |
 | Observability | Structured logs + OpenTelemetry-compatible metrics | Route/action provenance |
@@ -29,7 +30,7 @@ Pin exact versions, compiler, ABIs, deployment manifest, and rate conventions.
 crest/
 ├─ apps/
 │  ├─ web/                   Next.js App Router shell and owner screens
-│  ├─ api/                   typed read-only route/authority API (Hono)
+│  ├─ api/                   Hono account/route API plus optional untrusted Groq draft endpoint
 │  ├─ monitor/               route-drift observation; market/vault/rate assessment
 │  └─ automation/            isolated Crest Guardian operator CLI
 ├─ packages/
@@ -90,7 +91,14 @@ Use the newest stable **compatible** release, not every newest tag independently
 
 Pin JavaScript packages without range prefixes in the lockfile-backed workspace. Pin Foundry by release/commit and Solidity in `foundry.toml`. Before accepting any refresh, run install, typecheck, build, focused tests, ABI diff, and pinned-fork smoke flow together; “latest” is not evidence of compatibility or safety.
 
+`@crest/automation` reuses the pinned `viem 2.56.8`, `drizzle-orm 0.45.2`, and workspace
+`@crest/chain`, `@crest/contracts`, `@crest/db`, `@crest/domain`, `@crest/morpho`, `@crest/policy`,
+and `@crest/vault` packages. Task 8 adds no new external package or version pin. The signer is an
+ephemeral viem `PrivateKeyAccount`, not a generic wallet executor or additional service.
+
 Primary version sources: [Node releases](https://nodejs.org/en/about/previous-releases), [npm registry](https://www.npmjs.com/), [Supabase CLI releases](https://github.com/supabase/cli/releases), [PostgreSQL versioning](https://www.postgresql.org/support/versioning/), [Solidity releases](https://github.com/argotorg/solidity/releases), and [Foundry releases](https://github.com/foundry-rs/foundry/releases).
+
+Optional policy drafting adds **no package**: Node's native `fetch` calls `https://api.groq.com/openai/v1/chat/completions` using server-only `POLICY_LLM_API_KEY`. Fixed primary `openai/gpt-oss-120b` and fallback `qwen/qwen3.8-27b` both support strict JSON Schema output; GPT-OSS uses `reasoning_effort: low`, Qwen uses `reasoning_effort: none`, and both use `reasoning_format: hidden`. The API validates model output and runs the existing `@crest/policy` compiler. This provider never runs in `@crest/risk`, monitor, Guardian, or the contract. [Groq models](https://console.groq.com/docs/models), [structured outputs](https://console.groq.com/docs/structured-outputs), [reasoning](https://console.groq.com/docs/reasoning).
 
 ### 3.1 Rust decision
 
@@ -304,15 +312,18 @@ Mocks cover failure boundaries; they do not prove the claimed live route.
 ## 12. Deployment topology
 
 ```text
-Web/API deployment
-Monitor deployment without signing key
-Guardian deployment with minimally funded key
-Supabase Postgres
-Robinhood Chain RPC
-Robinhood lifecycle/rate sources
+Vercel             project `crest`, apps/web (Next.js 16, Node 24.x), CLI vercel@62.2.0; /v1/* and /rpc rewrite to the VPS API origin
+Shared VPS         Docker Compose project `crest`, image node:24.21.0-bookworm-slim + pnpm 12.4.1
+  crest-relay-1    scripts/rpc-retry-proxy.ts, cache off, testnet RPC upstream (128 MiB)
+  crest-api-1      apps/api on :8787, no host port (256 MiB)
+  crest-monitor-1  apps/monitor, no signing key (256 MiB)
+  crest-custos-1   apps/automation watch, the only container with the Guardian key (256 MiB)
+  vps-caddy-1      shared Caddy (another project); crest-api.43-129-38-115.nip.io -> API, /rpc -> relay
+Supabase Postgres  session pooler, sslmode=verify-full against the pinned Supabase root CA
+Robinhood Chain RPC, Robinhood lifecycle/rate sources
 ```
 
-Automation starts only after manifest and contract verification. Owner remains a user-controlled wallet.
+`node deploy/vps/deploy.ts` ships `git archive HEAD`, builds one image per commit on the VPS, swaps services only after their health checks pass, and keeps three releases for `--rollback`. Secrets live in `~/crest/{api,monitor,custos}.env` (mode 600), outside every release. Automation starts only after manifest and contract verification. Owner remains a user-controlled wallet.
 
 ## 13. Environment separation
 

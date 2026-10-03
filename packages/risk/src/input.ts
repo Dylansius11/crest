@@ -1,6 +1,6 @@
 import type { Address } from "viem";
 
-import type { FeedRound, PinnedBlock } from "@crest/chain";
+import type { CrestAccountPolicy, FeedRound, PinnedBlock } from "@crest/chain";
 import type { Observation } from "@crest/domain";
 import type { MarketSnapshot, PositionSnapshot } from "@crest/morpho";
 import type { CompiledPolicy } from "@crest/policy";
@@ -17,6 +17,8 @@ export interface AccountState {
   policyNonce: bigint;
   /** Loan-token balance held by the account itself, outside the vault. */
   idleReserveAssets: bigint;
+  /** Exact pinned onchain configuration, when the account reader provides it. */
+  policy?: CrestAccountPolicy;
 }
 
 export interface OracleInputs {

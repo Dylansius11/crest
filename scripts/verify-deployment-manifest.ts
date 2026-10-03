@@ -109,9 +109,16 @@ export async function verifyDeploymentManifestOnline(manifest: DeploymentManifes
     const expected = manifest.contracts[name].decimals;
     recordMismatch(errors, Number(abiUint(await ethCall(rpcUrl, manifest.contracts[name].address, "0x313ce567", stateBlock))), expected, `${name} decimals`);
   }
-  if (abiUint(await ethCall(rpcUrl, manifest.contracts.oracle.address, "0xa035b1fe", stateBlock)) === 0n) errors.push("oracle price is zero");
-  recordMismatch(errors, abiAddress(await ethCall(rpcUrl, manifest.contracts.irm.address, "0x3acb5624", stateBlock)), manifest.contracts.morpho.address, "IRM Morpho binding");
+  // A sandbox oracle may revert (stale or paused mock feed); report it as drift instead of aborting the check.
+  const price = await ethCall(rpcUrl, manifest.contracts.oracle.address, "0xa035b1fe", stateBlock).catch((error: unknown) => error);
+  if (typeof price !== "string") errors.push(`oracle price() reverted: ${price instanceof Error ? price.message : String(price)}`);
+  else if (abiUint(price) === 0n) errors.push("oracle price is zero");
+  // Only a reviewed route uses AdaptiveCurveIrm, which exposes MORPHO(); the sandbox MockIRM has no binding.
+  if (manifest.trust.level === "reviewed") {
+    recordMismatch(errors, abiAddress(await ethCall(rpcUrl, manifest.contracts.irm.address, "0x3acb5624", stateBlock)), manifest.contracts.morpho.address, "IRM Morpho binding");
+  }
   recordMismatch(errors, abiAddress(await ethCall(rpcUrl, manifest.vault.address, "0x38d52e0f", stateBlock)), manifest.contracts.loanToken.address, "vault asset");
+  recordMismatch(errors, abiAddress(await ethCall(rpcUrl, manifest.vault.address, "0xad468d11", stateBlock)), manifest.vault.governance.liquidityAdapter, "vault liquidity adapter");
 
   const account = "0x0000000000000000000000000000000000000001";
   for (const [name, selector] of Object.entries({ maxDeposit: "0x402d267d", maxMint: "0xc63d75b6", maxWithdraw: "0xce96cb77", maxRedeem: "0xd905777e" })) {
@@ -134,7 +141,8 @@ async function main(): Promise<void> {
   const onlineErrors = args.includes("--offline") ? [] : await verifyDeploymentManifestOnline(manifest, rpcUrl);
   if (onlineErrors.length > 0) throw new Error(onlineErrors.join("\n"));
   const source = args.includes("--offline") ? "offline evidence" : "onchain";
-  console.log(`Verified ${manifest.gate.outcome} at Robinhood block ${manifest.evidence.block.number} (${source})`);
+  const trust = manifest.trust.level === "sandbox" ? "SANDBOX " : "";
+  console.log(`Verified ${trust}${manifest.gate.outcome} on chain ${manifest.network.chainId} at block ${manifest.evidence.block.number} (${source})`);
 }
 
 const invokedPath = process.argv[1] ? resolve(process.argv[1]) : "";

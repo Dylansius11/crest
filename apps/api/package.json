@@ -6,14 +6,20 @@
   "scripts": {
     "dev": "node --watch src/server.ts",
     "start": "node src/server.ts",
+    "route:register": "node src/register-route.ts",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run"
   },
   "dependencies": {
+    "@crest/chain": "workspace:*",
     "@crest/contracts": "workspace:*",
+    "@crest/db": "workspace:*",
     "@crest/domain": "workspace:*",
+    "@crest/policy": "workspace:*",
     "@hono/node-server": "2.1.1",
+    "drizzle-orm": "0.45.2",
     "hono": "4.13.8",
+    "viem": "2.56.8",
     "zod": "4.6.4"
   }
 }

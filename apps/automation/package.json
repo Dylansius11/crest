@@ -5,12 +5,19 @@
   "type": "module",
   "scripts": {
     "doctor": "node src/main.ts doctor",
+    "watch": "node src/main.ts watch",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run"
   },
   "dependencies": {
+    "@crest/chain": "workspace:*",
     "@crest/contracts": "workspace:*",
+    "@crest/db": "workspace:*",
     "@crest/domain": "workspace:*",
+    "@crest/morpho": "workspace:*",
+    "@crest/policy": "workspace:*",
+    "@crest/vault": "workspace:*",
+    "drizzle-orm": "0.45.2",
     "viem": "2.56.8"
   }
 }

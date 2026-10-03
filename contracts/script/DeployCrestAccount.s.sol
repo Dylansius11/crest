@@ -21,7 +21,8 @@ contract DeployCrestAccount is Script {
     using SafeCast for uint256;
 
     string internal constant DEFAULT_MANIFEST = "../config/deployment-manifest.json";
-    uint256 internal constant ROBINHOOD_CHAIN_ID = 4663;
+    uint256 internal constant ROBINHOOD_MAINNET_CHAIN_ID = 4663;
+    uint256 internal constant ROBINHOOD_TESTNET_CHAIN_ID = 46630;
     uint256 internal constant BLOCKHASH_HISTORY = 256;
     address internal constant ARBSYS = address(100);
 
@@ -70,7 +71,7 @@ contract DeployCrestAccount is Script {
 
     /// @notice Reads explicit non-secret policy inputs and deploys only after explicit broadcast authorization.
     function run() external returns (CrestAccount account) {
-        account = _deploy(parametersFromEnv(), vm.readFile(DEFAULT_MANIFEST));
+        account = _deploy(parametersFromEnv(), vm.readFile(vm.envOr("DEPLOYMENT_MANIFEST_PATH", DEFAULT_MANIFEST)));
     }
 
     /// @notice Typed entrypoint for reviewable local simulations and deliberately authorized broadcasts.
@@ -115,8 +116,8 @@ contract DeployCrestAccount is Script {
     /// @notice Validates the reviewed manifest against the active chain before account creation/configuration.
     function validateManifest(string memory json) public returns (ManifestRoute memory route) {
         _require(_manifestUint(json, ".schemaVersion") == 1);
+        // The TypeScript validator fixes the supported chains and trust tiers; the script binds to the live chain.
         _require(_manifestUint(json, ".network.chainId") == block.chainid);
-        _require(_same(json.readString(".vault.generation"), "Morpho Vault V2"));
         _require(_same(json.readString(".gate.outcome"), "full_route"));
         _require(_same(json.readString(".gate.marketGate"), "passed"));
         _require(_same(json.readString(".gate.vaultGate"), "passed"));
@@ -135,8 +136,11 @@ contract DeployCrestAccount is Script {
         route.irmCodeHash = json.readBytes32(".contracts.irm.codeHash");
         route.vault = json.readAddress(".vault.address");
         route.vaultCodeHash = json.readBytes32(".vault.codeHash");
-        route.adapter = json.readAddress(".contracts.vaultAdapter.address");
-        route.adapterCodeHash = json.readBytes32(".contracts.vaultAdapter.codeHash");
+        // An idle-only vault has no liquidity adapter; every other vault must name and verify its adapter.
+        if (json.readAddress(".vault.governance.liquidityAdapter") != address(0)) {
+            route.adapter = json.readAddress(".contracts.vaultAdapter.address");
+            route.adapterCodeHash = json.readBytes32(".contracts.vaultAdapter.codeHash");
+        }
         route.market = MarketParams({
             loanToken: json.readAddress(".market.loanToken"),
             collateralToken: json.readAddress(".market.collateralToken"),
@@ -155,7 +159,7 @@ contract DeployCrestAccount is Script {
         _verifiedCode(route.oracle, route.oracleCodeHash);
         _verifiedCode(route.irm, route.irmCodeHash);
         _verifiedCode(route.vault, route.vaultCodeHash);
-        _verifiedCode(route.adapter, route.adapterCodeHash);
+        if (route.adapter != address(0)) _verifiedCode(route.adapter, route.adapterCodeHash);
         _require(route.market.loanToken == route.loanToken);
         _require(route.market.collateralToken == route.collateralToken);
         _require(route.market.oracle == route.oracle);
@@ -184,7 +188,7 @@ contract DeployCrestAccount is Script {
 
     function _authorizeBroadcast() internal view {
         if (!vm.envOr("CREST_BROADCAST", false)) revert BroadcastFlagRequired();
-        if (block.chainid == ROBINHOOD_CHAIN_ID && !vm.envOr("CREST_ALLOW_MAINNET_BROADCAST", false)) {
+        if (block.chainid == ROBINHOOD_MAINNET_CHAIN_ID && !vm.envOr("CREST_ALLOW_MAINNET_BROADCAST", false)) {
             revert MainnetBroadcastNotAuthorized();
         }
     }
@@ -199,7 +203,7 @@ contract DeployCrestAccount is Script {
         // Public nodes prune old state, so the lifecycle proof runs at or after the finalized evidence block.
         _require(forkBlock >= route.evidenceBlock && forkHash != bytes32(0));
 
-        if (block.chainid != ROBINHOOD_CHAIN_ID) {
+        if (block.chainid != ROBINHOOD_MAINNET_CHAIN_ID && block.chainid != ROBINHOOD_TESTNET_CHAIN_ID) {
             _require(forkHash == route.evidenceBlockHash && forkBlock == route.evidenceBlock);
             _require(route.evidenceBlock < block.number);
             _require(block.number - route.evidenceBlock <= BLOCKHASH_HISTORY);
@@ -226,6 +230,7 @@ contract DeployCrestAccount is Script {
         _require(json.readAddress(".vault.governance.liquidityAdapter") == route.adapter);
         _require(vault.asset() == route.loanToken);
         _require(vault.liquidityAdapter() == route.adapter);
+        if (route.adapter == address(0)) return bytes32(0);
         _require(vault.isAdapter(route.adapter));
 
         bytes memory data = vault.liquidityData();

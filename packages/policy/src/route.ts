@@ -19,7 +19,7 @@ export interface VerifiedRouteContext {
   vault: Address;
   tokens: { collateralDecimals: number; loanDecimals: number };
   /** The Chainlink feeds inside the market oracle: the inputs to Crest's own feed-only valuation. */
-  feeds: { collateral: Address; loan: Address };
+  feeds: { collateral: Address; loan: Address | null };
 }
 
 function evidence(manifest: DeploymentManifest, name: string): { address: Address; decimals: number | undefined } {
@@ -51,6 +51,9 @@ export function routeContextOf(manifest: DeploymentManifest, deployment: { accou
     market: params,
     vault,
     tokens: { collateralDecimals: collateral.decimals, loanDecimals: loan.decimals },
-    feeds: { collateral: evidence(manifest, "collateralFeed").address, loan: evidence(manifest, "loanFeed").address },
+    feeds: {
+      collateral: evidence(manifest, "collateralFeed").address,
+      loan: manifest.contracts.loanFeed === undefined ? null : evidence(manifest, "loanFeed").address,
+    },
   };
 }

@@ -5,8 +5,10 @@ import { parseArgs } from "node:util";
 import { getAddress } from "viem";
 import type { Address } from "viem";
 
-import { createRobinhoodClient, pinBlock, readCodeHash, readFeed, readMarketOraclePrice } from "@crest/chain";
+import { createRobinhoodClient, onchainAt, pinBlock, readCodeHash, readFeed, readMarketOraclePrice } from "@crest/chain";
+import type { FeedRound } from "@crest/chain";
 import { loadDeploymentManifest } from "@crest/contracts/manifest/file";
+import { observe } from "@crest/domain";
 import type { Fetch, Observation, ReasonCode } from "@crest/domain";
 import { morphoRouteOf, readMarket, readPosition } from "@crest/morpho";
 import {
@@ -30,7 +32,7 @@ import {
 import { readVault, readVaultPosition, simulateWithdrawal, vaultRouteOf } from "@crest/vault";
 
 /**
- * Read-only adapter smoke against the reviewed manifest at one pinned Robinhood block.
+ * Read-only adapter smoke against the active deployment manifest at one pinned Robinhood block.
  *
  * Nothing here signs or sends. Every adapter runs once against live state and its full observation, including
  * provenance and reasons, is written to `--out`. Exits non-zero when any identity or route check fails, so a
@@ -58,7 +60,7 @@ if (!args.borrower || !args["vault-holder"]) throw new Error("--borrower and --v
 const borrower = getAddress(args.borrower);
 const vaultHolder = getAddress(args["vault-holder"]);
 const ROBINHOOD_API = process.env.ROBINHOOD_API_BASE_URL ?? "https://api.robinhood.com/rhj";
-/** Chainlink directory (feeds-robinhood-mainnet.json): AAPL/USD and USDG/USD both publish a 86400 s heartbeat. */
+/** The selected manifest's feeds may be unavailable; an absent loan feed degrades rather than being invented. */
 const FEED_HEARTBEAT_SECONDS = 86_400n;
 
 async function resolveOverDoh(host: string): Promise<string> {
@@ -98,8 +100,12 @@ const fetchFn: Fetch = args.doh ? dohFetch : (url, init) => fetch(url, init);
 const now = () => new Date();
 
 const manifest = await loadDeploymentManifest();
-const client = createRobinhoodClient(rpcUrl);
-const pinned = await pinBlock(client, { nowSeconds: BigInt(Math.floor(Date.now() / 1000)), maxHeadLagSeconds: 120n });
+const client = createRobinhoodClient(rpcUrl, manifest.network.chainId);
+const pinned = await pinBlock(client, {
+  nowSeconds: BigInt(Math.floor(Date.now() / 1000)),
+  maxHeadLagSeconds: 120n,
+  expectedChainId: manifest.network.chainId,
+});
 if (pinned.value === null) throw new Error("could not pin a Robinhood block");
 const { block } = pinned.value;
 const reference = { headBlock: block.number, maxIndexLagBlocks: 1_200n };
@@ -123,7 +129,9 @@ const position = market.value === null ? null : await readPosition(client, block
 const [oraclePrice, collateralFeed, loanFeed, stockToken] = await Promise.all([
   readMarketOraclePrice(client, block, morphoRoute.params.oracle),
   readFeed(client, block, contract("collateralFeed"), FEED_HEARTBEAT_SECONDS),
-  readFeed(client, block, contract("loanFeed"), FEED_HEARTBEAT_SECONDS),
+  manifest.contracts.loanFeed === undefined
+    ? Promise.resolve(observe<FeedRound>(null, onchainAt(block, manifest.network.chainId)))
+    : readFeed(client, block, contract("loanFeed"), FEED_HEARTBEAT_SECONDS),
   readStockToken(client, block, morphoRoute.params.collateralToken),
 ]);
 

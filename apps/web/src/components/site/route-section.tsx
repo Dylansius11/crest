@@ -1,28 +1,19 @@
-import { Badge } from "@/components/ui/badge";
-import { Cell, CellLabel, Fact } from "@/components/ui/cell";
-import { forkProof, routeFacts } from "@/lib/content";
+import { Cell, Fact } from "@/components/ui/cell";
+import { forkProof, marketLltvPercent, oracleFacts, routeFacts } from "@/lib/content";
 
-/**
- * Route section: the receipt, not a pitch. Exact market id, contract names,
- * addresses, and the pinned-fork lifecycle outcome, laid out as numbered
- * technical cells on blueprint paper.
- */
+/** Archived reviewed mainnet route evidence, not the signing route. */
 export function RouteSection() {
   return (
     <section id="route" className="paper-grid relative bg-paper px-5 py-24 sm:px-10">
-      <div className="mb-10 flex flex-wrap items-end justify-between gap-6">
-        <div>
-          <CellLabel>02 · The route</CellLabel>
-          <h2 className="type-display mt-4 max-w-3xl text-poster-lg text-ink sm:text-poster-xl">
-            One market. Pinned, forked, and proven before it ever touches your
-            account.
-          </h2>
-        </div>
-        <Badge tone="verified" data-reveal="chip">Gate passed · full route</Badge>
+      <div className="mb-10">
+        <h2 data-reveal="headline" className="type-display max-w-3xl text-poster-lg text-ink sm:text-poster-xl">
+          The reviewed mainnet route, archived.
+        </h2>
+        <p className="mt-4 max-w-2xl text-base text-ink-soft">This pinned fork and these market facts describe Robinhood Chain mainnet evidence. The account you can open today signs on testnet, with test tokens, a mock oracle, and an idle-only vault.</p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Cell index="A" meta={routeFacts.chain} data-reveal="cell">
+        <Cell meta={routeFacts.chain} data-reveal="cell">
           <div className="p-6">
             <h3 className="type-display text-poster-md text-ink">Morpho market</h3>
             <dl className="mt-4">
@@ -30,12 +21,21 @@ export function RouteSection() {
               <Fact label="Collateral">{routeFacts.collateral} Stock Token</Fact>
               <Fact label="Loan token">{routeFacts.loanToken}</Fact>
               <Fact label="Oracle">{routeFacts.oracle}</Fact>
-              <Fact label="LLTV">{(Number("625000000000000000") / 1e18) * 100}%</Fact>
+              <Fact label="Morpho LLTV">{marketLltvPercent.toFixed(1)}%</Fact>
+              <Fact label="Morpho oracle value">{oracleFacts.morphoValue} USDG / AAPL</Fact>
+              <Fact label="Feed-only reference">{oracleFacts.feedOnlyValue} USDG / AAPL</Fact>
             </dl>
+            <p className="mt-4 max-w-prose text-poster-sm text-ink-soft">
+              Recorded at block {oracleFacts.observedBlock}. Morpho&apos;s oracle is
+              the value used for debt capacity and liquidation. The feed-only
+              reference is a divergence check, not a second multiplier. This
+              market&apos;s oracle includes the Stock Token UI multiplier beyond
+              the feed ratio; applying it again here would overstate collateral.
+            </p>
           </div>
         </Cell>
 
-        <Cell index="B" meta={`chain ${routeFacts.chainId}`} data-reveal="cell">
+        <Cell meta={`chain ${routeFacts.chainId}`} data-reveal="cell">
           <div className="p-6">
             <h3 className="type-display text-poster-md text-ink">Strategy vault</h3>
             <dl className="mt-4">
@@ -49,22 +49,16 @@ export function RouteSection() {
         </Cell>
       </div>
 
-      <Cell
-        className="mt-6"
-        index="C"
-        meta={`Foundry fork · block ${forkProof.block}`}
-        data-reveal="cell"
-      >
+      <Cell className="mt-6" meta={`Foundry fork · block ${forkProof.block}`} data-reveal="cell">
         <div className="grid gap-6 p-6 md:grid-cols-[1fr_auto] md:items-center">
           <div>
             <h3 className="type-display text-poster-md text-ink">
-              The lifecycle ran on a live fork before the gate opened
+              The lifecycle passed on a pinned fork
             </h3>
             <p className="mt-2 max-w-2xl text-poster-sm text-ink-soft">
               Supply, owner borrow-and-deploy, Guardian strategy repayment, and
-              owner exit executed at Robinhood block {forkProof.block}. Both
-              lifecycles had to pass. Nothing on this page describes a
-              simulation of that run; it is the recorded run.
+              owner exit were exercised against Robinhood state at block {forkProof.block}.
+              This is fork evidence, not a live account or transaction receipt.
             </p>
           </div>
           <dl className="grid grid-cols-2 gap-px border border-ink bg-ink">

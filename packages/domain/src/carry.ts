@@ -1,10 +1,10 @@
 import { z } from "zod";
 import { hashSchema } from "./identity.ts";
-import { baseUnitsSchema, basisPointsSchema, blockNumberSchema } from "./units.ts";
+import { baseUnitsSchema, basisPointsSchema, blockNumberSchema, integerStringSchema } from "./units.ts";
 
 export const projectedCarrySchema = z.strictObject({
   kind: z.literal("projected"),
-  annualCarryAssets: baseUnitsSchema,
+  annualCarryAssets: integerStringSchema.transform(BigInt),
   spreadBps: basisPointsSchema,
   observedAt: z.iso.datetime({ offset: true }),
 });

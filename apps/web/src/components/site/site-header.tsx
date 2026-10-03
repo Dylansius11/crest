@@ -1,27 +1,16 @@
 import { ButtonLink } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
-import { routeFacts } from "@/lib/content";
 
-/**
- * Poster header. Wordmark left at poster scale, evidence chip and owner CTA
- * right. Never sticky: the page scrolls like print.
- */
 export function SiteHeader() {
   return (
-    <header className="blue-field flex flex-col gap-4 px-5 pt-6 pb-2 sm:flex-row sm:items-center sm:justify-between sm:px-10">
-      <Logo priority height={64} className="h-12 sm:h-16" />
-      <nav aria-label="Primary" className="flex items-center gap-3">
-        <span className="type-display hidden border border-paper/70 px-3 py-2 text-poster-sm text-paper uppercase md:inline-flex">
-          {routeFacts.chain} · block {routeFacts.block}
-        </span>
-        <ButtonLink
-          href="#route"
-          variant="flame"
-          className="shadow-[4px_4px_0_0_var(--color-ink)]"
-        >
-          View the route
-        </ButtonLink>
-      </nav>
+    <header className="blue-field px-5 py-3 sm:px-10">
+      <div className="mx-auto flex max-w-[85rem] items-center justify-between gap-4">
+        <a href="/" aria-label="Crest home"><Logo priority height={56} className="h-12 sm:h-14" /></a>
+        <nav aria-label="Primary" className="flex items-center gap-3">
+          <a href="#proof" className="hidden min-h-11 items-center text-sm text-paper underline-offset-4 hover:underline focus-visible:underline sm:inline-flex">Proof</a>
+          <ButtonLink href="/account" variant="paper" className="whitespace-nowrap transition-transform duration-150 active:scale-[0.97]">Open your account</ButtonLink>
+        </nav>
+      </div>
     </header>
   );
 }

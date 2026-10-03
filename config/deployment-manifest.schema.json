@@ -1,10 +1,31 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://crest.local/schemas/deployment-manifest.schema.json",
-  "title": "Crest verified deployment manifest",
+  "title": "Crest deployment manifest: one chain-tagged route with its trust tier",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "network", "evidence", "sources", "contracts", "market", "vault", "rates", "forkProof", "gate", "integrity"],
+  "required": ["schemaVersion", "network", "trust", "evidence", "sources", "contracts", "market", "vault", "rates", "forkProof", "gate", "integrity"],
+  "allOf": [
+    {
+      "if": { "properties": { "network": { "properties": { "chainId": { "const": 4663 } } } } },
+      "then": {
+        "properties": {
+          "network": { "properties": { "name": { "const": "Robinhood Chain" } } },
+          "trust": { "properties": { "level": { "const": "reviewed" } } },
+          "contracts": { "required": ["vault", "vaultAdapter", "collateralFeed", "loanFeed"] }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "network": { "properties": { "chainId": { "const": 46630 } } } } },
+      "then": {
+        "properties": {
+          "network": { "properties": { "name": { "const": "Robinhood Chain Testnet" } } },
+          "trust": { "properties": { "level": { "const": "sandbox" }, "disclosures": { "minItems": 1 } } }
+        }
+      }
+    }
+  ],
   "properties": {
     "schemaVersion": { "const": 1 },
     "network": {
@@ -12,10 +33,19 @@
       "additionalProperties": false,
       "required": ["name", "chainId", "rpcUrl", "explorerUrl"],
       "properties": {
-        "name": { "const": "Robinhood Chain" },
-        "chainId": { "const": 4663 },
+        "name": { "enum": ["Robinhood Chain", "Robinhood Chain Testnet"] },
+        "chainId": { "enum": [4663, 46630] },
         "rpcUrl": { "type": "string", "format": "uri" },
         "explorerUrl": { "type": "string", "format": "uri" }
+      }
+    },
+    "trust": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["level", "disclosures"],
+      "properties": {
+        "level": { "enum": ["reviewed", "sandbox"] },
+        "disclosures": { "type": "array", "items": { "type": "string", "minLength": 1 } }
       }
     },
     "evidence": {
@@ -42,7 +72,7 @@
     "contracts": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["morpho", "loanToken", "collateralToken", "oracle", "irm", "vault", "vaultAdapter", "collateralFeed", "loanFeed"],
+      "required": ["morpho", "loanToken", "collateralToken", "oracle", "irm"],
       "properties": {
         "morpho": { "$ref": "#/$defs/contract" },
         "loanToken": { "$ref": "#/$defs/contract" },
@@ -90,9 +120,9 @@
             "collateralRound": { "$ref": "#/$defs/uint" },
             "collateralAnswer": { "$ref": "#/$defs/uint" },
             "collateralUpdatedAt": { "$ref": "#/$defs/uint" },
-            "loanRound": { "$ref": "#/$defs/uint" },
-            "loanAnswer": { "$ref": "#/$defs/uint" },
-            "loanUpdatedAt": { "$ref": "#/$defs/uint" },
+            "loanRound": { "$ref": "#/$defs/nullableUint" },
+            "loanAnswer": { "$ref": "#/$defs/nullableUint" },
+            "loanUpdatedAt": { "$ref": "#/$defs/nullableUint" },
             "checkedAtBlockTimestamp": { "$ref": "#/$defs/uint" }
           }
         },
@@ -231,7 +261,7 @@
       "additionalProperties": false,
       "required": ["tool", "rpcSource", "headerNormalization", "blockNumber", "blockHash", "morphoLifecycle", "vaultLifecycle", "morpho", "vault"],
       "properties": {
-        "tool": { "enum": ["Foundry 1.8.1", "Anvil 1.8.1"] },
+        "tool": { "enum": ["Foundry 1.8.1", "Anvil 1.8.1", "Foundry 1.8.3"] },
         "rpcSource": { "type": "string", "format": "uri" },
         "headerNormalization": { "type": "string", "minLength": 1 },
         "blockNumber": { "$ref": "#/$defs/uint" },
@@ -294,6 +324,7 @@
     "address": { "type": "string", "pattern": "^0x[0-9a-fA-F]{40}$" },
     "hash": { "type": "string", "pattern": "^0x[0-9a-fA-F]{64}$" },
     "uint": { "type": "string", "pattern": "^(0|[1-9][0-9]*)$" },
+    "nullableUint": { "type": ["string", "null"], "pattern": "^(0|[1-9][0-9]*)$" },
     "contract": {
       "type": "object",
       "additionalProperties": false,
