@@ -130,6 +130,25 @@ export type LiveAccountState = {
   reserveAssets: bigint | null;
   strategyAssets: bigint | null;
   withdrawableStrategyAssets: bigint | null;
+  /** The policy the account enforces at this block; null when the read failed, never a default. */
+  policy: LivePolicy | null;
+};
+
+export type LivePolicy = {
+  nonce: bigint;
+  maxCollateralAssets: bigint;
+  debtCeilingAssets: bigint;
+  maxStrategyAssets: bigint;
+  reserveFloorAssets: bigint;
+  strategyFloorAssets: bigint;
+  maxRepayPerActionAssets: bigint;
+  lowerLtvWad: bigint;
+  targetLtvWad: bigint;
+  upperLtvWad: bigint;
+  criticalLtvWad: bigint;
+  /** Morpho's liquidation LTV for the one market; set by Morpho, not by the owner. */
+  lltvWad: bigint;
+  guardian: Address;
 };
 
 export type TransactionEvidence = {

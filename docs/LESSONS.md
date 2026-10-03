@@ -25,6 +25,12 @@ Rules for this file:
 
 ---
 
+## 2026-10-03 — A custom-error revert without its ABI reads as "unknown reason" (Technical)
+
+- The owner simulated a second 20 USDG borrow on top of 20 USDG of debt under a 30 USDG ceiling. The account reverted with `DebtCeilingExceeded(cap, resulting)`, but the sheet said "Execution reverted for an unknown reason" because the simulation decoded only viem's short message. The recorded snapshot carries no caps, so the sheet and the Rules tab could not show the ceiling either.
+- viem names a custom error only when the call's ABI includes it; the revert data still sits on the RPC cause.
+- Rule: decode simulation reverts against the full Crest Account ABI and state cap errors in token units. Read limits that exist only onchain (caps, Custos address, Morpho LLTV) from `policy()` at a block, never from a snapshot that does not hold them.
+
 ## 2026-10-03 — A once-loaded record and a per-load wallet id broke the owner's live run (Technical)
 
 - In the owner's first live run on `/account`, the Exit panel's live read showed borrowing open at block 128106223. The headline still said "Borrowing is frozen" from the snapshot at block 128103774, because the page fetched `/v1/accounts/:address/position` once per selected account and never again.

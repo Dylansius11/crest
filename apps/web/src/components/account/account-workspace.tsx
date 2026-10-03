@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  BaseError,
   createWalletClient,
   custom,
   encodeFunctionData,
@@ -31,6 +30,7 @@ import { activeManifest, activeTokens } from "@/lib/manifest";
 import type { RouteToken } from "@/lib/manifest";
 import { positionHeadline } from "@/lib/position-headline";
 import { isOwnerSigningEnabled } from "@/lib/transaction-route";
+import { revertReason } from "@/lib/revert-reason";
 import { DeployPanel } from "./deploy-panel";
 import { EntryPanel } from "./entry-panel";
 import { ExitPanel } from "./exit-panel";
@@ -53,6 +53,7 @@ const ERC20_ABI = parseAbi([
 const ACCOUNT_READ_ABI = parseAbi([
   "function owner() view returns (address)",
   "function policyNonce() view returns (uint64)",
+  "function policy() view returns (((address loanToken, address collateralToken, address oracle, address irm, uint256 lltv) market, address yieldVault, uint128 maxCollateralAssets, uint128 debtCeilingAssets, uint128 maxStrategyAssets, uint128 reserveFloorAssets, uint128 strategyFloorAssets, uint128 maxRepayPerActionAssets, uint64 lowerLtvWad, uint64 targetLtvWad, uint64 upperLtvWad, uint64 criticalLtvWad, address guardian))",
   "function borrowingFrozen() view returns (bool)",
   "function currentDebtAssets() view returns (uint256)",
   "function idleReserveAssets() view returns (uint256)",
@@ -165,12 +166,6 @@ function decimalOrThrow(value: string, decimals: number, label: string): bigint 
   return parseUnits(value.trim(), decimals);
 }
 
-/** viem's short message names the revert; its full message repeats the whole request. */
-function errorText(error: unknown): string {
-  if (error instanceof BaseError) return error.shortMessage;
-  return error instanceof Error ? error.message : "unknown error";
-}
-
 export function AccountWorkspace() {
   const [wallet, setWallet] = useState<WalletState>({ kind: "disconnected" });
   const [walletPickerOpen, setWalletPickerOpen] = useState(false);
@@ -208,13 +203,15 @@ export function AccountWorkspace() {
     setLiveNotice("Reading live account state from the chain.");
     try {
       const blockNumber = await publicClient.getBlockNumber();
-      const [frozen, debt, reserve, strategy, withdrawable, morphoPosition] = await Promise.allSettled([
+      const [frozen, debt, reserve, strategy, withdrawable, morphoPosition, policy, policyNonce] = await Promise.allSettled([
         publicClient.readContract({ address: account, abi: ACCOUNT_READ_ABI, functionName: "borrowingFrozen", blockNumber }),
         publicClient.readContract({ address: account, abi: ACCOUNT_READ_ABI, functionName: "currentDebtAssets", blockNumber }),
         publicClient.readContract({ address: account, abi: ACCOUNT_READ_ABI, functionName: "idleReserveAssets", blockNumber }),
         publicClient.readContract({ address: account, abi: ACCOUNT_READ_ABI, functionName: "strategyAssets", blockNumber }),
         publicClient.readContract({ address: account, abi: ACCOUNT_READ_ABI, functionName: "maxWithdrawableStrategyAssets", blockNumber }),
         publicClient.readContract({ address: morphoAddress, abi: MORPHO_ABI, functionName: "position", args: [marketId, account], blockNumber }),
+        publicClient.readContract({ address: account, abi: ACCOUNT_READ_ABI, functionName: "policy", blockNumber }),
+        publicClient.readContract({ address: account, abi: ACCOUNT_READ_ABI, functionName: "policyNonce", blockNumber }),
       ]);
       if (request !== liveRequest.current) return;
       setLiveState({
@@ -225,9 +222,25 @@ export function AccountWorkspace() {
         strategyAssets: strategy.status === "fulfilled" ? strategy.value : null,
         withdrawableStrategyAssets: withdrawable.status === "fulfilled" ? withdrawable.value : null,
         collateralAssets: morphoPosition.status === "fulfilled" ? morphoPosition.value[2] : null,
+        policy: policy.status === "fulfilled" && policyNonce.status === "fulfilled" ? {
+          nonce: policyNonce.value,
+          maxCollateralAssets: policy.value.maxCollateralAssets,
+          debtCeilingAssets: policy.value.debtCeilingAssets,
+          maxStrategyAssets: policy.value.maxStrategyAssets,
+          reserveFloorAssets: policy.value.reserveFloorAssets,
+          strategyFloorAssets: policy.value.strategyFloorAssets,
+          maxRepayPerActionAssets: policy.value.maxRepayPerActionAssets,
+          lowerLtvWad: policy.value.lowerLtvWad,
+          targetLtvWad: policy.value.targetLtvWad,
+          upperLtvWad: policy.value.upperLtvWad,
+          criticalLtvWad: policy.value.criticalLtvWad,
+          lltvWad: policy.value.market.lltv,
+          guardian: policy.value.guardian,
+        } : null,
       });
-      const failed = [frozen, debt, reserve, strategy, withdrawable, morphoPosition].filter((result) => result.status === "rejected").length;
-      setLiveNotice(failed === 0 ? `Read directly from the chain at block ${blockNumber}.` : `Read at block ${blockNumber}; ${failed} of 6 reads failed and show as unavailable.`);
+      const reads = [frozen, debt, reserve, strategy, withdrawable, morphoPosition, policy, policyNonce];
+      const failed = reads.filter((result) => result.status === "rejected").length;
+      setLiveNotice(failed === 0 ? `Read directly from the chain at block ${blockNumber}.` : `Read at block ${blockNumber}; ${failed} of ${reads.length} reads failed and show as unavailable.`);
     } catch (error) {
       if (request !== liveRequest.current) return;
       setLiveState(null);
@@ -545,7 +558,7 @@ export function AccountWorkspace() {
       setTransaction({ phase: "signature-ready", action: next.action, detail: `${next.detail} Simulation succeeded at the shown block. Owner signature has not been requested.`, recipient: next.to, calldata: next.data, selector: next.selector, gas, blockNumber: block.number, blockHash: block.hash });
     } catch (error) {
       setPrepared(null);
-      setTransaction({ phase: "simulation-failed", action: next.action, detail: `Simulation failed: ${errorText(error)}`, recipient: next.to, calldata: next.data, selector: next.selector });
+      setTransaction({ phase: "simulation-failed", action: next.action, detail: `Simulation failed: ${revertReason(error)}`, recipient: next.to, calldata: next.data, selector: next.selector });
     }
   }, [verifyAccount]);
 
@@ -834,9 +847,9 @@ export function AccountWorkspace() {
     } catch (error) {
       const broadcastHash = submittedHash;
       if (broadcastHash === null) {
-        setTransaction((current) => ({ ...current, phase: "blocked", detail: `Signature or preflight did not complete, and nothing was broadcast: ${errorText(error)}` }));
+        setTransaction((current) => ({ ...current, phase: "blocked", detail: `Signature or preflight did not complete, and nothing was broadcast: ${revertReason(error)}` }));
       } else {
-        setTransaction((current) => ({ ...current, phase: "reconciliation-failed", hash: broadcastHash, detail: `Receipt reconciliation failed: ${errorText(error)}. The submitted hash needs explicit review before another owner action.` }));
+        setTransaction((current) => ({ ...current, phase: "reconciliation-failed", hash: broadcastHash, detail: `Receipt reconciliation failed: ${revertReason(error)}. The submitted hash needs explicit review before another owner action.` }));
       }
     }
   }, [degradedAcknowledged, gate, prepared, refreshBalances, refreshLiveState, selectedAddress, transaction.gas, transaction.phase, verifyAccount, wallet]);
@@ -907,13 +920,13 @@ export function AccountWorkspace() {
         onSwitchNetwork={() => {
           const provider = providerOf();
           if (!provider) return;
-          switchToActiveChain(provider).catch((error: unknown) => setRegistryNotice(`Network switch was not completed: ${errorText(error)}`));
+          switchToActiveChain(provider).catch((error: unknown) => setRegistryNotice(`Network switch was not completed: ${revertReason(error)}`));
         }}
         onBeginConfiguration={() => setSetupInProgress(true)}
         onFinish={() => { setSetupInProgress(false); if (wallet.kind === "connected") void refreshRegistry(wallet.address); }} /> : null}
-      {mode === "dashboard" || mode === "inspect" ? <AccountDashboard position={position} selectedAccount={selectedAccount} positionNotice={positionNotice}
+      {mode === "dashboard" || mode === "inspect" ? <AccountDashboard position={position} live={liveState} selectedAccount={selectedAccount} positionNotice={positionNotice}
         nowMs={nowMs} headline={headline} inspect={mode === "inspect"} inventory={inventoryView} entry={entryView} exit={exitView} policy={policyView} /> : null}
-      <ReviewSheet account={selectedAddress} owner={wallet.kind === "connected" ? wallet.address : null} position={position} transaction={transaction}
+      <ReviewSheet account={selectedAddress} owner={wallet.kind === "connected" ? wallet.address : null} position={position} live={liveState} transaction={transaction}
         prepared={prepared !== null} blockedReason={preparedBlockedReason}
         onSimulateConfiguration={() => { if (prepared?.action === "configure") void simulatePrepared(prepared); }}
         onSubmitPrepared={() => void submitPrepared()} />

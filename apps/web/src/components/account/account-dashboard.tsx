@@ -2,26 +2,25 @@
 
 import { useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
-import { Cell, Fact } from "@/components/ui/cell";
-import { activeTokens } from "@/lib/manifest";
 import type { PositionHeadline } from "@/lib/position-headline";
 import { AccountEvidence } from "./account-evidence";
 import { CapitalPanel } from "./capital-panel";
 import { CarryPanel } from "./carry-panel";
+import { CurrentLimits } from "./current-limits";
 import { GuardianStateCard } from "./guardian-state-card";
 import { KeyStrip } from "./key-strip";
 import { LtvBandPanel } from "./ltv-band-panel";
 import { RealizedCard } from "./realized-card";
 import { StatusHeadline } from "./status-headline";
-import { compactAddress, decimal, percentFromWad } from "./format";
+import { compactAddress } from "./format";
 import type { ReactNode } from "react";
-import type { RecordedAccount, RecordedPosition } from "./types";
+import type { LiveAccountState, RecordedAccount, RecordedPosition } from "./types";
 
 type Tab = "overview" | "manage" | "rules" | "evidence";
-const { loan } = activeTokens;
 
-export function AccountDashboard({ position, selectedAccount, positionNotice, nowMs, headline, inspect, inventory, entry, exit, policy }: {
+export function AccountDashboard({ position, live, selectedAccount, positionNotice, nowMs, headline, inspect, inventory, entry, exit, policy }: {
   position: RecordedPosition | null;
+  live: LiveAccountState | null;
   selectedAccount: RecordedAccount | null;
   positionNotice: string;
   nowMs: number;
@@ -55,15 +54,7 @@ export function AccountDashboard({ position, selectedAccount, positionNotice, no
       </div> : <div className="border border-ink p-5 text-sm" role="status">{position === null ? positionNotice : "The monitor has not recorded a snapshot for this account yet. Values stay unavailable, not zero."}</div> : null}
       {currentTab === "manage" && !inspect ? <div className="grid gap-5">{inventory}<div className="grid min-w-0 items-start gap-5 lg:grid-cols-2">{entry}{exit}</div></div> : null}
       {currentTab === "rules" ? <div className="grid min-w-0 items-start gap-5 lg:grid-cols-[minmax(0,4fr)_minmax(0,6fr)]">
-        <Cell index="Current limits" meta={snapshot ? `Policy ${position?.account.policyNonce}` : "Not recorded"} className="bg-paper"><dl className="p-5">
-          <Fact label="Lower LTV">{percentFromWad(snapshot?.lowerLtvWad)}</Fact>
-          <Fact label="Target LTV">{percentFromWad(snapshot?.targetLtvWad)}</Fact>
-          <Fact label="Upper LTV">{percentFromWad(snapshot?.upperLtvWad)}</Fact>
-          <Fact label="Critical LTV">{percentFromWad(snapshot?.criticalLtvWad)}</Fact>
-          <Fact label="Reserve floor">{decimal(snapshot?.reserveFloorAssets, loan.decimals, loan.symbol)}</Fact>
-          <Fact label="Vault floor">{decimal(snapshot?.strategyFloorAssets, loan.decimals, loan.symbol)}</Fact>
-          <Fact label="Maximum Custos repayment per action">{decimal(snapshot?.maxRepayPerActionAssets, loan.decimals, loan.symbol)}</Fact>
-        </dl></Cell>
+        <CurrentLimits live={live} position={position} />
         {inspect ? <p className="border-t border-ink pt-4 text-sm text-ink-soft">These limits are read-only. Only the account owner can change them with a wallet signature.</p> : policy}
       </div> : null}
       {currentTab === "evidence" ? <AccountEvidence position={position} selectedAccount={selectedAccount} positionNotice={positionNotice} /> : null}
