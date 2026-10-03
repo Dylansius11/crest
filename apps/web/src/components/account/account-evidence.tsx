@@ -43,7 +43,7 @@ export function AccountEvidence({ position, selectedAccount, positionNotice }: {
   return (
     <section id="evidence" aria-label="Evidence and permissions" className="space-y-5 scroll-mt-6">
       <div className="flex flex-col justify-between gap-2 border-b border-ink pb-3 sm:flex-row sm:items-end">
-        <div><p className="type-display text-poster-sm text-ink-soft">06 / Verification</p><h2 className="type-display text-poster-lg">Inspect the evidence</h2></div>
+        <h2 className="type-display text-poster-lg">Inspect the evidence</h2>
         <p className="max-w-md text-sm text-ink-soft">Who may act, the exact route re-read live, and where every assessed input came from.</p>
       </div>
       <PermissionInspector />

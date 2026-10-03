@@ -1,5 +1,6 @@
 import { AccountWorkspace } from "@/components/account/account-workspace";
 import { ButtonLink } from "@/components/ui/button";
+import { Logo } from "@/components/ui/logo";
 import { activeManifest } from "@/lib/manifest";
 import { isOwnerSigningEnabled } from "@/lib/transaction-route";
 
@@ -12,15 +13,14 @@ export default function AccountPage() {
     <main className="min-h-screen bg-paper text-ink">
       <header className="blue-field blue-grid border-b border-ink px-5 py-8 sm:px-10">
         <div className="mx-auto max-w-4xl">
-          <p className="type-display text-poster-base">Crest / Owner workspace</p>
-          <p className="mt-6 font-mono text-sm uppercase tracking-wider">{network.name} · chain {network.chainId}</p>
-          <h1 className="mt-3 type-display text-poster-lg sm:text-poster-xl">Registered evidence. Signing is off.</h1>
-          <p className="mt-4 max-w-2xl text-base">This build binds the owner workspace to a route that may be read but not signed against. No wallet transaction can be prepared here.</p>
+          <a href="/" aria-label="Crest home" className="inline-flex min-h-14 items-center"><Logo height={56} priority /></a>
+          <h1 className="mt-6 type-display text-poster-lg sm:text-poster-xl">This route is read-only.</h1>
+          <p className="mt-4 max-w-2xl text-base">The selected route is recorded evidence. Owner signing is unavailable here.</p>
         </div>
       </header>
       <section className="mx-auto grid max-w-4xl gap-6 px-5 py-10 sm:px-10">
         <div className="border border-ink bg-paper p-5 sm:p-8" role="status">
-          <p className="type-display text-poster-sm text-signal-warn">Owner transactions unavailable</p>
+          <p className="type-display text-poster-md text-signal-warn">Owner transactions unavailable</p>
           <p className="mt-3 max-w-2xl text-sm leading-relaxed">Owner signing opens only on a route whose trust tier and full-route gate allow it. This route records gate {gate.outcome} (market {gate.marketGate}, vault {gate.vaultGate}) at {evidence.block.finality} block {evidence.block.number}. Funding and approving a canonical canary on it is a separate owner decision.</p>
         </div>
         <dl className="grid gap-px overflow-hidden border border-ink bg-ink text-sm">

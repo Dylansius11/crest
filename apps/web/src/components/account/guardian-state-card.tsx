@@ -30,7 +30,7 @@ const OUTCOME: Record<InterventionOutcome, { label: string; tone: Tone }> = {
   "verified": { label: "Verified", tone: "verified" },
   "postcondition-failed": { label: "Postcondition failed", tone: "stop" },
   "pending": { label: "Awaiting reconciliation", tone: "warn" },
-  "failed": { label: "Failed before signing", tone: "stop" },
+  "failed": { label: "Failed before signing", tone: "neutral" },
   "detected": { label: "Detected, not claimed", tone: "neutral" },
   "superseded": { label: "Superseded", tone: "neutral" },
 };
@@ -53,6 +53,7 @@ const amount = (value: string | null | undefined) => decimal(value, loan.decimal
 export function GuardianStateCard({ position, nowMs }: { position: RecordedPosition; nowMs: number }) {
   const { assessment, snapshot } = position;
   const intervention = interventionView(position.latestIntervention);
+  const skippedBeforeSigning = intervention?.run?.failureClass === "pre_sign_validation_or_simulation" && !intervention.run.transactionHash;
   const capital = snapshot === null ? null : capitalView(snapshot, assessment);
   const created = assessment === null ? Number.NaN : Date.parse(assessment.createdAt);
   const stale = assessment !== null && (Number.isNaN(created) || nowMs - created > MAX_ASSESSMENT_AGE_MS || created - nowMs > MAX_CLOCK_SKEW_MS);
@@ -97,16 +98,17 @@ export function GuardianStateCard({ position, nowMs }: { position: RecordedPosit
       <div className="border-t border-ink p-5 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="type-display text-poster-sm">Last intervention</p>
-          {intervention ? <Badge tone={OUTCOME[intervention.outcome].tone}>{OUTCOME[intervention.outcome].label}</Badge> : null}
+          {intervention ? <Badge tone={skippedBeforeSigning ? "neutral" : OUTCOME[intervention.outcome].tone}>{skippedBeforeSigning ? "Skipped before signing" : OUTCOME[intervention.outcome].label}</Badge> : null}
         </div>
         {intervention ? (
           <>
+            {skippedBeforeSigning ? <p className="mt-2 text-sm">Skipped before signing. Nothing was signed.</p> : null}
             <dl className="mt-2">
               <Fact label="Action">{ACTION_LABEL[intervention.actionKind] ?? intervention.actionKind}{intervention.forCurrentAssessment ? null : <span className="block font-sans text-xs break-normal text-ink-soft">From an earlier assessment</span>}</Fact>
               <Fact label="Selector">{intervention.selector ?? "None"}</Fact>
               <Fact label="Requested and simulated">{intervention.requestedAssets === null ? "No amount (freeze)" : amount(intervention.requestedAssets)}</Fact>
               <Fact label="Detected">{intervention.detectedAt}</Fact>
-              {intervention.run?.failureClass ? <Fact label="Failure class">{intervention.run.failureClass}</Fact> : null}
+              {intervention.run?.failureClass ? <Fact label="Failure detail"><details><summary className="min-h-11 cursor-pointer content-center underline underline-offset-4">Show recorded failure class</summary><span className="font-mono text-xs">{intervention.run.failureClass}</span></details></Fact> : null}
               <Fact label="Transaction">
                 {intervention.run?.transactionHash
                   ? <a className="underline underline-offset-4" href={`${activeManifest.network.explorerUrl}/tx/${intervention.run.transactionHash}`} target="_blank" rel="noreferrer">{compactAddress(intervention.run.transactionHash)}</a>
@@ -124,7 +126,7 @@ export function GuardianStateCard({ position, nowMs }: { position: RecordedPosit
                 ))}
               </ul>
             ) : intervention.run?.status === "completed" ? null : (
-              <p className="mt-3 flex items-center gap-2 text-sm text-ink-soft"><CircleAlert aria-hidden className="size-4" />No postcondition evidence yet.</p>
+              skippedBeforeSigning ? null : <p className="mt-3 flex items-center gap-2 text-sm text-ink-soft"><CircleAlert aria-hidden className="size-4" />No postcondition evidence yet.</p>
             )}
           </>
         ) : <p className="mt-2 text-sm text-ink-soft">Custos has not acted on this account. It can only freeze or repay this account&apos;s own debt.</p>}

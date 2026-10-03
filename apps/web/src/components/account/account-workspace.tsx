@@ -19,16 +19,18 @@ import type { Address, Hex } from "viem";
 
 import { compilePolicy, policyStagingMessage, routeContextOf, toConfigurationCall } from "@crest/policy";
 
-import { Button, ButtonLink } from "@/components/ui/button";
-import { Cell } from "@/components/ui/cell";
+import { AccountHeader } from "./account-header";
+import { AccountDashboard, DashboardSkeleton } from "./account-dashboard";
+import { ReviewSheet } from "./review-sheet";
+import { SetupFlow } from "./setup-flow";
+import { WelcomeView } from "./welcome-view";
+import { accountMode } from "@/lib/account-mode";
 import { borrowGate, borrowSignatureBlock } from "@/lib/borrow-gate";
 import type { BorrowGate } from "@/lib/borrow-gate";
 import { activeManifest, activeTokens } from "@/lib/manifest";
 import type { RouteToken } from "@/lib/manifest";
+import { positionHeadline } from "@/lib/position-headline";
 import { isOwnerSigningEnabled } from "@/lib/transaction-route";
-import { AccountEvidence } from "./account-evidence";
-import { PositionSection } from "./position-section";
-import { AccountOverview } from "./account-overview";
 import { DeployPanel } from "./deploy-panel";
 import { EntryPanel } from "./entry-panel";
 import { ExitPanel } from "./exit-panel";
@@ -37,11 +39,8 @@ import { InventoryTable } from "./inventory-table";
 import { PolicyEditor } from "./policy-editor";
 import type { PolicyFormValues } from "./policy-editor";
 import { assertStagedPolicyResponse } from "./policy-stage";
-import { SandboxNotice } from "./sandbox-notice";
-import { TransactionPanel } from "./transaction-panel";
 import { activeChain, freshHead, providerOf, publicClient, selectProvider, switchToActiveChain } from "./wallet-client";
 import type { Eip1193Provider } from "./wallet-client";
-import { WalletPicker } from "./wallet-picker";
 import type { DiscoveredWallet } from "./wallet-discovery";
 import type { ExitAction, LiveAccountState, RecordedAccount, RecordedPosition, RecordedRegistry, TransactionAction, TransactionEvidence, WalletState } from "./types";
 
@@ -179,6 +178,8 @@ export function AccountWorkspace() {
   const [inspectNotice, setInspectNotice] = useState("");
   const [selectedAccount, setSelectedAccount] = useState<RecordedAccount | null>(null);
   const [position, setPosition] = useState<RecordedPosition | null>(null);
+  const [lookedUp, setLookedUp] = useState(false);
+  const [setupInProgress, setSetupInProgress] = useState(false);
   const [positionNotice, setPositionNotice] = useState("Select a recorded account to load recorded position evidence.");
   const [walletBalances, setWalletBalances] = useState<{ collateral: bigint | null; loan: bigint | null; block: bigint | null }>({ collateral: null, loan: null, block: null });
   const [assetIntents, setAssetIntents] = useState<{ collateral: "KEEP" | "PROTECT_AND_BORROW"; loan: "KEEP" | "EARN_STABLE" }>({ collateral: "KEEP", loan: "KEEP" });
@@ -262,6 +263,7 @@ export function AccountWorkspace() {
   const refreshRegistry = useCallback(async (owner: Address) => {
     setRegistry(null);
     setSelectedAccount(null);
+    setLookedUp(false);
     setPosition(null);
     setRegistryNotice("Loading recorded account registry.");
     try {
@@ -273,6 +275,7 @@ export function AccountWorkspace() {
       const exact = result.accounts.filter((account) => account.chainId === String(activeManifest.network.chainId) && isAddress(account.address));
       const [first] = exact;
       setSelectedAccount(first ?? null);
+      setLookedUp(false);
       setRegistryNotice(first ? "Recorded account registry loaded. Select an account to inspect its evidence." : "No Crest Account is registered for this wallet. Simulate a deployment below, or register an existing deployment receipt.");
     } catch (error) {
       setRegistryNotice(error instanceof Error ? `${error.message}. Read-only account fallback remains available.` : "Recorded account service is unavailable. Read-only account fallback remains available.");
@@ -367,6 +370,7 @@ export function AccountWorkspace() {
       if (result.evidence !== "recorded" || result.account.address.toLowerCase() !== address.toLowerCase() || result.account.chainId !== String(activeManifest.network.chainId)) throw new Error(`That account is not recorded on ${activeManifest.network.name} ${activeManifest.network.chainId}`);
       setPosition(result);
       setSelectedAccount(result.account);
+      setLookedUp(true);
       setPositionNotice("Recorded position evidence loaded. It is not live chain state.");
       setInspectNotice("Recorded account selected. A wallet is not needed to read it.");
     } catch (error) {
@@ -404,6 +408,7 @@ export function AccountWorkspace() {
     setRegistry(null);
     setSelectedAccount(null);
     setPosition(null);
+    setLookedUp(false);
     setWalletBalances({ collateral: null, loan: null, block: null });
     setPrepared(null);
     setTransaction(emptyTransaction());
@@ -796,119 +801,55 @@ export function AccountWorkspace() {
     : transaction.action !== null && EXIT_SIDE[transaction.action] ? exitBlockedReason
     : actionBlockedReason ?? (prepared?.borrowAssets === undefined ? null : borrowSignatureBlock(gate, degradedAcknowledged, prepared.borrowAssets));
 
+  const mode = accountMode({
+    wallet,
+    registryLoaded: registry !== null,
+    registryCount: registry?.accounts.filter((account) => account.chainId === String(activeManifest.network.chainId)).length ?? 0,
+    selected: selectedAccount ? { policyNonce: selectedAccount.policyNonce, owner: position?.snapshot?.owner ?? null, lookedUp } : null,
+    setupInProgress,
+  });
+  const headline = positionHeadline(position, nowMs);
+  const inventoryView = <InventoryTable assets={inventory} connected={wallet.kind === "connected"} locked={transaction.phase === "pending" || transaction.phase === "reconciliation-failed"} onIntentChange={changeIntent} />;
+  const entryView = <EntryPanel blockedReason={actionBlockedReason} busy={busy} gate={gate} acknowledged={degradedAcknowledged} collateralBalance={walletBalances.collateral} onAcknowledge={setDegradedAcknowledged} onPrepareSupply={(amount) => void prepareSupply(amount)} onPrepareBorrow={(amount) => void prepareBorrow(amount)} />;
+  const exitView = <ExitPanel live={liveState} notice={liveNotice} blockedReason={exitBlockedReason} busy={busy} onRefresh={selectedAddress ? () => void refreshLiveState(selectedAddress) : null} onPrepare={(action, amount) => void prepareExit(action, amount)} />;
+  const policyView = <PolicyEditor draftContext={wallet.kind === "connected" && selectedAddress ? { owner: wallet.address, account: selectedAddress } : null}
+    disabledReason={configurationBlockedReason} onCompile={compileConfiguration} onEdit={() => {
+      policyRequest.current += 1;
+      if (transaction.phase === "pending" || transaction.phase === "reconciliation-failed") return;
+      setPrepared(null);
+      setTransaction(emptyTransaction("Policy draft changed. Compile and simulate again before signing."));
+    }} issues={issues} />;
+  const deployView = <DeployPanel wallet={wallet} registry={registry} onRegistered={async () => {
+    if (wallet.kind !== "connected") throw new Error("Reconnect the deploying owner wallet to inspect its registered account");
+    await refreshRegistry(wallet.address);
+  }} />;
+
   return (
     <main className="min-h-screen bg-paper text-ink">
-      <header className="blue-field blue-grid border-b border-ink px-5 py-6 sm:px-10 sm:py-8">
-        <div className="mx-auto max-w-[85rem]">
-          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-paper pb-4">
-            <p className="type-display text-poster-base">Crest <span className="ml-2 font-sans text-sm font-normal normal-case">/ Owner workspace</span></p>
-            <ButtonLink href="/" variant="paper">Reviewed mainnet evidence</ButtonLink>
-          </div>
-          <div className="mt-6 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <p className="type-display text-poster-sm">{activeManifest.network.name} · chain {activeManifest.network.chainId} / one account / one market</p>
-              <h1 className="mt-2 type-display text-poster-lg sm:text-poster-xl">Your account. Your call.</h1>
-              <p className="mt-3 max-w-xl text-sm sm:text-base">Choose a wallet, inspect the route, then approve each action. No debt or strategy is live until a canonical receipt and recorded position say so.</p>
-              <p className="mt-2 max-w-xl border-l-2 border-paper pl-3 text-sm">Only the owner creates debt. Custos can freeze or repay this account's own debt, never borrow.</p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {wallet.kind === "connected" ? (
-                <>
-                  <span className="flex min-h-11 items-center border border-paper px-4 font-mono text-sm">{walletName}: {compactAddress(wallet.address)}</span>
-                  <Button variant="paper" onClick={() => { disconnect(); setWalletPickerOpen(true); }} disabled={transaction.phase === "pending" || transaction.phase === "reconciliation-failed"}>Change wallet</Button>
-                  <Button variant="paper" onClick={disconnect} disabled={transaction.phase === "pending" || transaction.phase === "reconciliation-failed"}>Disconnect</Button>
-                </>
-              ) : <Button variant="paper" onClick={() => setWalletPickerOpen((open) => !open)} disabled={wallet.kind === "connecting"}>{wallet.kind === "connecting" ? "Connecting wallet" : walletPickerOpen ? "Hide wallet choices" : "Choose wallet"}</Button>}
-            </div>
-          </div>
-          <WalletPicker open={walletPickerOpen} busy={wallet.kind === "connecting"} onSelect={(choice) => { void connect(choice); }} onClose={() => setWalletPickerOpen(false)} />
-        </div>
-      </header>
-      <SandboxNotice manifest={activeManifest} />
-      <nav aria-label="Owner workflow" className="border-b border-ink px-5 sm:px-10">
-        <div className="mx-auto flex max-w-[85rem] gap-0 overflow-x-auto">
-          {[["01", "Wallet", "#wallet"], ["02", "Position", "#position"], ["03", "Assets", "#assets"], ["04", "Set up", "#setup"], ["05", "Enter and exit", "#actions"], ["06", "Evidence", "#evidence"]].map(([number, label, href]) => (
-            <a key={href} href={href} className="flex min-h-12 shrink-0 items-center gap-2 border-r border-ink px-3 text-sm hover:bg-paper-soft first:border-l sm:px-5"><span className="font-mono text-crest-700">{number}</span><span className="type-display text-poster-sm">{label}</span></a>
-          ))}
-        </div>
-      </nav>
-      <div className="mx-auto flex max-w-[85rem] flex-col gap-10 px-5 py-8 sm:gap-14 sm:px-10 sm:py-12">
-        <section id="wallet" className="scroll-mt-6 space-y-4">
-          <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
-            <div><p className="type-display text-poster-sm text-ink-soft">01 / Start here</p><h2 className="type-display text-poster-lg">Connect or inspect</h2></div>
-            <p className="max-w-md text-sm text-ink-soft">A wallet signs. Anyone can read a recorded account address without connecting.</p>
-          </div>
-          <Cell index="Wallet and registry" meta={wallet.kind.replaceAll("-", " ")} className="bg-paper">
-            <div className="p-4 sm:p-6">
-              <p className="text-sm text-ink-soft" role="status" aria-live="polite">{registryNotice}</p>
-              {wallet.kind === "wrong-chain" ? (
-                <div className="mt-3 flex flex-col gap-3 border-l-2 border-signal-stop pl-3 sm:flex-row sm:items-center sm:justify-between" role="alert">
-                  <p className="text-sm">Wallet chain {wallet.chainId} is not {activeManifest.network.name} {activeManifest.network.chainId}. Nothing can be simulated or signed until it is.</p>
-                  <Button type="button" variant="solid" className="shrink-0" onClick={() => {
-                    const provider = providerOf();
-                    if (!provider) return;
-                    switchToActiveChain(provider).catch((error: unknown) => setRegistryNotice(`Network switch was not completed: ${errorText(error)}`));
-                  }}>Switch to chain {activeManifest.network.chainId}</Button>
-                </div>
-              ) : null}
-              {wallet.kind === "connected" && walletBalances.block !== null ? <p className="mt-2 text-xs text-ink-soft">Wallet balances read via RPC at block {walletBalances.block.toString()}, not from the account ledger.</p> : null}
-              {registry && registry.accounts.length > 0 ? (
-                <label className="mt-4 grid max-w-2xl gap-1 text-sm">
-                  <span className="type-display text-poster-sm">Your registered accounts</span>
-                  <select value={registry.accounts.some((account) => account.address.toLowerCase() === selectedAccount?.address.toLowerCase()) ? selectedAccount?.address ?? "" : ""} disabled={transaction.phase === "pending" || transaction.phase === "reconciliation-failed"} onChange={(event) => setSelectedAccount(registry.accounts.find((account) => account.address.toLowerCase() === event.target.value.toLowerCase()) ?? null)} className="min-h-11 w-full border border-ink bg-paper px-3 font-mono text-sm">
-                    <option value="">Choose an account</option>
-                    {registry.accounts.map((account) => <option key={account.address} value={account.address}>{account.address} · policy {account.policyNonce}</option>)}
-                  </select>
-                </label>
-              ) : null}
-              <form className="mt-5 flex flex-col gap-2 border-t border-ink pt-4 sm:flex-row sm:items-end" onSubmit={(event) => { event.preventDefault(); void inspectRecordedAddress(); }}>
-                <label className="grid min-w-0 flex-1 gap-1 text-sm"><span className="type-display text-poster-sm">Read another account</span><input value={inspectAddress} onChange={(event) => setInspectAddress(event.target.value)} placeholder="0x… Crest Account address" className="min-h-11 w-full border border-ink bg-paper px-3 font-mono text-sm" spellCheck={false} autoComplete="off" /></label>
-                <Button type="submit" variant="outline" disabled={transaction.phase === "pending" || transaction.phase === "reconciliation-failed"}>Read record</Button>
-              </form>
-              {inspectNotice ? <p className="mt-2 text-sm text-ink-soft" role="status">{inspectNotice}</p> : null}
-            </div>
-          </Cell>
-          <AccountOverview wallet={wallet} position={position} hasAccount={selectedAccount !== null} />
-          <p className="text-xs text-ink-soft">Account figures are recorded evidence. They are not live quotes and cannot replace an owner simulation.</p>
-        </section>
-        <PositionSection position={position} positionNotice={positionNotice} nowMs={nowMs} />
-        <section id="assets" className="scroll-mt-6 space-y-4">
-          <div><p className="type-display text-poster-sm text-ink-soft">03 / Decide before moving assets</p><h2 className="type-display text-poster-lg">Choose asset intent</h2><p className="mt-2 text-sm text-ink-soft">KEEP is the default. {collateralToken.symbol} is the only qualified collateral; {loanToken.symbol} is the fixed loan token and vault asset.</p></div>
-          <InventoryTable assets={inventory} connected={wallet.kind === "connected"} locked={transaction.phase === "pending" || transaction.phase === "reconciliation-failed"} onIntentChange={changeIntent} />
-        </section>
-        <section id="setup" className="scroll-mt-6 space-y-4">
-          <div><p className="type-display text-poster-sm text-ink-soft">04 / Owner setup</p><h2 className="type-display text-poster-lg">Deploy, then define limits</h2><p className="mt-2 text-sm text-ink-soft">Deployment is not borrowing. Policy needs a separate owner signature and canonical event.</p></div>
-          <div className="grid min-w-0 items-start gap-5 xl:grid-cols-2">
-            <DeployPanel wallet={wallet} registry={registry} onRegistered={async () => {
-              if (wallet.kind !== "connected") throw new Error("Reconnect the deploying owner wallet to inspect its registered account");
-              await refreshRegistry(wallet.address);
-            }} />
-            <PolicyEditor draftContext={wallet.kind === "connected" && selectedAddress ? { owner: wallet.address, account: selectedAddress } : null}
-              disabledReason={configurationBlockedReason} onCompile={compileConfiguration} onEdit={() => {
-              policyRequest.current += 1;
-              if (transaction.phase === "pending" || transaction.phase === "reconciliation-failed") return;
-              setPrepared(null);
-              setTransaction(emptyTransaction("Policy draft changed. Compile and simulate again before signing."));
-            }} issues={issues} />
-          </div>
-        </section>
-        <section id="actions" className="scroll-mt-6 space-y-4">
-          <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
-            <div><p className="type-display text-poster-sm text-ink-soft">05 / Signature required</p><h2 className="type-display text-poster-lg">Enter and exit</h2></div>
-            <p className="max-w-md text-sm text-ink-soft">Every action is simulated at a named block before your wallet is asked. Custos can freeze and repay; it can never borrow or withdraw.</p>
-          </div>
-          <div className="grid min-w-0 items-start gap-5 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
-            <div className="grid min-w-0 gap-5">
-              <EntryPanel blockedReason={actionBlockedReason} busy={busy} gate={gate} acknowledged={degradedAcknowledged} collateralBalance={walletBalances.collateral} onAcknowledge={setDegradedAcknowledged} onPrepareSupply={(amount) => void prepareSupply(amount)} onPrepareBorrow={(amount) => void prepareBorrow(amount)} />
-              <ExitPanel live={liveState} notice={liveNotice} blockedReason={exitBlockedReason} busy={busy} onRefresh={selectedAddress ? () => void refreshLiveState(selectedAddress) : null} onPrepare={(action, amount) => void prepareExit(action, amount)} />
-            </div>
-            <div className="min-w-0 lg:sticky lg:top-4">
-              <TransactionPanel account={selectedAddress} transaction={transaction} blockedReason={preparedBlockedReason} onSimulateConfiguration={() => { if (prepared?.action === "configure") void simulatePrepared(prepared); }} onSubmitPrepared={() => void submitPrepared()} />
-            </div>
-          </div>
-        </section>
-        <AccountEvidence position={position} selectedAccount={selectedAccount} positionNotice={positionNotice} />
-      </div>
+      <AccountHeader wallet={wallet} walletName={walletName} walletPickerOpen={walletPickerOpen} setWalletPickerOpen={setWalletPickerOpen}
+        connect={(choice) => { void connect(choice); }} disconnect={disconnect} registry={registry} selectedAccount={selectedAccount}
+        onSelectAccount={(account) => { setSelectedAccount(account); setLookedUp(false); setSetupInProgress(false); }}
+        inspectAddress={inspectAddress} setInspectAddress={setInspectAddress} inspectNotice={inspectNotice}
+        inspect={() => { void inspectRecordedAddress(); }} phase={transaction.phase} />
+      {mode === "welcome" ? <WelcomeView onConnect={() => setWalletPickerOpen(true)} address={inspectAddress} onAddressChange={setInspectAddress} notice={inspectNotice} onInspect={() => { void inspectRecordedAddress(); }} /> : null}
+      {mode === "loading" ? <DashboardSkeleton notice={registryNotice} /> : null}
+      {mode === "setup" ? <SetupFlow wallet={wallet} registryNotice={registryNotice} selectedAccount={selectedAccount} transaction={transaction}
+        assetsChosen={assetIntents.collateral === "PROTECT_AND_BORROW" && assetIntents.loan === "EARN_STABLE"}
+        inventory={inventoryView} deploy={deployView} policy={policyView} entry={entryView}
+        onConnect={() => setWalletPickerOpen(true)}
+        onSwitchNetwork={() => {
+          const provider = providerOf();
+          if (!provider) return;
+          switchToActiveChain(provider).catch((error: unknown) => setRegistryNotice(`Network switch was not completed: ${errorText(error)}`));
+        }}
+        onBeginConfiguration={() => setSetupInProgress(true)}
+        onFinish={() => { setSetupInProgress(false); if (wallet.kind === "connected") void refreshRegistry(wallet.address); }} /> : null}
+      {mode === "dashboard" || mode === "inspect" ? <AccountDashboard position={position} selectedAccount={selectedAccount} positionNotice={positionNotice}
+        nowMs={nowMs} headline={headline} inspect={mode === "inspect"} inventory={inventoryView} entry={entryView} exit={exitView} policy={policyView} /> : null}
+      <ReviewSheet account={selectedAddress} owner={wallet.kind === "connected" ? wallet.address : null} position={position} transaction={transaction}
+        prepared={prepared !== null} blockedReason={preparedBlockedReason}
+        onSimulateConfiguration={() => { if (prepared?.action === "configure") void simulatePrepared(prepared); }}
+        onSubmitPrepared={() => void submitPrepared()} />
     </main>
   );
 }
