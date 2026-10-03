@@ -66,9 +66,10 @@ export type TransactionPanelProps = {
 };
 
 export function TransactionPanel({ account, owner, position, transaction, blockedReason, onSimulateConfiguration, onSubmitPrepared }: TransactionPanelProps) {
-  const phase = PHASE[transaction.phase];
   const readyToSign = transaction.phase === "signature-ready";
   const configurationPrepared = transaction.action === "configure" && transaction.calldata !== undefined && transaction.phase === "idle";
+  // A staged policy sits in the idle phase, but it still needs a simulation and a transaction; never call it "nothing".
+  const phase = configurationPrepared ? { label: "Staged, not yet onchain", tone: "warn" as const } : PHASE[transaction.phase];
   const decoded = actionPreview(transaction);
   const args = decoded?.args;
   const amount = args && typeof args[0] === "bigint" ? args[0] : args && typeof args[1] === "bigint" ? args[1] : null;
@@ -85,6 +86,7 @@ export function TransactionPanel({ account, owner, position, transaction, blocke
         </div>
         <p className="text-base leading-relaxed">{transaction.action ? SUMMARY[transaction.action] : "No owner action is prepared."}</p>
         <p className="text-sm" role="status" aria-live="polite">{transaction.detail}</p>
+        {configurationPrepared ? <p className="border-l-2 border-signal-warn pl-3 text-sm" role="note">The signed message only staged this policy. It changes nothing until you simulate the configuration below and sign the transaction.</p> : null}
         {blockedReason && (readyToSign || configurationPrepared) ? <p className="border-l-2 border-signal-degraded pl-3 text-sm" role="note">Locked: {blockedReason}</p> : null}
         <dl>
           <Fact label="Chain and environment">{activeManifest.network.name} {activeManifest.network.chainId} · {activeManifest.trust.level}</Fact>
