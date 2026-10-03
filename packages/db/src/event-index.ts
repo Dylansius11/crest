@@ -233,10 +233,8 @@ export async function indexCrestEvents(input: CrestEventIndexInput): Promise<{
   const activation = await input.db.transaction(async (transaction) => {
     if (reorged) await markReorged(transaction, input.crestAccountId, input.deploymentBlock, input.marketId, route.vaultAddress);
 
-    for (const event of events) {
-      await persistCanonicalEvent(transaction, input.crestAccountId, event);
-      await persistConfirmedStrategyRepayment(transaction, input.crestAccountId, event);
-    }
+    await persistCanonicalEvents(transaction, input.crestAccountId, events);
+    await persistConfirmedStrategyRepayments(transaction, input.crestAccountId, events);
 
     let indexedPolicyNonce: bigint | null = null;
     for (const policyEvent of activatedPolicies) {
@@ -320,16 +318,15 @@ async function decodeCanonicalEvents(input: {
     ...input.vaultLogs.flatMap((log) => decodeLog(log, vaultAbi, "vault", input)),
   ].sort(compareEvents);
 
-  const blocks = new Map<string, Date>();
-  for (const event of candidates) {
-    const key = `${event.blockNumber}:${event.blockHash}`;
-    if (blocks.has(key)) continue;
-    const block = await input.client.getBlock({ blockNumber: event.blockNumber });
-    if (block.hash.toLowerCase() !== event.blockHash.toLowerCase()) {
-      throw new Error(`event ${event.id} is not on the canonical chain`);
+  const blockNumbers = new Map<string, bigint>();
+  for (const event of candidates) blockNumbers.set(`${event.blockNumber}:${event.blockHash}`, event.blockNumber);
+  const blocks = new Map(await Promise.all([...blockNumbers].map(async ([key, blockNumber]) => {
+    const block = await input.client.getBlock({ blockNumber });
+    if (`${blockNumber}:${block.hash.toLowerCase()}` !== key.toLowerCase()) {
+      throw new Error(`event at block ${blockNumber} is not on the canonical chain`);
     }
-    blocks.set(key, new Date(Number(block.timestamp) * 1_000));
-  }
+    return [key, new Date(Number(block.timestamp) * 1_000)] as const;
+  })));
 
   return Promise.all(candidates.map(async (event) => {
     const payload = { ...event.payload };
@@ -359,6 +356,13 @@ async function decodeCanonicalEvents(input: {
   }));
 }
 
+/**
+ * Both Robinhood RPCs answer a one-million-block filtered eth_getLogs in about the time of a
+ * thousand-block one, so the span bounds round trips, not node work: a 1_000 span cost one
+ * sequential request per thousand blocks and stretched every monitor cycle to minutes.
+ */
+const LOG_RANGE_BLOCKS = 100_000n;
+
 async function getLogsInRanges(
   client: EventIndexPublicClient,
   address: Address,
@@ -367,8 +371,8 @@ async function getLogsInRanges(
   topics: readonly (Hex | readonly Hex[] | null)[],
 ): Promise<readonly Log[]> {
   const logs: Log[] = [];
-  for (let start = fromBlock; start <= toBlock; start += 1_000n) {
-    const end = start + 999n > toBlock ? toBlock : start + 999n;
+  for (let start = fromBlock; start <= toBlock; start += LOG_RANGE_BLOCKS) {
+    const end = start + LOG_RANGE_BLOCKS - 1n > toBlock ? toBlock : start + LOG_RANGE_BLOCKS - 1n;
     const request = client.request as unknown as (parameters: unknown) => Promise<readonly Parameters<typeof formatLog>[0][]>;
     const result = await request({
       method: "eth_getLogs",
@@ -417,12 +421,16 @@ function toStrategyEvent(event: CanonicalAccountEvent): IndexedCrestEvent[] {
   return [{ id: event.id, blockNumber: event.blockNumber, logIndex: event.logIndex, canonical: true, kind: event.kind, assets: BigInt(assets), shares: BigInt(shares) }];
 }
 
-async function persistCanonicalEvent(transaction: { execute(query: SQL): Promise<unknown> }, crestAccountId: string, event: CanonicalAccountEvent): Promise<void> {
+/** One statement per table: the hosted database is a round trip away, and the whole history is replayed each run. */
+async function persistCanonicalEvents(transaction: { execute(query: SQL): Promise<unknown> }, crestAccountId: string, events: readonly CanonicalAccountEvent[]): Promise<void> {
+  const rows = lastPerKey(events);
+  if (rows.length === 0) return;
+  const observedAt = new Date().toISOString();
   await transaction.execute(sql`
     insert into canonical_account_events
       (crest_account_id, event_kind, transaction_hash, log_index, block_number, block_hash, block_time, canonical, reorged_at, payload_json, observed_at)
-    values
-      (${crestAccountId}, ${event.kind}, ${bytea(event.transactionHash)}, ${event.logIndex.toString()}, ${event.blockNumber.toString()}, ${bytea(event.blockHash)}, ${event.blockTime.toISOString()}, true, null, ${JSON.stringify(event.payload)}::jsonb, ${new Date().toISOString()})
+    values ${sql.join(rows.map((event) => sql`
+      (${crestAccountId}, ${event.kind}, ${bytea(event.transactionHash)}, ${event.logIndex.toString()}, ${event.blockNumber.toString()}, ${bytea(event.blockHash)}, ${event.blockTime.toISOString()}, true, null, ${JSON.stringify(event.payload)}::jsonb, ${observedAt})`), sql`,`)}
     on conflict (crest_account_id, transaction_hash, log_index, block_hash) do update set
       event_kind = excluded.event_kind,
       block_number = excluded.block_number,
@@ -435,32 +443,44 @@ async function persistCanonicalEvent(transaction: { execute(query: SQL): Promise
   `);
 }
 
-async function persistConfirmedStrategyRepayment(transaction: { execute(query: SQL): Promise<unknown> }, crestAccountId: string, event: CanonicalAccountEvent): Promise<void> {
-  if (event.kind !== "RepaidFromStrategy" || event.payload.receiptStatus !== "confirmed") return;
-  const assetsBefore = event.payload.strategyAssetsBefore;
-  const assetsAfter = event.payload.strategyAssetsAfter;
-  const debtBefore = event.payload.debtBefore;
-  const debtAfter = event.payload.debtAfter;
-  if (assetsBefore === undefined || assetsAfter === undefined || debtBefore === undefined || debtAfter === undefined) return;
-  const debtRepaid = isObservedStrategyDebtReduction({
-    canonical: true,
-    receiptSucceeded: true,
-    debtBeforeAssets: BigInt(debtBefore),
-    debtAfterAssets: BigInt(debtAfter),
+async function persistConfirmedStrategyRepayments(transaction: { execute(query: SQL): Promise<unknown> }, crestAccountId: string, events: readonly CanonicalAccountEvent[]): Promise<void> {
+  const observedAt = new Date().toISOString();
+  const rows = lastPerKey(events).flatMap((event) => {
+    if (event.kind !== "RepaidFromStrategy" || event.payload.receiptStatus !== "confirmed") return [];
+    const assetsBefore = event.payload.strategyAssetsBefore;
+    const assetsAfter = event.payload.strategyAssetsAfter;
+    const debtBefore = event.payload.debtBefore;
+    const debtAfter = event.payload.debtAfter;
+    if (assetsBefore === undefined || assetsAfter === undefined || debtBefore === undefined || debtAfter === undefined) return [];
+    const debtRepaid = isObservedStrategyDebtReduction({
+      canonical: true,
+      receiptSucceeded: true,
+      debtBeforeAssets: BigInt(debtBefore),
+      debtAfterAssets: BigInt(debtAfter),
+    });
+    if (debtRepaid === null) return [];
+    return [sql`
+      (${crestAccountId}, 'repay', ${bytea(event.transactionHash)}, ${event.logIndex.toString()}, null, null, ${BigInt(assetsBefore).toString()}, ${BigInt(assetsAfter).toString()}, ${BigInt(debtBefore).toString()}, ${BigInt(debtAfter).toString()}, ${debtRepaid.toString()}, null, ${event.blockNumber.toString()}, ${bytea(event.blockHash)}, ${event.blockTime.toISOString()}, true, ${observedAt}, null)`];
   });
-  if (debtRepaid === null) return;
+  if (rows.length === 0) return;
 
   await transaction.execute(sql`
     insert into realized_strategy_events
       (crest_account_id, kind, transaction_hash, log_index, shares_before, shares_after, assets_before, assets_after, debt_before_assets, debt_after_assets, debt_repaid_assets, attributed_fees_assets, block_number, block_hash, block_time, canonical, observed_at, reorged_at)
-    values
-      (${crestAccountId}, 'repay', ${bytea(event.transactionHash)}, ${event.logIndex.toString()}, null, null, ${BigInt(assetsBefore).toString()}, ${BigInt(assetsAfter).toString()}, ${BigInt(debtBefore).toString()}, ${BigInt(debtAfter).toString()}, ${debtRepaid.toString()}, null, ${event.blockNumber.toString()}, ${bytea(event.blockHash)}, ${event.blockTime.toISOString()}, true, ${new Date().toISOString()}, null)
+    values ${sql.join(rows, sql`,`)}
     on conflict (crest_account_id, transaction_hash, log_index, block_hash) do update set
       kind = excluded.kind, shares_before = null, shares_after = null, assets_before = excluded.assets_before, assets_after = excluded.assets_after,
       debt_before_assets = excluded.debt_before_assets, debt_after_assets = excluded.debt_after_assets, debt_repaid_assets = excluded.debt_repaid_assets,
       attributed_fees_assets = null, block_number = excluded.block_number, block_hash = excluded.block_hash, block_time = excluded.block_time,
       canonical = true, observed_at = excluded.observed_at, reorged_at = null
   `);
+}
+
+/** A multi-row upsert may touch each conflict key once; a later duplicate wins, as sequential upserts did. */
+function lastPerKey(events: readonly CanonicalAccountEvent[]): CanonicalAccountEvent[] {
+  const byKey = new Map<string, CanonicalAccountEvent>();
+  for (const event of events) byKey.set(`${event.transactionHash.toLowerCase()}:${event.logIndex}:${event.blockHash.toLowerCase()}`, event);
+  return [...byKey.values()];
 }
 
 async function markReorged(transaction: { execute(query: SQL): Promise<unknown> }, crestAccountId: string, deploymentBlock: bigint, marketId: Hex, vaultAddress: Address): Promise<void> {

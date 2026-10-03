@@ -7,7 +7,7 @@ import { Cell, Fact } from "@/components/ui/cell";
 import { activeManifest, activeTokens } from "@/lib/manifest";
 import { compactAddress, decimal, percentFromWad } from "./format";
 import { SandboxNotice } from "./sandbox-notice";
-import type { RecordedPosition, TransactionEvidence, TransactionPhase } from "./types";
+import type { LiveAccountState, RecordedPosition, TransactionEvidence, TransactionPhase } from "./types";
 
 const PHASE: Record<TransactionPhase, { label: string; tone: "neutral" | "verified" | "warn" | "stop" | "degraded" }> = {
   idle: { label: "Nothing prepared", tone: "neutral" },
@@ -59,22 +59,35 @@ export type TransactionPanelProps = {
   account: string | null;
   owner: string | null;
   position: RecordedPosition | null;
+  /** Chain reads at one block; caps exist only onchain, so the recorded snapshot cannot supply them. */
+  live: LiveAccountState | null;
   transaction: TransactionEvidence;
   blockedReason: string | null;
   onSimulateConfiguration(): void;
   onSubmitPrepared(): void;
 };
 
-export function TransactionPanel({ account, owner, position, transaction, blockedReason, onSimulateConfiguration, onSubmitPrepared }: TransactionPanelProps) {
-  const phase = PHASE[transaction.phase];
+export function TransactionPanel({ account, owner, position, live, transaction, blockedReason, onSimulateConfiguration, onSubmitPrepared }: TransactionPanelProps) {
   const readyToSign = transaction.phase === "signature-ready";
   const configurationPrepared = transaction.action === "configure" && transaction.calldata !== undefined && transaction.phase === "idle";
+  // A staged policy sits in the idle phase, but it still needs a simulation and a transaction; never call it "nothing".
+  const phase = configurationPrepared ? { label: "Staged, not yet onchain", tone: "warn" as const } : PHASE[transaction.phase];
   const decoded = actionPreview(transaction);
   const args = decoded?.args;
   const amount = args && typeof args[0] === "bigint" ? args[0] : args && typeof args[1] === "bigint" ? args[1] : null;
   const token = transaction.action === "approve-collateral" || transaction.action === "supply" || transaction.action === "withdraw-collateral" ? activeTokens.collateral : activeTokens.loan;
   const snapshot = position?.snapshot;
   const changesGuardian = transaction.action === "configure";
+  const loanToken = activeTokens.loan;
+  const policy = live?.policy ?? null;
+  const liveDebt = live?.debtAssets ?? null;
+  // Borrowing adds the amount to today's onchain debt and repaying subtracts it; Morpho rounding moves the result by wei.
+  const resultingDebt = liveDebt === null || amount === null ? null
+    : transaction.action === "borrow-and-deploy" ? liveDebt + amount
+    : transaction.action === "owner-repay" ? (liveDebt > amount ? liveDebt - amount : 0n)
+    : null;
+  const overCeiling = resultingDebt !== null && policy !== null && transaction.action === "borrow-and-deploy" && resultingDebt > policy.debtCeilingAssets;
+  const usdg = (value: bigint | string | null | undefined) => decimal(value === null || value === undefined ? value : value.toString(), loanToken.decimals, loanToken.symbol);
 
   return (
     <Cell id="owner-transaction" index="Owner transaction" meta={transaction.action?.replaceAll("-", " ") ?? "none"} className="border-0 bg-paper" tabIndex={-1} aria-labelledby="owner-transaction-title">
@@ -85,6 +98,7 @@ export function TransactionPanel({ account, owner, position, transaction, blocke
         </div>
         <p className="text-base leading-relaxed">{transaction.action ? SUMMARY[transaction.action] : "No owner action is prepared."}</p>
         <p className="text-sm" role="status" aria-live="polite">{transaction.detail}</p>
+        {configurationPrepared ? <p className="border-l-2 border-signal-warn pl-3 text-sm" role="note">The signed message only staged this policy. It changes nothing until you simulate the configuration below and sign the transaction.</p> : null}
         {blockedReason && (readyToSign || configurationPrepared) ? <p className="border-l-2 border-signal-degraded pl-3 text-sm" role="note">Locked: {blockedReason}</p> : null}
         <dl>
           <Fact label="Chain and environment">{activeManifest.network.name} {activeManifest.network.chainId} · {activeManifest.trust.level}</Fact>
@@ -97,15 +111,15 @@ export function TransactionPanel({ account, owner, position, transaction, blocke
           <Fact label="Token and amount">{amount === null ? "Not specified for this action" : decimal(amount.toString(), token.decimals, token.symbol)}</Fact>
           <Fact label="Vault share bound">{decoded?.functionName === "borrowAndDeploy" && args ? `At least ${args[1]?.toString()} shares (50 bps below preview)` : decoded?.functionName === "withdrawStrategy" && args ? `At most ${args[2]?.toString()} shares (50 bps above preview)` : "Not applicable"}</Fact>
           <Fact label="Withdrawal receiver">{transaction.action?.startsWith("withdraw-") ? owner ?? "Owner wallet unavailable" : "No withdrawal"}</Fact>
-          <Fact label="Current debt">{decimal(snapshot?.debtAssets, activeTokens.loan.decimals, activeTokens.loan.symbol)}</Fact>
-          <Fact label="Resulting debt">Not available from simulation; verify the receipt and next snapshot.</Fact>
+          <Fact label="Current debt"><span className="block sm:text-right">{liveDebt !== null && live ? <>{usdg(liveDebt)}<span className="block text-xs text-ink-soft">Onchain at block {live.blockNumber.toString()}</span></> : <>{usdg(snapshot?.debtAssets)}<span className="block text-xs text-ink-soft">Recorded snapshot</span></>}</span></Fact>
+          <Fact label="Resulting debt">{resultingDebt !== null ? <span className="block sm:text-right">About {usdg(resultingDebt)}{overCeiling ? <span className="block text-xs break-normal text-signal-stop">Above the debt ceiling; the account will revert this borrow</span> : null}</span> : "Not available from simulation; verify the receipt and next snapshot."}</Fact>
           <Fact label="Current LTV">{percentFromWad(snapshot?.ltvWad)}</Fact>
           <Fact label="Resulting LTV">Not available from simulation; onchain rules still apply.</Fact>
-          <Fact label="Collateral cap">Not included in the recorded snapshot; enforced by the account onchain.</Fact>
-          <Fact label="Debt ceiling">Not included in the recorded snapshot; enforced by the account onchain.</Fact>
-          <Fact label="Reserve floor">{decimal(snapshot?.reserveFloorAssets, activeTokens.loan.decimals, activeTokens.loan.symbol)}</Fact>
-          <Fact label="Vault floor">{decimal(snapshot?.strategyFloorAssets, activeTokens.loan.decimals, activeTokens.loan.symbol)}</Fact>
-          <Fact label="Custos repayment cap">{decimal(snapshot?.maxRepayPerActionAssets, activeTokens.loan.decimals, activeTokens.loan.symbol)}</Fact>
+          <Fact label="Collateral cap">{policy ? `${decimal(policy.maxCollateralAssets.toString(), activeTokens.collateral.decimals, activeTokens.collateral.symbol)} onchain` : "Live policy read unavailable; enforced by the account onchain."}</Fact>
+          <Fact label="Debt ceiling">{policy ? `${usdg(policy.debtCeilingAssets)} onchain${liveDebt !== null ? ` · ${usdg(policy.debtCeilingAssets > liveDebt ? policy.debtCeilingAssets - liveDebt : 0n)} left to borrow` : ""}` : "Live policy read unavailable; enforced by the account onchain."}</Fact>
+          <Fact label="Reserve floor">{usdg(policy?.reserveFloorAssets ?? snapshot?.reserveFloorAssets)}</Fact>
+          <Fact label="Vault floor">{usdg(policy?.strategyFloorAssets ?? snapshot?.strategyFloorAssets)}</Fact>
+          <Fact label="Custos repayment cap">{usdg(policy?.maxRepayPerActionAssets ?? snapshot?.maxRepayPerActionAssets)}</Fact>
           <Fact label="Guardian authority">{changesGuardian ? "May change if this policy transaction is mined" : "Unchanged"}</Fact>
           <Fact label="Estimated gas">{transaction.gas?.toString() ?? "Not simulated"}</Fact>
           <Fact label="Simulation block">{transaction.blockNumber?.toString() ?? "Not simulated"}</Fact>

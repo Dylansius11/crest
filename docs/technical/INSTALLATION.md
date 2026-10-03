@@ -405,7 +405,8 @@ that policy only when its `policy_hash` matches a canonical `PolicyConfigured` e
 assessment is written until both are active. The poll indexes events and
 reads the account, market, vault, oracle, rates, and lifecycle, then stores immutable snapshots, an assessment,
 and at most one idempotent Guardian trigger. No account is fabricated or registered by a read-only poll. Use
-`pnpm --filter @crest/monitor start` for continuous polling (`MONITOR_INTERVAL_MS`, default 60000 ms); `--once`
+`pnpm --filter @crest/monitor start` for continuous polling (`MONITOR_INTERVAL_MS`, default 60000 ms; the hosted
+46630 sandbox in `deploy/vps/compose.yml` uses 15000 ms for the monitor and for `GUARDIAN_POLL_INTERVAL_MS`); `--once`
 exits on any registry, route, or RPC failure. A read-only monitor must not receive the Guardian key.
 
 `@crest/automation doctor` requires `ROBINHOOD_CHAIN_RPC_URL`, `DATABASE_URL`, `GUARDIAN_EXPECTED_ADDRESS`,

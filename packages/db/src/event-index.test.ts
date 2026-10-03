@@ -181,7 +181,6 @@ describe("canonical Crest event accounting", () => {
     const [events] = await client`select count(*)::int as count from canonical_account_events where crest_account_id = ${ids.account} and canonical`;
     const [realized] = await client`select debt_repaid_assets as debt, shares_before, shares_after from realized_strategy_events where crest_account_id = ${ids.account} and canonical`;
     const [cursor] = await client`select last_canonical_block_number as block from indexer_cursors where chain_id = 4663 and stream_key = ${`crest:${ids.account}:${marketId}`}`;
-    expect(ranges).toHaveLength(30);
     expect(ranges.every((range) => range.topics !== undefined)).toBe(true);
     expect(events?.count).toBe(3);
     expect(realized).toEqual({ debt: "25", shares_before: null, shares_after: null });
@@ -241,7 +240,6 @@ describe("canonical Crest event accounting", () => {
     const [forkRows] = await client`
       select count(*)::int as total, count(*) filter (where canonical)::int as canonical, count(*) filter (where not canonical)::int as reorged
       from canonical_account_events where crest_account_id = ${ids.account}`;
-    expect(ranges).toHaveLength(45);
     expect(forkRows).toEqual({ total: 6, canonical: 3, reorged: 3 });
     const [reorgedInputs] = await client`
       select

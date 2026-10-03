@@ -26,7 +26,7 @@ describe("injected wallet selection", () => {
     });
     const changes: Array<Array<{ name: string; provider: Eip1193Provider }>> = [];
     const unsubscribe = subscribeWallets(target, (wallets) => changes.push(wallets));
-    expect(changes.at(-1)).toEqual([{ id: "a5b68433-58f2-4972-aa09-2b82bf2cee5e", name: "Wallet One", provider: first }, { id: "33c0435c-6674-4c72-a3ee-6402be7198cf", name: "Wallet Two", provider: second }]);
+    expect(changes.at(-1)).toEqual([{ id: "a5b68433-58f2-4972-aa09-2b82bf2cee5e", key: "test.wallet one", name: "Wallet One", provider: first }, { id: "33c0435c-6674-4c72-a3ee-6402be7198cf", key: "test.wallet two", name: "Wallet Two", provider: second }]);
     announce("a5b68433-58f2-4972-aa09-2b82bf2cee5e", "Wallet One", first);
     expect(changes.at(-1)).toHaveLength(2);
     unsubscribe();
@@ -38,13 +38,24 @@ describe("injected wallet selection", () => {
     target.ethereum = legacy;
     let wallets: Array<{ name: string; provider: Eip1193Provider }> = [];
     const unsubscribe = subscribeWallets(target, (next) => { wallets = next; });
-    expect(wallets).toEqual([{ id: "legacy", name: "Browser wallet", provider: legacy }]);
+    expect(wallets).toEqual([{ id: "legacy", key: "legacy", name: "Browser wallet", provider: legacy }]);
     const modern = provider("modern");
     announce("865e8a6f-8163-4fa1-a8f9-385ec7cc1e94", "Modern wallet", modern);
-    expect(wallets).toEqual([{ id: "865e8a6f-8163-4fa1-a8f9-385ec7cc1e94", name: "Modern wallet", provider: modern }]);
+    expect(wallets).toEqual([{ id: "865e8a6f-8163-4fa1-a8f9-385ec7cc1e94", key: "test.modern wallet", name: "Modern wallet", provider: modern }]);
     unsubscribe();
     announce("06cec118-8f2d-4a4b-8673-5c76e13ab9ce", "Ignored", provider("ignored"));
     expect(wallets).toHaveLength(1);
+  });
+
+  test("keys a wallet by its reverse-DNS id, so a reload with a fresh uuid still finds the remembered wallet", () => {
+    const keys: string[] = [];
+    for (const uuid of ["0f6b1e9a-1c2d-4e5f-8a9b-0c1d2e3f4a5b", "7a8b9c0d-1e2f-4a3b-9c4d-5e6f7a8b9c0d"]) {
+      const { target, provider, announce } = fixture();
+      const unsubscribe = subscribeWallets(target, (wallets) => { if (wallets[0]) keys.push(wallets[0].key); });
+      announce(uuid, "MetaMask", provider("metamask"));
+      unsubscribe();
+    }
+    expect(keys).toEqual(["test.metamask", "test.metamask"]);
   });
 
   test("rejects malformed announcements that cannot request accounts", () => {

@@ -25,6 +25,31 @@ Rules for this file:
 
 ---
 
+## 2026-10-03 — Database tests follow DATABASE_URL, which this shell points at hosted Supabase  (Workflow)
+
+- `pnpm db:test` and `pnpm --filter @crest/db test` timed out against a running local Supabase. The shell exported `DATABASE_URL` for the hosted Supabase pooler, and every `packages/db` test prefers that variable over `127.0.0.1:54322`, so the timed-out runs inserted fixture owners, assessments, and triggers into the hosted database.
+- Custos ignored the fixture triggers because they belong to unregistered accounts, but the rows stay until removed.
+- Rule: run database tests with `DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres` set explicitly in the same command, and check the host before any test that writes.
+
+## 2026-10-03 — A narrow eth_getLogs span made every monitor cycle take minutes  (Technical)
+
+- The hosted monitor logged one assessment every 3 min 50 s against a 60 s sleep, so Custos froze 4 min 49 s and repaid 7 min 54 s after the triggering borrow. The indexer re-read the account history from block 127605219 in 1,000-block `eth_getLogs` requests: 636 sequential requests per stream at about 235 ms each.
+- Robinhood testnet and mainnet RPCs both answered a filtered 1,000,000-block `eth_getLogs` in about the time of a 1,000-block one (210 ms and 1.3 to 1.7 s), so round trips, not node work, set the cost, and it grew with chain height.
+- With the span widened, the indexer's database transaction became the cost: 22 s for one upsert per event plus policy updates. The VPS to the Sydney Supabase pooler is about 230 ms per round trip, and `prepare: false` makes each statement two round trips (460 ms measured, 280 ms with `prepare: true`). One multi-row upsert per table and parallel block reads cut the index step from 47 s to 14 s.
+- Rule: size log spans to the measured RPC limit, write replayed history in one statement per table, and time each step inside the cycle before blaming the database, the RPC, or confirmation depth.
+
+## 2026-10-03 — A custom-error revert without its ABI reads as "unknown reason" (Technical)
+
+- The owner simulated a second 20 USDG borrow on top of 20 USDG of debt under a 30 USDG ceiling. The account reverted with `DebtCeilingExceeded(cap, resulting)`, but the sheet said "Execution reverted for an unknown reason" because the simulation decoded only viem's short message. The recorded snapshot carries no caps, so the sheet and the Rules tab could not show the ceiling either.
+- viem names a custom error only when the call's ABI includes it; the revert data still sits on the RPC cause.
+- Rule: decode simulation reverts against the full Crest Account ABI and state cap errors in token units. Read limits that exist only onchain (caps, Custos address, Morpho LLTV) from `policy()` at a block, never from a snapshot that does not hold them.
+
+## 2026-10-03 — A once-loaded record and a per-load wallet id broke the owner's live run (Technical)
+
+- In the owner's first live run on `/account`, the Exit panel's live read showed borrowing open at block 128106223. The headline still said "Borrowing is frozen" from the snapshot at block 128103774, because the page fetched `/v1/accounts/:address/position` once per selected account and never again.
+- A reload dropped the wallet and returned the welcome view. EIP-6963 `info.uuid` is new on every page load, and the page never called `eth_accounts`. The asset intents also reset to KEEP on every load, and compile, supply, and borrow are all gated on them.
+- Rule: re-read the recorded position on the monitor's cadence and after each confirmed owner action. Restore a remembered wallet by its `rdns` through the prompt-free `eth_accounts`. Derive the qualified intents for an account that is already configured on the single route.
+
 ## 2026-10-03 — A layout composed at 125% display scaling looks shrunken at 100% (Technical)
 
 - Observed: the landing was tuned on a 1920px screen at 125% scaling, a 1536px CSS viewport. At 100% the same screen is 1912px wide, so the `85rem` column left about 280px of empty blue on each side and the six-line headline pushed the CTA below the fold.

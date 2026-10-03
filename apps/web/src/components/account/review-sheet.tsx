@@ -4,12 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { TransactionPanel } from "./transaction-panel";
-import type { RecordedPosition, TransactionEvidence } from "./types";
+import type { LiveAccountState, RecordedPosition, TransactionEvidence } from "./types";
 
-export function ReviewSheet({ account, owner, position, transaction, prepared, blockedReason, onSimulateConfiguration, onSubmitPrepared }: {
+export function ReviewSheet({ account, owner, position, live, transaction, prepared, blockedReason, onSimulateConfiguration, onSubmitPrepared }: {
   account: string | null;
   owner: string | null;
   position: RecordedPosition | null;
+  live: LiveAccountState | null;
   transaction: TransactionEvidence;
   prepared: boolean;
   blockedReason: string | null;
@@ -49,7 +50,7 @@ export function ReviewSheet({ account, owner, position, transaction, prepared, b
         <p className="type-display text-poster-base">Review and sign</p>
         {locked ? <span className="text-xs text-ink-soft">Awaiting reconciliation</span> : <button type="button" onClick={close} className="min-h-11 border border-ink px-4 text-sm transition-colors duration-150 hover:bg-paper-soft active:scale-[.97] focus-visible:outline-2 focus-visible:outline-crest-700">Close</button>}
       </div>
-      <TransactionPanel account={account} owner={owner} position={position} transaction={transaction} blockedReason={blockedReason} onSimulateConfiguration={onSimulateConfiguration} onSubmitPrepared={onSubmitPrepared} />
+      <TransactionPanel account={account} owner={owner} position={position} live={live} transaction={transaction} blockedReason={blockedReason} onSimulateConfiguration={onSimulateConfiguration} onSubmitPrepared={onSubmitPrepared} />
     </motion.div>
   </div>;
 }
