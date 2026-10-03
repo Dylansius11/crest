@@ -556,7 +556,7 @@ The script verifies `https://crest-api.43-129-38-115.nip.io/health`, `/v1/route`
 
 ## 18. Web on Vercel
 
-`apps/web` deploys from the CLI to the Vercel project `crest` (Root Directory `apps/web`, Next.js preset, Node 24.x); production is `https://crest-three-omega.vercel.app`. Project env vars, for production, preview, and development, none secret:
+`apps/web` deploys from the CLI to the Vercel project `crest` (Root Directory `apps/web`, Next.js preset, Node 24.x); production is `https://crestguard.vercel.app`, and the first alias `crest-three-omega.vercel.app` answers with a 308 to it (project domain `redirect`). Project env vars, for production, preview, and development, none secret:
 
 | Variable | Value |
 |---|---|
