@@ -106,4 +106,4 @@ Order: Connect wallet, Choose assets, Create your account, Set your rules, Add c
 - [x] Screenshots 1440 and 390 of `/` and `/account` (welcome, inspect of `0xaD8A3272c6E68cF819fe1E3b2aEFD0f8Fd5b2c75`); fix in one batch; one confirm round.
 - [x] `impeccable detect --json` on changed files; fix mechanical findings.
 - [x] Update `docs/DESIGN-SYSTEMS.md` (account modes, landing order, removed kickers) and `docs/LESSONS.md` if a lesson is verified.
-- [ ] `npx vercel@62.2.0 deploy --prod --yes`; smoke `https://crestguard.vercel.app`.
+- [x] `npx vercel@62.2.0 deploy --prod --yes`; smoke `https://crestguard.vercel.app`.
