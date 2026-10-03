@@ -144,48 +144,52 @@ Position screen order:
 10. intervention timeline and transaction evidence;
 11. stress scenarios and limitations.
 
-Owner workspace navigation follows the action sequence rather than a permanent right-hand evidence rail:
+The account page derives one of five modes from wallet, registry, and position state (`apps/web/src/lib/account-mode.ts`), so first-time owners get guidance and returning owners skip it:
 
-1. connect an explicitly selected injected wallet or inspect an address read-only; a wrong network offers a one-click switch to the manifest chain;
-2. watch the recorded position: the Custos card (assessed state, permitted selector, Guardian-actionable amount from the engine, last intervention with its postcondition checks), the LTV band, capital (quoted versus withdrawable versus Guardian-actionable), projected carry that withholds a net spread unless both rates are normal and comparable, and realized debt reduction from canonical events; unavailable values stay visible with their reason codes;
-3. choose the manifest collateral and loan-token intent (symbols come from the active manifest, never hard-coded), then deploy and configure through separate owner approvals;
-4. enter and exit: simulate supply or owner-only borrow, and owner repay, strategy, reserve, or collateral withdrawal, or unfreeze, against a live chain read; one sticky transaction panel carries every simulation, signature, and receipt;
-5. verify: owner versus Custos permissions, a one-block live read of market parameters, code hashes, vault asset, liquidity, and oracle that falls back to the manifest value per row with its reason, input provenance, and canonical receipts.
+1. `welcome`: no wallet and no look-up. Two doors: connect a wallet to manage, or read any account by address without signing.
+2. `loading`: wallet connected, registry or position still reading. Nothing is guessed while it loads.
+3. `setup`: a connected wallet with no recorded account. A guided five-step flow, the only place numbered steps appear: connect, choose the manifest collateral and loan-token intent (symbols come from the active manifest), create the account, set the rules, then add collateral and borrow. Each step is a separate owner approval.
+4. `dashboard`: the connected wallet is the recorded owner. A plain-language status headline (`positionHeadline`), a five-fact key strip (debt, Current LTV, collateral, withdrawable from vault, Custos last action), then tabs Overview, Manage, Rules, Evidence. Overview carries the Custos card, LTV band, capital, carry, and realized debt reduction; Manage carries supply, owner-only borrow, repay, withdraw, and unfreeze, each simulated against a live chain read with one sticky transaction panel and a review sheet before signature; Evidence carries permissions, the one-block live read, provenance, and canonical receipts.
+5. `inspect`: a look-up of an account the wallet does not own. The same dashboard, labelled read-only, with Manage removed.
 
-A sandbox route renders a hatched SANDBOX band directly under the header with every manifest disclosure one click away. It never shrinks into a footnote.
+Unavailable values stay visible with their reason, never as zero. Custos is credited only for a verified postcondition; a pre-sign skip reads "Skipped before signing. Nothing was signed."
+
+A sandbox route puts a "Sandbox: read disclosures" chip in the account header that opens every manifest disclosure in a popover. It is always in the header, never a footnote.
 
 The wallet chooser uses EIP-6963 announcements so multiple extensions remain separately selectable.
 The legacy `window.ethereum` provider appears only when no wallet announces itself. Provider
 names are self-attested, so the signer must confirm the extension's actual request.
 
-Landing-page order (marketing surface, same rules, different emphasis):
+Landing-page order (marketing surface, same rules, different emphasis). There is no sandbox band on the landing page; the live console and every testnet fact carry their own "Robinhood Chain Testnet" label instead:
 
-1. cover: the claim plus the Custos panel, with the observed block and date;
-2. how it works: the three-move sequence;
-3. the route: exact market, vault, and pinned-fork evidence;
-4. authority: owner, Guardian selectors, and the Guardian-cannot list;
-5. the band: LTV band against Morpho LLTV;
-6. the carry: both APY sides and the net spread;
-7. the watch: one intervention, bento;
-8. questions: the objections that precede trust, answered with the caps that make each answer true.
+1. cover: the claim, the "Open your account" CTA, the 6.421094 USDG receipt line, and the live Custos console;
+2. one bad day: a pinned four-step illustration (price falls, freeze, reserve repay, vault repay) on the owner's LTV band, labelled as an illustration;
+3. proof: the three real testnet transactions, each with its block and explorer link;
+4. authority: what the owner can do, the three Custos selectors, and what Custos cannot do;
+5. how it works: the three-move sequence;
+6. the band: owner limits against Morpho LLTV;
+7. the carry: both APY sides and realized debt reduction;
+8. the reviewed mainnet route, archived, with the pinned-fork evidence;
+9. questions, then the footer CTA.
+
+No kicker or eyebrow labels above headlines, and no decorative section numbers.
 
 Never place “Borrow more” above the risk/liquidity summary. It is always an owner-approval card.
 
 ## 7. Core components
 
-### 7.1 Custos panel
+### 7.1 Live Custos console
 
-Hero and dashboard centrepiece. One panel, in this order:
+Landing-page centrepiece. It reads the recorded position of the demo account the VPS Guardian watches (`/v1/accounts/<address>/position`) and shows, in order:
 
-1. identity strip: `Custos` with a static identity mark and the role label `Crest Guardian`; show a live-state indicator only after a fresh runtime observation proves it;
-2. one paragraph of what it watches and what it may do;
-3. the band strip it enforces, with zone ticks and the Morpho LLTV terminal marker;
-4. the callable surface, one row per selector, each row stating the outcome it can produce;
-5. the rule line: everything else is not callable;
-6. an illustration disclaimer and the verification stamp for the observed block;
-7. the mono identity footer: chain, market id prefix, vault prefix.
+1. identity strip: `Custos on duty` and the label `Live on Robinhood Chain Testnet`;
+2. the guarded account address;
+3. the plain-language headline from `positionHeadline`, with a one-time FROZEN stamp only when the snapshot says frozen;
+4. borrowing state, recorded block, policy nonce, Guardian address, and the observation age with its UTC time;
+5. the three callable selectors, each with the outcome it can produce;
+6. the sandbox line: test tokens, mock oracle, idle-only vault, only the owner can create debt.
 
-The panel must never display a position, a balance, or a projection. It describes authority and policy only; account numbers appear on the account screen once they exist.
+It shows a "Reading the account" state while the request is in flight and "Live status unavailable" when it fails or the response does not match the demo account on chain 46630. It never shows a balance, a rate, or a projection.
 
 ### 7.2 Wallet Asset Intent Table
 
@@ -348,17 +352,13 @@ The objections that precede trust, as ruled rows: a two-digit index, the questio
 - The answer text is complete in the DOM whether or not the panel is expanded, so a reader without JavaScript sees every answer.
 - Answers are static product copy. Never generate one per visitor, and never soften a cap or a failure path to make an answer shorter.
 
-### 7.13 Marquee ticker
-
-A ticker may carry route facts and nothing else: counts, selectors, observed block, finality. It never carries a rate, a balance, or an outcome, because scrolling text cannot show a source or a timestamp. It pauses and duplicates with `aria-hidden` on the copy so assistive technology reads the facts once.
-
 ## 8. Motion
 
 - Library split: GSAP with ScrollTrigger for scroll-linked sequences; Motion for component-level transitions.
 - GSAP runs only in client components, inside `useGSAP` with a scope ref, and is registered once.
 - `prefers-reduced-motion` is a hard gate: every effect lives inside `gsap.matchMedia()` on `(prefers-reduced-motion: no-preference)`, so reduced motion renders a static page rather than a faster one.
 - Durations: `120–180ms` for state feedback, `400–800ms` for entrance reveals, `200–240ms` for drawers and modals.
-- Allowed: mask wipes on headline lines, one batched settle for cells, a rail that draws with scroll, a band sweep driven by scroll, a slow rotating verification stamp, marquee translation.
+- Allowed: mask wipes on headline lines, one batched settle for cells, a clip wipe on the proof grid, a rail that draws with scroll, the pinned illustration stepper, a slow rotating verification stamp, and the hero's CSS entrance (rise with a short blur, staggered, plus the one-time FROZEN stamp). The hero entrance is CSS so it runs at first paint and never leaves the cover hidden waiting for hydration.
 - Forbidden: any animation of a debt, balance, rate, or LTV value; counters and odometers; pulses that repeat; animating debt down before a canonical postcondition; countdowns; parallax that moves text off its baseline; anything that replays on scroll-back.
 - Texture and decoration may drift; content may not.
 
@@ -407,7 +407,7 @@ High-risk owner actions — raising debt or strategy caps, lowering floors, chan
 
 | State | UI treatment | Recovery |
 |---|---|---|
-| Sandbox route (46630) | Hatched SANDBOX band with all disclosures; owner signing enabled | None needed; never label it reviewed or live mainnet |
+| Sandbox route (46630) | Account header chip opens every manifest disclosure; landing facts carry a testnet label; owner signing enabled | None needed; never label it reviewed or live mainnet |
 | Signing-disabled route | Readable evidence page, no transaction controls | Owner funds and approves a canary separately |
 | Wrong network | Stop note with one-click switch to the manifest chain | Switch or add the chain in the wallet |
 | Assessment missing or stale (over 10 min) | Borrow closed with the reason | Wait for a fresh monitor poll |

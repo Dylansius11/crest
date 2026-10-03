@@ -48,11 +48,11 @@ export function positionHeadline(position: RecordedPosition | null, nowMs: numbe
 export function unreadableInputs(position: RecordedPosition | null): string[];
 ```
 
-- [ ] Write failing tests for every mode transition and for headlines: no record, no snapshot, frozen with unreadable inputs (names the USDG price feed and the Robinhood stock registry, excludes rate inputs), frozen after a verified Custos freeze, open and NORMAL, PROTECT or CRITICAL, DEGRADED while open, stale assessment.
-- [ ] Run `pnpm --filter @crest/web test` and see them fail.
-- [ ] Implement both modules.
-- [ ] Run the tests and see them pass.
-- [ ] Commit `feat(web): derive account mode and a plain status headline`.
+- [x] Write failing tests for every mode transition and for headlines: no record, no snapshot, frozen with unreadable inputs (names the USDG price feed and the Robinhood stock registry, excludes rate inputs), frozen after a verified Custos freeze, open and NORMAL, PROTECT or CRITICAL, DEGRADED while open, stale assessment.
+- [x] Run `pnpm --filter @crest/web test` and see them fail.
+- [x] Implement both modules.
+- [x] Run the tests and see them pass.
+- [x] Commit `feat(web): derive account mode and a plain status headline`.
 
 ### Task 2: Account shell, welcome, dashboard, inspect, review sheet
 
@@ -63,9 +63,9 @@ export function unreadableInputs(position: RecordedPosition | null): string[];
 
 **Interfaces:** consumes Task 1. The header carries the wallet controls, account switcher, "Look up an account", and the sandbox disclosure chip. The dashboard renders the headline, the key strip, and the tabs Overview, Manage, Rules, Evidence; Manage and Rules editing are hidden in `inspect`.
 
-- [ ] Compose the modes; keep every handler wired to the same props it has today.
-- [ ] `tsc --noEmit` clean at the end of the track.
-- [ ] Commit `feat(web): give returning owners a dashboard and look-ups a read-only view`.
+- [x] Compose the modes; keep every handler wired to the same props it has today.
+- [x] `tsc --noEmit` clean at the end of the track.
+- [x] Commit `feat(web): give returning owners a dashboard and look-ups a read-only view`.
 
 ### Task 3: Guided setup
 
@@ -75,8 +75,8 @@ export function unreadableInputs(position: RecordedPosition | null): string[];
 
 Order: Connect wallet, Choose assets, Create your account, Set your rules, Add collateral and borrow. One step open, completed steps collapse to a summary, a progress rail, Back and Continue, "Details" disclosures. Wrong chain shows the switch inside step 1.
 
-- [ ] Build the flow; land on the dashboard when the flow finishes or the account already has a policy.
-- [ ] Commit `feat(web): guide first-time owners through setup one step at a time`.
+- [x] Build the flow; land on the dashboard when the flow finishes or the account already has a policy.
+- [x] Commit `feat(web): guide first-time owners through setup one step at a time`.
 
 ### Task 4: Landing restructure, hero, live console, proof
 
@@ -85,10 +85,10 @@ Order: Connect wallet, Choose assets, Create your account, Set your rules, Add c
 - Create: `apps/web/src/components/site/live-custos-console.tsx`, `proof-section.tsx`
 - Delete when obsolete: `custos-panel.tsx`, `guardian-console.tsx`, `timeline-section.tsx`
 
-- [ ] Remove the sandbox band; label testnet data where it appears and title the route section as the archived reviewed mainnet route.
-- [ ] Hero copy and CTAs per spec; live console reads `/v1/accounts/<featured>/position` with a static fallback.
-- [ ] Proof section from `docs/evidence/canary-live-46630.json` and `hosted-guardian-46630.json` figures, explorer links from `testnetManifest.network.explorerUrl`.
-- [ ] Commit `feat(web): lead the landing page with a live Custos console and real proof`.
+- [x] Remove the sandbox band; label testnet data where it appears and title the route section as the archived reviewed mainnet route.
+- [x] Hero copy and CTAs per spec; live console reads `/v1/accounts/<featured>/position` with a static fallback.
+- [x] Proof section from `docs/evidence/canary-live-46630.json` and `hosted-guardian-46630.json` figures, explorer links from `testnetManifest.network.explorerUrl`.
+- [x] Commit `feat(web): lead the landing page with a live Custos console and real proof`.
 
 ### Task 5: Signature sequence and motion
 
@@ -96,14 +96,14 @@ Order: Connect wallet, Choose assets, Create your account, Set your rules, Add c
 - Create: `apps/web/src/components/site/custos-at-work.tsx`
 - Modify: `apps/web/src/components/site/reveal-provider.tsx`, `policy-band-gauge.tsx`
 
-- [ ] Pinned ScrollTrigger sequence with four discrete steps (price falls, freeze, repay from reserve, repay from vault), labeled Illustration, static stacked layout under reduced motion.
-- [ ] One orchestrated entrance per section family; no identical fade on every block.
-- [ ] Commit `feat(web): show Custos handling a bad day in one pinned sequence`.
+- [x] Pinned ScrollTrigger sequence with four discrete steps (price falls, freeze, repay from reserve, repay from vault), labeled Illustration, static stacked layout under reduced motion.
+- [x] One orchestrated entrance per section family; no identical fade on every block.
+- [x] Commit `feat(web): show Custos handling a bad day in one pinned sequence`.
 
 ### Task 6: Integrate, verify, document, deploy
 
-- [ ] `pnpm --filter @crest/web test`, `pnpm --filter @crest/web exec tsc --noEmit`, production `next build`.
-- [ ] Screenshots 1440 and 390 of `/` and `/account` (welcome, inspect of `0xaD8A3272c6E68cF819fe1E3b2aEFD0f8Fd5b2c75`); fix in one batch; one confirm round.
-- [ ] `impeccable detect --json` on changed files; fix mechanical findings.
-- [ ] Update `docs/DESIGN-SYSTEMS.md` (account modes, landing order, removed kickers) and `docs/LESSONS.md` if a lesson is verified.
+- [x] `pnpm --filter @crest/web test`, `pnpm --filter @crest/web exec tsc --noEmit`, production `next build`.
+- [x] Screenshots 1440 and 390 of `/` and `/account` (welcome, inspect of `0xaD8A3272c6E68cF819fe1E3b2aEFD0f8Fd5b2c75`); fix in one batch; one confirm round.
+- [x] `impeccable detect --json` on changed files; fix mechanical findings.
+- [x] Update `docs/DESIGN-SYSTEMS.md` (account modes, landing order, removed kickers) and `docs/LESSONS.md` if a lesson is verified.
 - [ ] `npx vercel@62.2.0 deploy --prod --yes`; smoke `https://crestguard.vercel.app`.

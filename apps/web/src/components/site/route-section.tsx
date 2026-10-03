@@ -1,28 +1,19 @@
-import { Badge } from "@/components/ui/badge";
-import { Cell, CellLabel, Fact } from "@/components/ui/cell";
+import { Cell, Fact } from "@/components/ui/cell";
 import { forkProof, marketLltvPercent, oracleFacts, routeFacts } from "@/lib/content";
 
-/**
- * Route section: the receipt, not a pitch. Exact market id, contract names,
- * addresses, and the pinned-fork lifecycle outcome, laid out as numbered
- * technical cells on blueprint paper.
- */
+/** Archived reviewed mainnet route evidence, not the signing route. */
 export function RouteSection() {
   return (
     <section id="route" className="paper-grid relative bg-paper px-5 py-24 sm:px-10">
-      <div className="mb-10 flex flex-wrap items-end justify-between gap-6">
-        <div>
-          <CellLabel>02 · The route</CellLabel>
-          <h2 className="type-display mt-4 max-w-3xl text-poster-lg text-ink sm:text-poster-xl">
-            One market. Pinned, forked, and proven before it ever touches your
-            account.
-          </h2>
-        </div>
-        <Badge tone="warn" data-reveal="chip">Mainnet fork only · testnet unavailable</Badge>
+      <div className="mb-10">
+        <h2 data-reveal="headline" className="type-display max-w-3xl text-poster-lg text-ink sm:text-poster-xl">
+          The reviewed mainnet route, archived.
+        </h2>
+        <p className="mt-4 max-w-2xl text-base text-ink-soft">This pinned fork and these market facts describe Robinhood Chain mainnet evidence. The account you can open today signs on testnet, with test tokens, a mock oracle, and an idle-only vault.</p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Cell index="A" meta={routeFacts.chain} data-reveal="cell">
+        <Cell meta={routeFacts.chain} data-reveal="cell">
           <div className="p-6">
             <h3 className="type-display text-poster-md text-ink">Morpho market</h3>
             <dl className="mt-4">
@@ -44,7 +35,7 @@ export function RouteSection() {
           </div>
         </Cell>
 
-        <Cell index="B" meta={`chain ${routeFacts.chainId}`} data-reveal="cell">
+        <Cell meta={`chain ${routeFacts.chainId}`} data-reveal="cell">
           <div className="p-6">
             <h3 className="type-display text-poster-md text-ink">Strategy vault</h3>
             <dl className="mt-4">
@@ -58,12 +49,7 @@ export function RouteSection() {
         </Cell>
       </div>
 
-      <Cell
-        className="mt-6"
-        index="C"
-        meta={`Foundry fork · block ${forkProof.block}`}
-        data-reveal="cell"
-      >
+      <Cell className="mt-6" meta={`Foundry fork · block ${forkProof.block}`} data-reveal="cell">
         <div className="grid gap-6 p-6 md:grid-cols-[1fr_auto] md:items-center">
           <div>
             <h3 className="type-display text-poster-md text-ink">

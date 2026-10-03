@@ -35,18 +35,6 @@ const vaultShare = vaultRate === null || borrowRate === null || vaultRate + borr
   ? null
   : Number(vaultRate * 100n / (vaultRate + borrowRate));
 
-/** Observed evidence timestamp, humanized for the poster footer. */
-export const evidenceDate = new Date(manifest.evidence.block.timestamp).toLocaleDateString(
-  "en-US",
-  { month: "short", day: "numeric", year: "numeric" },
-);
-
-export const heroStats = [
-  { value: "1", label: "Market" },
-  { value: "1", label: "Loan token" },
-  { value: "1", label: "Vault" },
-  { value: "3", label: "Guardian moves" },
-] as const;
 
 export const policyBand = {
   lower: "30.0",

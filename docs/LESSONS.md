@@ -25,6 +25,12 @@ Rules for this file:
 
 ---
 
+## 2026-10-03 — Next dev served on 127.0.0.1 never hydrates when opened from that origin (Technical)
+
+- Opening the dev server (Next 16.3.5, Turbopack) at `http://127.0.0.1:3100` rendered the server HTML, but the HMR connection was blocked as cross-origin, the client never hydrated, the landing console stayed on its fallback, and no GSAP trigger ran. The same server at `http://localhost:3100` hydrated and every effect ran.
+- Next treats dev resources requested from a host it does not recognise as cross-origin and blocks them unless the host is listed in `allowedDevOrigins`.
+- Rule: review the web app in a browser at `localhost`, and treat "static page, no effects, fallbacks stuck" in dev as a hydration failure to check before debugging components.
+
 ## 2026-10-03 — The Vercel CLI uploads untracked files, and `vercel link` rewrites `.gitignore` (Technical)
 
 - A CLI deploy sends the working tree, not git's tracked set: a dry run with git's matcher showed `.env.example` and the untracked `apps/web/AGENTS.md` and `CLAUDE.md` in the upload until the root `.vercelignore` became an allowlist. The repo root also holds `.env` with live credentials.

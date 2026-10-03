@@ -1,4 +1,4 @@
-import { Cell, CellLabel, Fact } from "@/components/ui/cell";
+import { Cell, Fact } from "@/components/ui/cell";
 import { carry } from "@/lib/content";
 
 /**
@@ -12,22 +12,17 @@ export function CarrySection() {
 
   return (
     <section className="paper-grid bg-paper px-5 py-24 sm:px-10" aria-label="Carry">
-      <div className="mb-10 flex flex-wrap items-end justify-between gap-6">
-        <div>
-          <CellLabel>05 · The carry</CellLabel>
-          <h2 className="type-display mt-4 max-w-3xl text-poster-lg text-ink sm:text-poster-xl">
-            Yield is a spread, so we print both sides.
-          </h2>
-        </div>
-        <p className="max-w-md text-poster-sm text-ink-soft">
-          Pinned rate observations, not a current quote. These two averages use
-          different windows, so they cannot establish today's net carry.
-          Realized repayment appears only with a canonical account receipt.
+      <div className="mb-10">
+        <h2 data-reveal="headline" className="type-display max-w-3xl text-poster-lg text-ink sm:text-poster-xl">
+          Yield has two sides.
+        </h2>
+        <p className="mt-4 max-w-2xl text-poster-sm text-ink-soft">
+          These are archived mainnet rate observations, not a current quote. The averages use different windows, so they cannot establish today's net carry. The testnet repayment above is a realized debt reduction, not yield.
         </p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
-        <Cell index="R" meta={`recorded block ${carry.blockNumber} · ${carry.observedAt}`} data-reveal="cell">
+        <Cell meta={`archived mainnet block ${carry.blockNumber} · ${carry.observedAt}`} data-reveal="cell">
           <div className="p-6">
             {vaultShare === null ? (
               <p className="mb-6 border border-ink p-4 text-poster-sm text-ink-soft">
@@ -58,16 +53,11 @@ export function CarrySection() {
           </div>
         </Cell>
 
-        <Cell index="V" meta="canonical only" data-reveal="cell">
+        <Cell meta="testnet transaction above" data-reveal="cell">
           <div className="p-6">
-            <h3 className="type-display text-poster-md text-ink">Realized, so far</h3>
-            <p className="mt-2 text-poster-sm text-ink-soft">
-              This landing page has no connected account or canonical repayment
-              receipt. Open your account to see realized debt reduction, if any.
-            </p>
-            <p className="type-display mt-6 border border-dashed border-ink/40 px-4 py-6 text-poster-sm text-ink-soft uppercase">
-              Awaiting first verified repayment
-            </p>
+            <h3 className="type-display text-poster-md text-ink">Realized debt reduction</h3>
+            <p className="mt-2 text-poster-sm text-ink-soft">Custos repaid 6.421094 USDG from the fixed vault in the testnet transaction above. That is repayment, not a claim about vault yield. See your own recorded outcome on the account page.</p>
+            <a href="#proof" className="mt-5 inline-flex min-h-11 items-center text-sm text-ink underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-ink">See the receipt</a>
           </div>
         </Cell>
       </div>

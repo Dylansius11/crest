@@ -69,22 +69,12 @@
 
   --radius-cell: 2px;
   --radius-card: 4px;
-
-  --animate-marquee: marquee 28s linear infinite;
-
-  @keyframes marquee {
-    from {
-      transform: translateX(0);
-    }
-    to {
-      transform: translateX(-50%);
-    }
-  }
 }
 
 /* Base */
 html {
   scroll-behavior: smooth;
+  scrollbar-color: var(--color-ink) var(--color-paper);
 }
 
 body {
@@ -173,6 +163,36 @@ body {
 
 .pulse-once {
   animation: crest-pulse 0.5s ease-out 1;
+}
+
+/*
+ * Hero entrance. CSS rather than JavaScript, so the first paint already runs it
+ * and the hero is never left hidden waiting for hydration. Reduced motion
+ * collapses it to the final frame through the rule below.
+ */
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+    filter: blur(6px);
+  }
+}
+
+@keyframes stamp-in {
+  from {
+    opacity: 0;
+    transform: rotate(-2deg) scale(1.18);
+  }
+}
+
+.rise-in {
+  animation: rise-in 0.8s cubic-bezier(0.23, 1, 0.32, 1) both;
+  animation-delay: var(--delay, 0ms);
+}
+
+.stamp-in {
+  animation: stamp-in 0.42s cubic-bezier(0.23, 1, 0.32, 1) both;
+  animation-delay: var(--delay, 0ms);
 }
 
 @media (prefers-reduced-motion: reduce) {
