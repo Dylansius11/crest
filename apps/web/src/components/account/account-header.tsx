@@ -33,7 +33,7 @@ export function AccountHeader({ wallet, walletName, walletPickerOpen, setWalletP
     <header className="blue-field blue-grid border-b border-ink px-5 py-4 text-paper sm:px-10">
       <div className="mx-auto max-w-[85rem]">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-3">
-          <a href="/" aria-label="Crest home" className="mr-6 inline-flex min-h-14 items-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-paper"><Logo height={56} priority /></a>
+          <a href="/" aria-label="Crest home" className="mr-6 inline-flex min-h-14 items-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-paper"><Logo height={56} priority className="h-14" /></a>
           <div className="order-3 flex w-full gap-2 sm:order-2 sm:ml-auto sm:w-auto">
             {activeManifest.trust.level === "sandbox" ? <button type="button" popoverTarget="sandbox-disclosures" className="min-h-11 flex-1 border border-paper px-3 text-sm transition-colors duration-150 hover:bg-crest-700 active:scale-[.97] focus-visible:outline-2 focus-visible:outline-paper sm:flex-none">Sandbox<span className="hidden sm:inline">: read disclosures</span><span className="sr-only sm:hidden">: read disclosures</span></button> : null}
             <button type="button" aria-expanded={lookupOpen} onClick={() => setLookupOpen(!lookupOpen)} className="min-h-11 flex-1 border border-paper px-3 text-sm transition-colors duration-150 hover:bg-crest-700 active:scale-[.97] focus-visible:outline-2 focus-visible:outline-paper sm:flex-none">Look up an account</button>

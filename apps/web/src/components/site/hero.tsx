@@ -15,7 +15,7 @@ export function Hero() {
       <div aria-hidden className="hatch pointer-events-none absolute inset-x-0 top-0 h-28 opacity-30" />
       <div className="relative mx-auto grid max-w-[85rem] items-center gap-12 lg:grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)] lg:gap-14">
         <div className="min-w-0">
-          <h1 id="hero-heading" className="type-display text-[clamp(2.75rem,5.3vw,5.25rem)] leading-[0.9] tracking-[-0.03em] text-balance">
+          <h1 id="hero-heading" className="type-display text-[clamp(2.75rem,4.7vw,4.9rem)] leading-[0.9] tracking-[-0.03em] text-balance">
             <span className="rise-in block">Borrow against your stock.</span>
             <span className="rise-in mt-2 block [--delay:110ms]">
               <span className="bg-flame px-2 text-ink [box-decoration-break:clone]">Custos</span> guards the debt.

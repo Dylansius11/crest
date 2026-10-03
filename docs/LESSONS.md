@@ -25,6 +25,12 @@ Rules for this file:
 
 ---
 
+## 2026-10-03 — A layout composed at 125% display scaling looks shrunken at 100% (Technical)
+
+- Observed: the landing was tuned on a 1920px screen at 125% scaling, a 1536px CSS viewport. At 100% the same screen is 1912px wide, so the `85rem` column left about 280px of empty blue on each side and the six-line headline pushed the CTA below the fold.
+- Why: CSS px track the OS scale factor. A fixed rem maximum looks full at one scale and sparse at another.
+- Rule: scale the root size with the viewport above the composition width (`html { font-size: clamp(100%, 100vw / 96, 125%) }`) and size layout in rem. Check hero fit at 1912x948 as well as 1440 and 390; rem media queries use the browser default and are unaffected.
+
 ## 2026-10-03 — Next dev served on 127.0.0.1 never hydrates when opened from that origin (Technical)
 
 - Opening the dev server (Next 16.3.5, Turbopack) at `http://127.0.0.1:3100` rendered the server HTML, but the HMR connection was blocked as cross-origin, the client never hydrated, the landing console stayed on its fallback, and no GSAP trigger ran. The same server at `http://localhost:3100` hydrated and every effect ran.

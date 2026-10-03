@@ -122,8 +122,10 @@ Rules:
 - Base spacing: `4px`; scale `4, 8, 12, 16, 24, 32, 48, 64, 96`.
 - Rules: `1px` solid ink on paper, `1px` solid paper on blue. Hairline grids come from `gap-px` over an ink or paper background, never from borders on every child.
 - Cell/card radius: `2px` to `4px`. Controls: `2px`.
-- Page gutters: `20px` mobile, `40px` from `sm`.
-- Content maximum: `1360px`.
+- Page gutters: `1.25rem` mobile, `2.5rem` from `sm`.
+- Content maximum: `85rem`.
+- Fluid scale: the root size is `clamp(100%, 100vw / 96, 125%)`. It stays 16px up to a 1536px viewport and grows to 20px at 1920px, so a 1920px screen at 100% display scaling renders the same composition as at 125% instead of a 1360px column between empty bands. Size anything that should scale in `rem`; media-query breakpoints keep the browser default rem and do not move.
+- Scrollbar: paper track with a 1px ink rule, square `crest-600` thumb inset by a paper border, flame on hover and drag (`::-webkit-scrollbar`; Firefox gets `scrollbar-color`).
 - Texture: dotted `22px` grid on both fields; a diagonal hatch band may mark a transition. Texture never sits under body copy at full opacity.
 - Minimum target: `44x44px`.
 - Mobile: one column; action state, LTV, debt, and withdrawable liquidity precede charts.

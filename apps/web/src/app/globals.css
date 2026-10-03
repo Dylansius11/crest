@@ -72,9 +72,49 @@
 }
 
 /* Base */
+/* The layout was composed on a 1536px-wide viewport (1920px at 125% display
+   scaling). On wider 100% displays the root size grows with the viewport, so
+   every rem-based size scales together instead of leaving empty side bands.
+   Media-query breakpoints use the browser default rem, so they do not move. */
 html {
+  font-size: clamp(100%, 100vw / 96, 125%);
   scroll-behavior: smooth;
-  scrollbar-color: var(--color-ink) var(--color-paper);
+}
+
+/* Poster scrollbar: paper track with an ink rule, square blue thumb inset by a
+   paper border, flame while hovered or dragged. Firefox gets the two colors. */
+::-webkit-scrollbar {
+  width: 14px;
+  height: 14px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-paper);
+  border-left: 1px solid var(--color-ink);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-crest-600);
+  border: 3px solid var(--color-paper);
+  border-radius: 0;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-flame);
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: var(--color-flame-press);
+}
+
+::-webkit-scrollbar-corner {
+  background: var(--color-paper);
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  html {
+    scrollbar-color: var(--color-crest-600) var(--color-paper);
+  }
 }
 
 body {
