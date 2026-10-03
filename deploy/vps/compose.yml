@@ -76,7 +76,7 @@ services:
     env_file: ["${CREST_SECRETS_DIR:?set CREST_SECRETS_DIR}/monitor.env"]
     environment:
       <<: *route
-      MONITOR_INTERVAL_MS: "60000"
+      MONITOR_INTERVAL_MS: "15000"
     working_dir: /app/apps/monitor
     command: ["node", "src/main.ts"]
     networks: [default]
@@ -90,7 +90,7 @@ services:
     environment:
       <<: *route
       GUARDIAN_EXPECTED_CHAIN_ID: "46630"
-      GUARDIAN_POLL_INTERVAL_MS: "30000"
+      GUARDIAN_POLL_INTERVAL_MS: "15000"
       GUARDIAN_HEARTBEAT_FILE: /tmp/custos-heartbeat
     working_dir: /app/apps/automation
     command: ["node", "src/main.ts", "watch"]

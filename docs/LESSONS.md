@@ -25,6 +25,18 @@ Rules for this file:
 
 ---
 
+## 2026-10-03 — Database tests follow DATABASE_URL, which this shell points at hosted Supabase  (Workflow)
+
+- `pnpm db:test` and `pnpm --filter @crest/db test` timed out against a running local Supabase. The shell exported `DATABASE_URL` for the hosted Supabase pooler, and every `packages/db` test prefers that variable over `127.0.0.1:54322`, so the timed-out runs inserted fixture owners, assessments, and triggers into the hosted database.
+- Custos ignored the fixture triggers because they belong to unregistered accounts, but the rows stay until removed.
+- Rule: run database tests with `DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres` set explicitly in the same command, and check the host before any test that writes.
+
+## 2026-10-03 — A narrow eth_getLogs span made every monitor cycle take minutes  (Technical)
+
+- The hosted monitor logged one assessment every 3 min 50 s against a 60 s sleep, so Custos froze 4 min 49 s and repaid 7 min 54 s after the triggering borrow. The indexer re-read the account history from block 127605219 in 1,000-block `eth_getLogs` requests: 636 sequential requests per stream at about 235 ms each. Supabase cost about 230 ms per query and was not the bottleneck.
+- Robinhood testnet and mainnet RPCs both answered a filtered 1,000,000-block `eth_getLogs` in about the time of a 1,000-block one (210 ms and 1.3 to 1.7 s), so round trips, not node work, set the cost, and it grew with chain height.
+- Rule: size log spans to the measured RPC limit and time the cycle from the monitor's own log timestamps before blaming the database or confirmation depth.
+
 ## 2026-10-03 — A custom-error revert without its ABI reads as "unknown reason" (Technical)
 
 - The owner simulated a second 20 USDG borrow on top of 20 USDG of debt under a 30 USDG ceiling. The account reverted with `DebtCeilingExceeded(cap, resulting)`, but the sheet said "Execution reverted for an unknown reason" because the simulation decoded only viem's short message. The recorded snapshot carries no caps, so the sheet and the Rules tab could not show the ceiling either.

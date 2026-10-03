@@ -359,6 +359,13 @@ async function decodeCanonicalEvents(input: {
   }));
 }
 
+/**
+ * Both Robinhood RPCs answer a one-million-block filtered eth_getLogs in about the time of a
+ * thousand-block one, so the span bounds round trips, not node work: a 1_000 span cost one
+ * sequential request per thousand blocks and stretched every monitor cycle to minutes.
+ */
+const LOG_RANGE_BLOCKS = 100_000n;
+
 async function getLogsInRanges(
   client: EventIndexPublicClient,
   address: Address,
@@ -367,8 +374,8 @@ async function getLogsInRanges(
   topics: readonly (Hex | readonly Hex[] | null)[],
 ): Promise<readonly Log[]> {
   const logs: Log[] = [];
-  for (let start = fromBlock; start <= toBlock; start += 1_000n) {
-    const end = start + 999n > toBlock ? toBlock : start + 999n;
+  for (let start = fromBlock; start <= toBlock; start += LOG_RANGE_BLOCKS) {
+    const end = start + LOG_RANGE_BLOCKS - 1n > toBlock ? toBlock : start + LOG_RANGE_BLOCKS - 1n;
     const request = client.request as unknown as (parameters: unknown) => Promise<readonly Parameters<typeof formatLog>[0][]>;
     const result = await request({
       method: "eth_getLogs",
