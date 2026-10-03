@@ -33,9 +33,10 @@ Rules for this file:
 
 ## 2026-10-03 — A narrow eth_getLogs span made every monitor cycle take minutes  (Technical)
 
-- The hosted monitor logged one assessment every 3 min 50 s against a 60 s sleep, so Custos froze 4 min 49 s and repaid 7 min 54 s after the triggering borrow. The indexer re-read the account history from block 127605219 in 1,000-block `eth_getLogs` requests: 636 sequential requests per stream at about 235 ms each. Supabase cost about 230 ms per query and was not the bottleneck.
+- The hosted monitor logged one assessment every 3 min 50 s against a 60 s sleep, so Custos froze 4 min 49 s and repaid 7 min 54 s after the triggering borrow. The indexer re-read the account history from block 127605219 in 1,000-block `eth_getLogs` requests: 636 sequential requests per stream at about 235 ms each.
 - Robinhood testnet and mainnet RPCs both answered a filtered 1,000,000-block `eth_getLogs` in about the time of a 1,000-block one (210 ms and 1.3 to 1.7 s), so round trips, not node work, set the cost, and it grew with chain height.
-- Rule: size log spans to the measured RPC limit and time the cycle from the monitor's own log timestamps before blaming the database or confirmation depth.
+- With the span widened, the indexer's database transaction became the cost: 22 s for one upsert per event plus policy updates. The VPS to the Sydney Supabase pooler is about 230 ms per round trip, and `prepare: false` makes each statement two round trips (460 ms measured, 280 ms with `prepare: true`). One multi-row upsert per table and parallel block reads cut the index step from 47 s to 14 s.
+- Rule: size log spans to the measured RPC limit, write replayed history in one statement per table, and time each step inside the cycle before blaming the database, the RPC, or confirmation depth.
 
 ## 2026-10-03 — A custom-error revert without its ABI reads as "unknown reason" (Technical)
 
