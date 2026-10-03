@@ -41,6 +41,7 @@ import type { PolicyFormValues } from "./policy-editor";
 import { assertStagedPolicyResponse } from "./policy-stage";
 import { activeChain, freshHead, providerOf, publicClient, selectProvider, switchToActiveChain } from "./wallet-client";
 import type { Eip1193Provider } from "./wallet-client";
+import { rememberedWallet, rememberWallet, subscribeWallets } from "./wallet-discovery";
 import type { DiscoveredWallet } from "./wallet-discovery";
 import type { ExitAction, LiveAccountState, RecordedAccount, RecordedPosition, RecordedRegistry, TransactionAction, TransactionEvidence, WalletState } from "./types";
 
@@ -124,6 +125,9 @@ function revealTransaction(): void {
  */
 const SHARE_MARGIN_BPS = 50n;
 
+/** The monitor records a position about once a minute; the page re-reads the record and the chain this often. */
+const POSITION_REFRESH_MS = 30_000;
+
 type PreparedAction = {
   action: TransactionAction;
   data: Hex;
@@ -193,6 +197,9 @@ export function AccountWorkspace() {
   const preTransactionState = useRef<PreTransactionState | null>(null);
   const policyRequest = useRef(0);
   const liveRequest = useRef(0);
+  const positionRef = useRef<RecordedPosition | null>(null);
+  const reconnectAttempted = useRef(false);
+  const [positionVersion, setPositionVersion] = useState(0);
 
   const selectedAddress = selectedAccount !== null && isAddress(selectedAccount.address) ? getAddress(selectedAccount.address) : null;
 
@@ -259,6 +266,14 @@ export function AccountWorkspace() {
     setPrepared(null);
     setTransaction(emptyTransaction("Asset intent changed. Compile and simulate the exact owner action again."));
   }, [transaction.phase]);
+
+  // Configuring this single route compiles only with both qualified intents, so a configured account already
+  // carries them; a reload must not demand that the owner pick them again before every action. An unconfigured
+  // account keeps whatever the owner chose during setup.
+  const routeConfigured = selectedAccount !== null && selectedAccount.policyNonce !== "0";
+  useEffect(() => {
+    if (routeConfigured) setAssetIntents({ collateral: "PROTECT_AND_BORROW", loan: "EARN_STABLE" });
+  }, [routeConfigured, selectedAddress]);
 
   const refreshRegistry = useCallback(async (owner: Address) => {
     setRegistry(null);
@@ -334,27 +349,45 @@ export function AccountWorkspace() {
   }, [activeProvider, hydrateWallet]);
 
   useEffect(() => {
-    if (!selectedAddress || position?.account.address.toLowerCase() === selectedAddress.toLowerCase()) return;
+    positionRef.current = position;
+  }, [position]);
+
+  // The record changes after every monitor poll (a Custos freeze, an indexed policy, a new assessment), so it is
+  // re-read on a timer and after each confirmed owner action instead of once per selected account.
+  useEffect(() => {
+    if (!selectedAddress) return;
     let active = true;
     const loadPosition = async () => {
-      setPosition(null);
-      setPositionNotice("Loading recorded position evidence.");
+      const first = positionRef.current?.account.address.toLowerCase() !== selectedAddress.toLowerCase();
+      if (first) {
+        setPosition(null);
+        setPositionNotice("Loading recorded position evidence.");
+      }
       try {
         const response = await fetch(`/v1/accounts/${selectedAddress}/position`, { headers: { accept: "application/json" } });
         if (!response.ok) throw new Error(response.status === 404 ? "Recorded account position was not found" : `recorded position service returned ${response.status}`);
         const result = await response.json() as RecordedPosition;
         if (result.evidence !== "recorded" || result.account.address.toLowerCase() !== selectedAddress.toLowerCase()) throw new Error("recorded position service returned an invalid evidence payload");
-        if (active) {
-          setPosition(result);
-          setPositionNotice("Recorded position evidence loaded. It is not live chain state.");
-        }
+        if (!active) return;
+        setPosition(result);
+        // The registry row is read once per wallet; the position carries the account's current nonce and status.
+        setSelectedAccount((current) => current !== null && current.address.toLowerCase() === result.account.address.toLowerCase() ? result.account : current);
+        setPositionNotice("Recorded position evidence loaded. It is not live chain state.");
       } catch (error) {
-        if (active) setPositionNotice(error instanceof Error ? `${error.message}. Transaction controls stay disabled.` : "Recorded position evidence is unavailable. Transaction controls stay disabled.");
+        // A failed refresh keeps the last record on screen; only a failed first load explains the gap.
+        if (active && first) setPositionNotice(error instanceof Error ? `${error.message}. Transaction controls stay disabled.` : "Recorded position evidence is unavailable. Transaction controls stay disabled.");
       }
     };
     void loadPosition();
-    return () => { active = false; };
-  }, [selectedAddress]);
+    const timer = setInterval(() => {
+      void loadPosition();
+      void refreshLiveState(selectedAddress);
+    }, POSITION_REFRESH_MS);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  }, [positionVersion, refreshLiveState, selectedAddress]);
 
   const inspectRecordedAddress = useCallback(async () => {
     if (!isAddress(inspectAddress, { strict: true })) {
@@ -390,8 +423,10 @@ export function AccountWorkspace() {
         choice.provider.request({ method: "eth_chainId" }) as Promise<string>,
       ]);
       await hydrateWallet(accounts, chainId);
+      rememberWallet(choice.key);
       setWalletPickerOpen(false);
     } catch (error) {
+      rememberWallet(null);
       selectProvider(null);
       setActiveProvider(null);
       setWalletName(null);
@@ -401,6 +436,7 @@ export function AccountWorkspace() {
   }, [hydrateWallet]);
   const disconnect = useCallback(() => {
     policyRequest.current += 1;
+    rememberWallet(null);
     selectProvider(null);
     setActiveProvider(null);
     setWalletName(null);
@@ -414,6 +450,36 @@ export function AccountWorkspace() {
     setTransaction(emptyTransaction());
     setRegistryNotice("Wallet disconnected locally. Browser wallet permissions remain under the wallet provider’s control.");
   }, []);
+
+  // A reload restores the wallet the owner last connected, through `eth_accounts`, which never opens a prompt.
+  // If the wallet no longer grants this site an account, the memory is dropped and the welcome view stays.
+  useEffect(() => {
+    const remembered = rememberedWallet();
+    if (!remembered) return;
+    const restore = async (choice: DiscoveredWallet) => {
+      try {
+        const accounts = await choice.provider.request({ method: "eth_accounts" });
+        if (!Array.isArray(accounts) || accounts.length === 0 || providerOf() !== null) {
+          if (providerOf() === null) rememberWallet(null);
+          return;
+        }
+        const chainId = await choice.provider.request({ method: "eth_chainId" }) as string;
+        if (providerOf() !== null) return;
+        selectProvider(choice.provider);
+        setActiveProvider(choice.provider);
+        setWalletName(choice.name);
+        await hydrateWallet(accounts as string[], chainId);
+      } catch {
+        // The wallet refused a silent read; the owner can still connect by hand.
+      }
+    };
+    return subscribeWallets(window, (wallets) => {
+      const choice = wallets.find((wallet) => wallet.key === remembered);
+      if (!choice || reconnectAttempted.current) return;
+      reconnectAttempted.current = true;
+      void restore(choice);
+    });
+  }, [hydrateWallet]);
 
   const configurationBlockedReason = useMemo(() => {
     if (!isOwnerSigningEnabled(activeManifest)) return `${activeManifest.network.name} ${activeManifest.network.chainId} is registered evidence only; owner signing is disabled on this route`;
@@ -764,6 +830,7 @@ export function AccountWorkspace() {
       setTransaction((current) => ({ ...current, phase: "confirmed", detail: `Canonical receipt and ${evidenceName} postcondition confirmed at block ${at}.`, blockNumber: at, blockHash: receipt.blockHash }));
       void refreshLiveState(selectedAddress);
       void refreshBalances(wallet.address);
+      setPositionVersion((version) => version + 1);
     } catch (error) {
       const broadcastHash = submittedHash;
       if (broadcastHash === null) {

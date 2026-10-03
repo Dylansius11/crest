@@ -25,6 +25,12 @@ Rules for this file:
 
 ---
 
+## 2026-10-03 — A once-loaded record and a per-load wallet id broke the owner's live run (Technical)
+
+- In the owner's first live run on `/account`, the Exit panel's live read showed borrowing open at block 128106223. The headline still said "Borrowing is frozen" from the snapshot at block 128103774, because the page fetched `/v1/accounts/:address/position` once per selected account and never again.
+- A reload dropped the wallet and returned the welcome view. EIP-6963 `info.uuid` is new on every page load, and the page never called `eth_accounts`. The asset intents also reset to KEEP on every load, and compile, supply, and borrow are all gated on them.
+- Rule: re-read the recorded position on the monitor's cadence and after each confirmed owner action. Restore a remembered wallet by its `rdns` through the prompt-free `eth_accounts`. Derive the qualified intents for an account that is already configured on the single route.
+
 ## 2026-10-03 — A layout composed at 125% display scaling looks shrunken at 100% (Technical)
 
 - Observed: the landing was tuned on a 1920px screen at 125% scaling, a 1536px CSS viewport. At 100% the same screen is 1912px wide, so the `85rem` column left about 280px of empty blue on each side and the six-line headline pushed the CTA below the fold.
